@@ -7,5 +7,5 @@ output = os.getenv('OUTPUT')
 assert output and output.startswith('gs://cpg-tob-wgs-test/')
 
 subprocess.run(
-    ['gsutil', 'cp', 'gs://cpg-tob-wgs-upload/TOB15[2-3]?.g.vcf.gz*', output]
+    ['gsutil', 'cp', 'gs://cpg-tob-wgs-main/v0/TOB15[2-3]?.g.vcf.gz*', output]
 )
