@@ -12,7 +12,7 @@ subprocess.run(
         'gsutil',
         'mv',
         'gs://cpg-tob-wgs-upload/*.g.vcf.gz*',
-        'gs://cpg-tob-wgs-upload/*.csv',  # metadata
+        'gs://cpg-tob-wgs-upload/*.csv',  # QC metadata.
         output,
     ]
 )
