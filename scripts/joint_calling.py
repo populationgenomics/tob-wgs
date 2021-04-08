@@ -11,7 +11,7 @@ subprocess.run(
     '--callset tog-wgs '
     '--version v0 '
     '--output_bucket gs://cpg-tob-wgs-temporary/v0/ '
-    '--keep_scratch" ',
+    '--keep_scratch',
     shell=True,
     check=False,
 )
