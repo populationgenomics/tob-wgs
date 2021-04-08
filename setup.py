@@ -1,22 +1,21 @@
 #!/usr/bin/env python
 
 """
-Setup script for the pytob package
+Setup script
 """
 
 import setuptools
 
-with open('./README.md', 'r') as readme:
-    long_description = readme.read()
+PKG = 'tob-wgs'
 
 setuptools.setup(
-    name='pytob',
-    packages='pytob',
+    name=PKG,
+    packages=[PKG],
     version='0.0.1',  # automatically updated by bump2version
-    description='Python analysis modules for TOB-WGS.',
-    long_description=long_description,
+    description=f'Python analysis modules for {PKG}.',
+    long_description=open('./README.md').read(),
     long_description_content_type='text/markdown',
-    url=f'https://github.com/populationgenomics/tob-wgs',
+    url='https://github.com/populationgenomics/{PKG}',
     license='MIT',
     author='Centre for Population Genomics',
     author_email='genomic-analysis-team@populationgenomics.org.au',

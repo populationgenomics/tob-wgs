@@ -1,0 +1,9 @@
+name: tob-wgs
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pre-commit
+  - pylint
+  - bump2version
