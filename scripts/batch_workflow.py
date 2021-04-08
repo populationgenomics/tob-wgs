@@ -303,7 +303,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     if not dry_run:
         if not billing_project:
             raise click.BadParameter(
-                '--billing_project has to be specified (unless --dry_run is set)'
+                '--billing-project has to be specified (unless --dry-run is set)'
             )
 
     if prod:
@@ -492,12 +492,13 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     split_intervals_job.depends_on(combiner_job)
     intervals = split_intervals_job.intervals
 
-    combined_vcf = add_tabix_step(b, combined_vcf_path, medium_disk).combined_vcf
+    tabix_job = add_tabix_step(b, combined_vcf_path, medium_disk)
+    tabix_job.depends_on(combiner_job)
 
     gnarly_output_vcfs = [
         add_gnarly_genotyper_on_vcf_step(
             b,
-            combined_gvcf=combined_vcf,
+            combined_gvcf=tabix_job.combined_vcf,
             interval=intervals[f'interval_{idx}'],
             ref_fasta=ref_fasta,
             dbsnp_vcf=dbsnp_vcf,
