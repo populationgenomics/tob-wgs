@@ -26,7 +26,7 @@ and <output_bucket>/plot-indels-recal.Rscript
 
 import os
 import subprocess
-from os.path import join, basename, splitext
+from os.path import join
 from typing import List
 import click
 import hailtop.batch as hb
@@ -331,7 +331,6 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         b.read_input_group(**{'g.vcf.gz': path, 'g.vcf.gz.tbi': path + '.tbi'})
         for path in gvcf_paths
     ]
-    sample_names = [splitext(basename(path))[0] for path in gvcf_paths]
 
     # Make a 2.5:1 interval number to samples in callset ratio interval list.
     # We allow overriding the behavior by specifying the desired number of vcfs
@@ -384,27 +383,25 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         if dbsnp_resource_vcf
         else dbsnp_vcf
     )
+    # pylint: disable=unused-variable
     noalt_regions = b.read_input('gs://cpg-reference/hg38/v0/noalt.bed')
 
-    reblocked_gvcfs = [
-        add_reblock_gvcfs_step(b, gvcf, small_disk).output_gvcf for gvcf in gvcfs
-    ]
-    gvcfs_for_combiner = [
-        os.path.join(output_bucket, 'combiner', sample + '.g.vcf.gz')
-        for sample in sample_names
-    ]
-    subset_gvcf_jobs = [
-        add_subset_noalt_step(
-            b,
-            input_gvcf=gvcf,
-            output_gvcf_path=output_gvcf_path,
-            disk_size=small_disk,
-            noalt_regions=noalt_regions,
-        )
-        for output_gvcf_path, gvcf in zip(gvcfs_for_combiner, reblocked_gvcfs)
-    ]
-
+    # reblocked_gvcfs = [
+    #     add_reblock_gvcfs_step(b, gvcf, small_disk).output_gvcf for gvcf in gvcfs
+    # ]
     combiner_bucket = os.path.join(output_bucket, 'combiner')
+
+    # subset_gvcf_jobs = [
+    #     add_subset_noalt_step(
+    #         b,
+    #         input_gvcf=gvcf,
+    #         output_gvcf_path=join(combiner_bucket, sample + '.g.vcf.gz'),
+    #         disk_size=small_disk,
+    #         noalt_regions=noalt_regions,
+    #     )
+    #     for sample, gvcf in zip(sample_names, reblocked_gvcfs)
+    # ]
+
     combined_mt_path = os.path.join(combiner_bucket, '100genomes.mt')
     # d = {
     #     'sample': sample_names,
@@ -419,14 +416,15 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     combined_vcf_path = join(combiner_bucket, 'combined.vcf.gz')
     combiner_job = dataproc.hail_dataproc_job(
         b,
-        f'run-python-script.py '
+        f'run_python_script.py '
         f'combine_gvcfs.py --overwrite '
         f'--bucket-with-vcfs {input_bucket} '
         f'--qc-csv {join(input_bucket, qc_csv_fname)}'
         f'--out-mt {combined_mt_path} '
         f'--bucket {combiner_bucket}/work '
         f'--hail-billing {billing_project} '
-        f'&& sample_qc.py --overwrite '
+        f'&& '
+        f'sample_qc.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--bucket {combiner_bucket} '
         f'--out-hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
@@ -438,7 +436,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         max_age='8h',
         packages=DATAPROC_PACKAGES,
         num_secondary_workers=10,
-        depends_on=subset_gvcf_jobs,
+        # depends_on=subset_gvcf_jobs,
     )
 
     variant_qc_bucket = join(output_bucket, 'variant_qc')
@@ -450,7 +448,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     rf_result_ht_path = join(variant_qc_bucket, 'rf_result.ht')
     rf_job = dataproc.hail_dataproc_job(
         b,
-        f'run-python-script.py '
+        f'run_python_script.py '
         f'generate_qc_annotations.py --split-multiallelic --overwrite '
         f'--mt {combined_mt_path} '
         f'--hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
@@ -478,7 +476,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         max_age='8h',
         packages=DATAPROC_PACKAGES,
         num_secondary_workers=10,
-        depends_on=subset_gvcf_jobs,
+        depends_on=[combiner_job],
     )
     rf_job.always_run()
 
