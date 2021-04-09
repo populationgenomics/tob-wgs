@@ -438,20 +438,20 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         f'--hail-billing {billing_project} ',
         max_age='8h',
         packages=DATAPROC_PACKAGES,
-        num_secondary_workers=4,
-        # depends_on=[combiner_job],
-    )
-    mt_to_vcf_job = dataproc.hail_dataproc_job(
-        b,
-        f'run_python_script.py '
-        f'mt_to_vcf.py --overwrite '
-        f'--mt {combined_mt_path} '
-        f'-o {combined_vcf_path} ',
-        max_age='8h',
-        packages=DATAPROC_PACKAGES,
         num_secondary_workers=10,
         # depends_on=[combiner_job],
     )
+    # mt_to_vcf_job = dataproc.hail_dataproc_job(
+    #     b,
+    #     f'run_python_script.py '
+    #     f'mt_to_vcf.py --overwrite '
+    #     f'--mt {combined_mt_path} '
+    #     f'-o {combined_vcf_path} ',
+    #     max_age='8h',
+    #     packages=DATAPROC_PACKAGES,
+    #     num_secondary_workers=10,
+    #     depends_on=[combiner_job],
+    # )
 
     variant_qc_bucket = join(output_bucket, 'variant_qc')
     freq_ht_path = join(variant_qc_bucket, 'frequencies.ht')
@@ -518,7 +518,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     intervals = split_intervals_job.intervals
 
     tabix_job = add_tabix_step(b, combined_vcf_path, medium_disk)
-    tabix_job.depends_on(mt_to_vcf_job)
+    # tabix_job.depends_on(mt_to_vcf_job)
 
     gnarly_output_vcfs = [
         add_gnarly_genotyper_on_vcf_step(
