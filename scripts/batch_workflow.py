@@ -417,26 +417,39 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     combiner_job = dataproc.hail_dataproc_job(
         b,
         f'run_python_script.py '
-        f'combine_gvcfs.py --overwrite '
+        f'combine_gvcfs.py '
         f'--bucket-with-vcfs {input_bucket} '
-        f'--qc-csv {join(input_bucket, qc_csv_fname)}'
+        f'--qc-csv {join(input_bucket, qc_csv_fname)} '
         f'--out-mt {combined_mt_path} '
         f'--bucket {combiner_bucket}/work '
-        f'--hail-billing {billing_project} '
-        f'&& '
+        f'--hail-billing {billing_project} ',
+        max_age='8h',
+        packages=DATAPROC_PACKAGES,
+        num_secondary_workers=10,
+        # depends_on=subset_gvcf_jobs,
+    )
+    sample_qc_job = dataproc.hail_dataproc_job(
+        b,
         f'sample_qc.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--bucket {combiner_bucket} '
         f'--out-hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
         f'--out-meta-ht {meta_ht_path} '
-        f'--hail-billing {billing_project} '
-        f'&& mt_to_vcf.py --overwrite '
+        f'--hail-billing {billing_project} ',
+        max_age='8h',
+        packages=DATAPROC_PACKAGES,
+        num_secondary_workers=4,
+        depends_on=[combiner_job],
+    )
+    mt_to_vcf_job = dataproc.hail_dataproc_job(
+        b,
+        f'mt_to_vcf.py --overwrite '
         f'--mt {combined_mt_path} '
         f'-o {combined_vcf_path} ',
         max_age='8h',
         packages=DATAPROC_PACKAGES,
         num_secondary_workers=10,
-        # depends_on=subset_gvcf_jobs,
+        depends_on=[combiner_job],
     )
 
     variant_qc_bucket = join(output_bucket, 'variant_qc')
@@ -446,7 +459,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     qc_ac_ht_path = join(variant_qc_bucket, 'qc_ac.ht')
     # vep_ht = join(variant_qc_bucket, 'vep.ht')
     rf_result_ht_path = join(variant_qc_bucket, 'rf_result.ht')
-    rf_job = dataproc.hail_dataproc_job(
+    rf_anno_job = dataproc.hail_dataproc_job(
         b,
         f'run_python_script.py '
         f'generate_qc_annotations.py --split-multiallelic --overwrite '
@@ -454,17 +467,29 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         f'--hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
         f'--meta-ht {meta_ht_path} '
         f'--out-info-ht {info_ht_path} '
-        f'--out-allele-data-ht {allele_data_ht_path}'
-        f'--out-qc-ac-ht {qc_ac_ht_path}'
-        f'--bucket {combiner_bucket} '
-        f'&& '
+        f'--out-allele-data-ht {allele_data_ht_path} '
+        f'--out-qc-ac-ht {qc_ac_ht_path} '
+        f'--bucket {combiner_bucket} ',
+        max_age='8h',
+        packages=DATAPROC_PACKAGES,
+        num_secondary_workers=10,
+        depends_on=[sample_qc_job],
+    )
+    rf_freq_data_job = dataproc.hail_dataproc_job(
+        b,
         f'generate_freq_data.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
         f'--meta-ht {meta_ht_path} '
         f'--out-ht {freq_ht_path} '
-        f'--bucket {combiner_bucket} '
-        f'&& '
+        f'--bucket {combiner_bucket} ',
+        max_age='8h',
+        packages=DATAPROC_PACKAGES,
+        num_secondary_workers=10,
+        depends_on=[rf_anno_job],
+    )
+    rf_job = dataproc.hail_dataproc_job(
+        b,
         f'random_forest.py --overwrite '
         f'--info-ht {info_ht_path} '
         f'--freq-ht {freq_ht_path} '
@@ -476,7 +501,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         max_age='8h',
         packages=DATAPROC_PACKAGES,
         num_secondary_workers=10,
-        depends_on=[combiner_job],
+        depends_on=[rf_freq_data_job],
     )
     rf_job.always_run()
 
@@ -487,11 +512,10 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         ref_fasta,
         disk_size=small_disk,
     )
-    split_intervals_job.depends_on(combiner_job)
     intervals = split_intervals_job.intervals
 
     tabix_job = add_tabix_step(b, combined_vcf_path, medium_disk)
-    tabix_job.depends_on(combiner_job)
+    tabix_job.depends_on(mt_to_vcf_job)
 
     gnarly_output_vcfs = [
         add_gnarly_genotyper_on_vcf_step(
