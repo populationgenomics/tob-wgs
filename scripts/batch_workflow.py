@@ -390,7 +390,6 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     #     add_reblock_gvcfs_step(b, gvcf, small_disk).output_gvcf for gvcf in gvcfs
     # ]
     combiner_bucket = os.path.join(output_bucket, 'combiner')
-
     # subset_gvcf_jobs = [
     #     add_subset_noalt_step(
     #         b,
@@ -418,7 +417,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         b,
         f'run_python_script.py '
         f'combine_gvcfs.py '
-        f'--bucket-with-vcfs {input_bucket} '
+        f'--bucket-with-vcfs {combiner_bucket} '
         f'--qc-csv {join(input_bucket, qc_csv_fname)} '
         f'--out-mt {combined_mt_path} '
         f'--bucket {combiner_bucket}/work '
@@ -434,7 +433,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
         f'sample_qc.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--bucket {combiner_bucket} '
-        f'--out-hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
+        f'--out-hardfiltered-samples-ht {hard_filtered_samples_ht_path} '
         f'--out-meta-ht {meta_ht_path} '
         f'--hail-billing {billing_project} ',
         max_age='8h',
