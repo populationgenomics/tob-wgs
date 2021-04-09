@@ -402,7 +402,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     #     for sample, gvcf in zip(sample_names, reblocked_gvcfs)
     # ]
 
-    combined_mt_path = os.path.join(combiner_bucket, '100genomes.mt')
+    combined_mt_path = join(combiner_bucket, 'genomes.mt')
     # d = {
     #     'sample': sample_names,
     #     'population': ['' for _ in sample_names],
@@ -430,6 +430,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     )
     sample_qc_job = dataproc.hail_dataproc_job(
         b,
+        f'run_python_script.py '
         f'sample_qc.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--bucket {combiner_bucket} '
@@ -443,6 +444,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     )
     mt_to_vcf_job = dataproc.hail_dataproc_job(
         b,
+        f'run_python_script.py '
         f'mt_to_vcf.py --overwrite '
         f'--mt {combined_mt_path} '
         f'-o {combined_vcf_path} ',
@@ -477,6 +479,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     )
     rf_freq_data_job = dataproc.hail_dataproc_job(
         b,
+        f'run_python_script.py '
         f'generate_freq_data.py --overwrite '
         f'--mt {combined_mt_path} '
         f'--hard-filtered-samples-ht {hard_filtered_samples_ht_path} '
@@ -490,6 +493,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     )
     rf_job = dataproc.hail_dataproc_job(
         b,
+        f'run_python_script.py '
         f'random_forest.py --overwrite '
         f'--info-ht {info_ht_path} '
         f'--freq-ht {freq_ht_path} '
