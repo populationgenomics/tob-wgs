@@ -1,0 +1,199 @@
+---
+author: "Centre for Population Genomics"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    theme: cosmo
+    #css: ../style.css
+    toc: true
+    code_download: true
+    code_folding: show
+  rmdformats::material:
+    highlight: kate
+params:
+  title: "Concordance of SNPchip and WGS genotype calls"
+title: "`r paste(params$title)`"
+---
+
+```{r knitr_opts, include=F}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r load_pkgs}
+require(tidyverse)
+require(fs)
+require(glue)
+require(here)
+require(reactable)
+require(downloadthis)
+
+require(googleCloudStorageR)
+require(gargle)
+
+source("functions.R")
+
+# conda pkgs
+CONDA_ENV <- "~/conda/envs"
+CROSSMAP <- glue("{CONDA_ENV}/crossmap/bin/CrossMap.py")
+BCFTOOLS <- glue("{CONDA_ENV}/bioinf/bin/bcftools")
+```
+
+## Introduction
+
+Here we're exploring genotype concordance between SNPchip and WGS data for the
+TOB-WGS project. We have been provided with one multi-sample VCF file containing
+genotype calls from the SNPchip data, and several single-sample GVCF files
+containing genotype calls from the WGS data.
+
+```{r vars}
+test_bucket <- "cpg-tob-wgs-test"
+snpchip_raw_vcf <- here("nogit/data/snpchip/onek1k_pre_imputation_genotypes.vcf.bgz")
+```
+
+### WGS GVCF files
+
+- Let's first explore the contents of the `r test_bucket` bucket:
+
+```{r list_contents1, eval=FALSE}
+scope <-c("https://www.googleapis.com/auth/cloud-platform")
+token <- gargle::token_fetch(scopes = scope)
+googleCloudStorageR::gcs_auth(token = token)
+
+obj <-
+  googleCloudStorageR::gcs_list_objects(bucket = test_bucket,
+                                        detail = "summary") %>%
+  dplyr::as_tibble() %>%
+  dplyr::mutate(name = glue("gs://{test_bucket}/{name}"),
+                size = sub(" bytes", "", size), # else returns NA
+                size = fs::as_fs_bytes(size),
+                ftype = guess_file_type(name))
+
+saveRDS(obj, here("nogit/data/test_bucket/2021-04-11_list_contents.rds"))
+```
+
+```{r list_contents2}
+obj <- readRDS(here("nogit/data/test_bucket/2021-04-11_list_contents.rds"))
+gvcf <- dplyr::filter(obj, ftype == "GVCF")
+```
+
+- Total of **`r nrow(obj)`** files, consisting of **`r nrow(gvcf)`** GVCF files:
+
+```{r gvcf_list}
+gvcf_tab <- gvcf %>%
+  mutate(size = as.character(size),
+         n = dplyr::row_number()) %>%
+  select(n, name, size) %>%
+  reactable::reactable(
+    pagination = FALSE, highlight = TRUE, searchable = TRUE,
+    filterable = TRUE, bordered = TRUE,
+    fullWidth = FALSE,
+    columns = list(
+      n = colDef(minWidth = 60),
+      name = colDef(minWidth = 320),
+      size = colDef(minWidth = 80)
+    ))
+
+htmlwidgets::prependContent(
+  gvcf_tab,
+  htmltools::h2(class = "title", glue("GVCF files in {test_bucket}")))
+```
+
+```{r gvcf_file_sizes}
+theme_set(theme_bw())
+# ~11.7 GB of GVCFs
+gvcf %>%
+  dplyr::summarise(min = fs::as_fs_bytes(min(size)),
+                   max = fs::as_fs_bytes(max(size)),
+                   q1 = fs::as_fs_bytes(quantile(size, 0.25)),
+                   median = fs::as_fs_bytes(median(size)),
+                   q3 = fs::as_fs_bytes(quantile(size, 0.75)),
+                   total = fs::as_fs_bytes(sum(size)),
+                   .groups = "drop") %>%
+  tidyr::pivot_longer(cols = dplyr::everything()) %>%
+  knitr::kable(caption = "GVCF file size metrics.")
+
+ggplot(gvcf, aes(x = size)) +
+  geom_histogram(bins = 40, fill='#aec7e8', color='#1f77b4') +
+  scale_x_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()) +
+  coord_flip() +
+  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(gvcf)} samples."))
+```
+
+- There's also a CSV file with sample mappings:
+
+```{r read_csv_map, message=FALSE}
+sample_map <-
+  here("nogit/data/test_bucket/R_210315_BINKAN1_1K1KDNA_M001.csv") %>%
+  readr::read_csv()
+
+in_test <- gvcf %>%
+  mutate(nm = basename(name),
+         nm = sub(".g.vcf.gz", "", nm)) %>%
+  pull(nm)
+
+in_sample_map <- sample_map$sample.sample_name
+in_sample_map[!in_sample_map %in% in_test] # TOB1521 missing from test bucket
+```
+
+### SNPchip VCF file
+
+- Let's first look at the sample names and number of SNPs:
+
+```{r snpchip_stats, cache=TRUE}
+snpchip_samplenames <-
+  system(glue("{BCFTOOLS} query -l {snpchip_raw_vcf}"), intern = TRUE) %>%
+  dplyr::as_tibble() %>%
+  purrr::set_names("sample") %>%
+  dplyr::mutate(n = dplyr::row_number())
+
+snpchip_variants <-
+  system(glue("{BCFTOOLS} stats {snpchip_raw_vcf} | ",
+              "grep -v '^#' | ",
+              "grep 'number of records'"), intern = TRUE) %>%
+  str_split("\t")
+```
+
+- Total of **`r nrow(snpchip_samplenames)`** samples.
+- Total of **`r snpchip_variants[[1]][4]`** variants.
+
+```{r snpchip_samplenames2}
+snpchip_samplenames %>%
+  dplyr::slice(c(1:2, 154:157, (n() - 5):n())) %>%
+  knitr::kable()
+```
+
+- Explore genotypes:
+
+```{r read_vcf, eval=FALSE}
+d <- readr::read_tsv(snpchip_raw_vcf,
+                     col_types = c(.default = "c", POS = "d"),
+                     comment = "##")
+d %>%
+  select(chr = `#CHROM`, everything(), -c(QUAL, FILTER, INFO, FORMAT)) %>%
+  saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
+```
+
+```{r read_vcf2}
+d <- readRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
+var_counts <-
+  d %>%
+  dplyr::select(-c(chr:ALT)) %>%
+  purrr::map(table) %>%
+  purrr::map(as.data.frame) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::as_tibble()
+
+var_counts %>%
+  rename(GT = Var1, Count = Freq) %>%
+  ggplot(aes(y = Count, x = sample)) +
+  geom_point(shape = 21, colour = 'blue', fill = "#1f77b4") +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  facet_wrap(~GT, scales = "free") +
+  ggtitle("GT counts per sample",
+          subtitle = "Sample labels not shown on X axis for clarity.")
+```
