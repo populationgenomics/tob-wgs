@@ -7,4 +7,9 @@ import subprocess
 output = os.getenv('OUTPUT')
 assert output and output.startswith('gs://cpg-tob-wgs-archive/cram/batch')
 
-subprocess.run(['gsutil', 'mv', 'gs://cpg-tob-wgs-upload/*.cram*', output])
+# Make sure this isn't adding to a previous batch.
+assert (
+    subprocess.run(['gsutil', 'ls', f'{output}/*.cram*'], check=False).returncode == 1
+)
+
+subprocess.run(['gsutil', 'mv', 'gs://cpg-tob-wgs-upload/*.cram*', output], check=True)
