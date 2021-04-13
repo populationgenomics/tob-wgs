@@ -5,7 +5,7 @@ import os
 import subprocess
 
 output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-main/')
+assert output and output.startswith('gs://cpg-tob-wgs-main/gvcf/batch')
 
 subprocess.run(
     [

@@ -5,6 +5,6 @@ import os
 import subprocess
 
 output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-archive/')
+assert output and output.startswith('gs://cpg-tob-wgs-archive/cram/batch')
 
 subprocess.run(['gsutil', 'mv', 'gs://cpg-tob-wgs-upload/*.cram*', output])
