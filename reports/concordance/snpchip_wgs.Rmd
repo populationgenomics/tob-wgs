@@ -46,40 +46,45 @@ genotype calls from the SNPchip data, and several single-sample GVCF files
 containing genotype calls from the WGS data.
 
 ```{r vars}
-test_bucket <- "cpg-tob-wgs-test"
+project <- "cpg-tob-wgs"
+date <- "2021-04-13"
+dir_bucket <- here("nogit/data/bucket")
+bucket_test <- glue("{project}-test")
+bucket_main <- glue("{project}-main")
+bucket_upload <- glue("{project}-upload")
 snpchip_raw_vcf <- here("nogit/data/snpchip/onek1k_pre_imputation_genotypes.vcf.bgz")
 ```
 
 ### WGS GVCF files
 
-- Let's first explore the contents of the `r test_bucket` bucket:
+- Let's first explore the contents of the `r bucket_test` bucket:
 
 ```{r list_contents1, eval=FALSE}
 scope <-c("https://www.googleapis.com/auth/cloud-platform")
 token <- gargle::token_fetch(scopes = scope)
 googleCloudStorageR::gcs_auth(token = token)
 
-obj <-
-  googleCloudStorageR::gcs_list_objects(bucket = test_bucket,
-                                        detail = "summary") %>%
-  dplyr::as_tibble() %>%
-  dplyr::mutate(name = glue("gs://{test_bucket}/{name}"),
-                size = sub(" bytes", "", size), # else returns NA
-                size = fs::as_fs_bytes(size),
-                ftype = guess_file_type(name))
+test_obj <- my_gcs_list_obj(bucket_test)
+main_obj <- my_gcs_list_obj(bucket_main)
+upload_obj <- my_gcs_list_obj(bucket_upload)
 
-saveRDS(obj, here("nogit/data/test_bucket/2021-04-11_list_contents.rds"))
+save_obj_rds(test_obj, "test")
+save_obj_rds(main_obj, "main")
+save_obj_rds(upload_obj, "upload")
 ```
 
 ```{r list_contents2}
-obj <- readRDS(here("nogit/data/test_bucket/2021-04-11_list_contents.rds"))
-gvcf <- dplyr::filter(obj, ftype == "GVCF")
+test_obj <- read_obj_rds("test")
+main_obj <- read_obj_rds("main")
+upload_obj <- read_obj_rds("upload")
+test_gvcf <- dplyr::filter(test_obj, ftype == "GVCF")
 ```
 
-- Total of **`r nrow(obj)`** files, consisting of **`r nrow(gvcf)`** GVCF files:
+- Total of **`r nrow(test_obj)`** files, consisting of **`r nrow(test_gvcf)`**
+  GVCF files:
 
 ```{r gvcf_list}
-gvcf_tab <- gvcf %>%
+gvcf_tab <- test_gvcf %>%
   mutate(size = as.character(size),
          n = dplyr::row_number()) %>%
   select(n, name, size) %>%
@@ -95,13 +100,13 @@ gvcf_tab <- gvcf %>%
 
 htmlwidgets::prependContent(
   gvcf_tab,
-  htmltools::h2(class = "title", glue("GVCF files in {test_bucket}")))
+  htmltools::h2(class = "title", glue("GVCF files in {bucket_test}")))
 ```
 
 ```{r gvcf_file_sizes}
 theme_set(theme_bw())
 # ~11.7 GB of GVCFs
-gvcf %>%
+test_gvcf %>%
   dplyr::summarise(min = fs::as_fs_bytes(min(size)),
                    max = fs::as_fs_bytes(max(size)),
                    q1 = fs::as_fs_bytes(quantile(size, 0.25)),
@@ -110,26 +115,26 @@ gvcf %>%
                    total = fs::as_fs_bytes(sum(size)),
                    .groups = "drop") %>%
   tidyr::pivot_longer(cols = dplyr::everything()) %>%
-  knitr::kable(caption = "GVCF file size metrics.")
+  knitr::kable(caption = glue("{bucket_test} GVCF file size metrics."))
 
-ggplot(gvcf, aes(x = size)) +
+ggplot(test_gvcf, aes(x = size)) +
   geom_histogram(bins = 40, fill='#aec7e8', color='#1f77b4') +
   scale_x_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme(panel.grid.minor = element_blank(),
         panel.grid.major = element_blank()) +
   coord_flip() +
-  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(gvcf)} samples."))
+  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(test_gvcf)} samples in {bucket_test}."))
 ```
 
 - There's also a CSV file with sample mappings:
 
 ```{r read_csv_map, message=FALSE}
 sample_map <-
-  here("nogit/data/test_bucket/R_210315_BINKAN1_1K1KDNA_M001.csv") %>%
+  here("nogit/data/bucket/test/R_210315_BINKAN1_1K1KDNA_M001.csv") %>%
   readr::read_csv()
 
-in_test <- gvcf %>%
+in_test <- test_gvcf %>%
   mutate(nm = basename(name),
          nm = sub(".g.vcf.gz", "", nm)) %>%
   pull(nm)
@@ -137,6 +142,27 @@ in_test <- gvcf %>%
 in_sample_map <- sample_map$sample.sample_name
 in_sample_map[!in_sample_map %in% in_test] # TOB1521 missing from test bucket
 ```
+
+- Let's plot the QC metrics in this file:
+
+```{r csv_map_plots}
+sample_map %>%
+  select(sample = sample.sample_name,
+         freemix = raw_data.FREEMIX,
+         chimeras_pct = raw_data.PCT_CHIMERAS,
+         dup_pct = raw_data.PERCENT_DUPLICATION,
+         insert_size_med = raw_data.MEDIAN_INSERT_SIZE,
+         cov_med = raw_data.MEDIAN_COVERAGE) %>%
+  tidyr::pivot_longer(cols = -sample, names_to = "variable") %>%
+  ggplot(aes(x = value, y = sample)) +
+  geom_point(shape = 21, colour = 'blue', fill = "#1f77b4") +
+  facet_wrap(~variable, scales = "free", nrow = 1) +
+  theme(
+    strip.background = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
 
 ### SNPchip VCF file
 
@@ -147,17 +173,20 @@ snpchip_samplenames <-
   system(glue("{BCFTOOLS} query -l {snpchip_raw_vcf}"), intern = TRUE) %>%
   dplyr::as_tibble() %>%
   purrr::set_names("sample") %>%
-  dplyr::mutate(n = dplyr::row_number())
+  dplyr::mutate(n = dplyr::row_number(),
+                n = paste0(n, ")")) %>%
+  dplyr::select(n, sample)
 
 snpchip_variants <-
   system(glue("{BCFTOOLS} stats {snpchip_raw_vcf} | ",
               "grep -v '^#' | ",
               "grep 'number of records'"), intern = TRUE) %>%
-  str_split("\t")
+  str_split("\t") %>%
+  purrr::pluck(1, 4)
 ```
 
 - Total of **`r nrow(snpchip_samplenames)`** samples.
-- Total of **`r snpchip_variants[[1]][4]`** variants.
+- Total of **`r snpchip_variants`** variants.
 
 ```{r snpchip_samplenames2}
 snpchip_samplenames %>%
@@ -168,32 +197,30 @@ snpchip_samplenames %>%
 - Explore genotypes:
 
 ```{r read_vcf, eval=FALSE}
-d <- readr::read_tsv(snpchip_raw_vcf,
+snp <- readr::read_tsv(snpchip_raw_vcf,
                      col_types = c(.default = "c", POS = "d"),
                      comment = "##")
-d %>%
+snp %>%
   select(chr = `#CHROM`, everything(), -c(QUAL, FILTER, INFO, FORMAT)) %>%
   saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
 ```
 
 ```{r read_vcf2}
-d <- readRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
+snp <- readRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
 var_counts <-
-  d %>%
+  snp %>%
   dplyr::select(-c(chr:ALT)) %>%
-  purrr::map(table) %>%
-  purrr::map(as.data.frame) %>%
+  purrr::map(~as.data.frame(table(.x))) %>%
   dplyr::bind_rows(.id = "sample") %>%
   dplyr::as_tibble()
 
 var_counts %>%
-  rename(GT = Var1, Count = Freq) %>%
+  rename(GT = .x, Count = Freq) %>%
   ggplot(aes(y = Count, x = sample)) +
   geom_point(shape = 21, colour = 'blue', fill = "#1f77b4") +
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
   facet_wrap(~GT, scales = "free") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   ggtitle("GT counts per sample",
           subtitle = "Sample labels not shown on X axis for clarity.")
 ```
