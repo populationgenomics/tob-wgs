@@ -34,7 +34,6 @@ source("functions.R")
 
 # conda pkgs
 CONDA_ENV <- "~/conda/envs"
-CROSSMAP <- glue("{CONDA_ENV}/crossmap/bin/CrossMap.py")
 BCFTOOLS <- glue("{CONDA_ENV}/bioinf/bin/bcftools")
 ```
 
@@ -245,4 +244,33 @@ var_counts %>%
 
 ```{r gt_counts}
 knitr::include_graphics("gt_counts_per_sample.png")
+```
+
+## Concordance
+
+- First we need to coordinate-sort the SNPchip VCF file, and convert to
+  hg19 from GRCh37:
+
+```{bash sort_hg19, eval=FALSE}
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/onek1k_pre_imputation_genotypes.vcf.bgz"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_hg19.vcf.gz"
+BCFTOOLS="${HOME}/conda/envs/bioinf/bin/bcftools"
+BGZIP="${HOME}/conda/envs/bioinf/bin/bgzip"
+
+cat <(${BCFTOOLS} view -h ${INPUT_VCF} | sed 's/contig=<ID=/contig=<ID=chr/') \
+  <(${BCFTOOLS} view -H ${INPUT_VCF} | sort -k1n,1 -k2n,2 | awk '{ print "chr" $0 }') | \
+  ${BGZIP} > ${OUTPUT_VCF}
+```
+
+- Next we can use [Crossmap](http://crossmap.sourceforge.net) to convert the
+  hg19 coordinates to GRCh38:
+
+```{bash crossmap, eval=FALSE}
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_hg19.vcf.gz"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_GRCh38.vcf"
+CHAIN="${HOME}/projects/tob-wgs/nogit/data/snpchip/hg19ToHg38.over.chain.gz"
+FASTA38="${HOME}/projects/tob-wgs/nogit/data/snpchip/Homo_sapiens_assembly38.fasta"
+CROSSMAP="${HOME}/conda/envs/crossmap/bin/CrossMap.py"
+
+${CROSSMAP} vcf ${CHAIN} ${INPUT_VCF} ${FASTA38} ${OUTPUT_VCF}
 ```
