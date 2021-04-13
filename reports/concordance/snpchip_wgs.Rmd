@@ -77,7 +77,16 @@ save_obj_rds(upload_obj, "upload")
 test_obj <- read_obj_rds("test")
 main_obj <- read_obj_rds("main")
 upload_obj <- read_obj_rds("upload")
-test_gvcf <- dplyr::filter(test_obj, ftype == "GVCF")
+test_gvcf <-
+  filter(test_obj, ftype == "GVCF") %>%
+  mutate(nm = basename(name),
+         nm = sub(".g.vcf.gz", "", nm))
+main_gvcf <- filter(main_obj, ftype == "GVCF") %>%
+  mutate(nm = basename(name),
+         nm = sub(".g.vcf.gz", "", nm))
+upload_gvcf <- filter(upload_obj, ftype == "GVCF") %>%
+  mutate(nm = basename(name),
+         nm = sub(".g.vcf.gz", "", nm))
 ```
 
 - Total of **`r nrow(test_obj)`** files, consisting of **`r nrow(test_gvcf)`**
@@ -107,7 +116,7 @@ htmlwidgets::prependContent(
 theme_set(theme_bw())
 # ~11.7 GB of GVCFs
 test_gvcf %>%
-  dplyr::summarise(min = fs::as_fs_bytes(min(size)),
+  summarise(min = fs::as_fs_bytes(min(size)),
                    max = fs::as_fs_bytes(max(size)),
                    q1 = fs::as_fs_bytes(quantile(size, 0.25)),
                    median = fs::as_fs_bytes(median(size)),
@@ -125,6 +134,15 @@ ggplot(test_gvcf, aes(x = size)) +
         panel.grid.major = element_blank()) +
   coord_flip() +
   ggtitle(glue::glue("GVCF file size (bytes) for {nrow(test_gvcf)} samples in {bucket_test}."))
+
+ggplot(upload_gvcf, aes(x = size)) +
+  geom_histogram(bins = 40, fill='#aec7e8', color='#1f77b4') +
+  scale_x_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()) +
+  coord_flip() +
+  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(upload_gvcf)} samples in {bucket_upload}."))
 ```
 
 - There's also a CSV file with sample mappings:
@@ -145,7 +163,7 @@ in_sample_map[!in_sample_map %in% in_test] # TOB1521 missing from test bucket
 
 - Let's plot the QC metrics in this file:
 
-```{r csv_map_plots}
+```{r csv_map_plots, fig.width=14}
 sample_map %>%
   select(sample = sample.sample_name,
          freemix = raw_data.FREEMIX,
@@ -173,9 +191,9 @@ snpchip_samplenames <-
   system(glue("{BCFTOOLS} query -l {snpchip_raw_vcf}"), intern = TRUE) %>%
   dplyr::as_tibble() %>%
   purrr::set_names("sample") %>%
-  dplyr::mutate(n = dplyr::row_number(),
+  mutate(n = dplyr::row_number(),
                 n = paste0(n, ")")) %>%
-  dplyr::select(n, sample)
+  select(n, sample)
 
 snpchip_variants <-
   system(glue("{BCFTOOLS} stats {snpchip_raw_vcf} | ",
@@ -205,11 +223,11 @@ snp %>%
   saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
 ```
 
-```{r read_vcf2}
+```{r read_vcf2, eval=FALSE}
 snp <- readRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
 var_counts <-
   snp %>%
-  dplyr::select(-c(chr:ALT)) %>%
+  select(-c(chr:ALT)) %>%
   purrr::map(~as.data.frame(table(.x))) %>%
   dplyr::bind_rows(.id = "sample") %>%
   dplyr::as_tibble()
@@ -223,4 +241,8 @@ var_counts %>%
         axis.ticks.x=element_blank()) +
   ggtitle("GT counts per sample",
           subtitle = "Sample labels not shown on X axis for clarity.")
+```
+
+```{r gt_counts}
+knitr::include_graphics("gt_counts_per_sample.png")
 ```
