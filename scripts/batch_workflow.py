@@ -27,12 +27,13 @@ and <output_bucket>/plot-indels-recal.Rscript
 import os
 from os.path import join
 from typing import List
+import subprocess
 import logging
 import click
 import hailtop.batch as hb
+import hail as hl
 from hailtop.batch.job import Job
 from analysis_runner import dataproc
-from joint_calling import utils
 
 logger = logging.getLogger('joint-calling')
 logger.setLevel('INFO')
@@ -339,7 +340,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stateme
     # TODO: merge with existing data
     # TODO: fix impute_type
 
-    samples_ht = utils.find_inputs(input_buckets)
+    samples_ht = find_inputs(input_buckets)
     samples_ht_path = join(output_bucket, 'samples.ht')
     samples_ht.write(samples_ht_path)
     logger.info(f'Saved metadata to {samples_ht_path}')
@@ -1597,6 +1598,86 @@ def add_gather_variant_calling_metrics_step(
     if output_path_prefix:
         b.write_output(j.metrics, output_path_prefix)
     return j
+
+
+def find_inputs(input_buckets: List[str]) -> hl.Table:
+    """
+    Read the inputs assuming a standard CPG storage structure.
+    :param input_buckets: buckets to find GVCFs and CSV metadata files.
+    :return: a Table with the following structure:
+        s (key)
+        population
+        gvcf
+        freemix
+        pct_chimeras
+        duplication
+        median_insert_size
+        mean_coverage
+    """
+    gvcf_paths: List[str] = []
+    for ib in input_buckets:
+        cmd = f'gsutil ls \'{ib}/*.g.vcf.gz\''
+        gvcf_paths.extend(
+            line.strip()
+            for line in subprocess.check_output(cmd, shell=True).decode().split()
+        )
+
+    qc_csvs: List[str] = []
+    for ib in input_buckets:
+        cmd = f'gsutil ls \'{ib}/*.csv\''
+        qc_csvs.extend(
+            line.strip()
+            for line in subprocess.check_output(cmd, shell=True).decode().split()
+        )
+
+    ht: hl.Table = None
+    for qc_csv in qc_csvs:
+        single_ht = hl.import_table(qc_csv, delimiter=',', impute=True)
+        # sample.id,sample.sample_name,sample.flowcell_lane,sample.library_id,sample.platform,sample.centre,sample.reference_genome,raw_data.FREEMIX,raw_data.PlinkSex,raw_data.PCT_CHIMERAS,raw_data.PERCENT_DUPLICATION,raw_data.MEDIAN_INSERT_SIZE,raw_data.MEDIAN_COVERAGE
+        # 613,TOB1529,ILLUMINA,HVTVGDSXY.1-2-3-4,LP9000039-NTP_H04,KCCG,hg38,0.0098939700,F(-1),0.023731,0.151555,412.0,31.0
+        # 609,TOB1653,ILLUMINA,HVTVGDSXY.1-2-3-4,LP9000039-NTP_F03,KCCG,hg38,0.0060100100,F(-1),0.024802,0.165634,452.0,33.0
+        # 604,TOB1764,ILLUMINA,HVTV7DSXY.1-2-3-4,LP9000037-NTP_B02,KCCG,hg38,0.0078874400,F(-1),0.01684,0.116911,413.0,43.0
+        # 633,TOB1532,ILLUMINA,HVTVGDSXY.1-2-3-4,LP9000039-NTP_C05,KCCG,hg38,0.0121946000,F(-1),0.024425,0.151094,453.0,37.0
+        single_ht = single_ht.select(
+            s=single_ht['sample.sample_name'],
+            freemix=single_ht['raw_data.FREEMIX'],
+            pct_chimeras=single_ht['raw_data.PCT_CHIMERAS'],
+            duplication=single_ht['raw_data.PERCENT_DUPLICATION'],
+            median_insert_size=single_ht['raw_data.MEDIAN_INSERT_SIZE'],
+            mean_coverage=single_ht['raw_data.MEDIAN_COVERAGE'],
+            population='EUR',
+            gvcf='',
+        ).key_by('s')
+        if ht is None:
+            ht = single_ht
+        else:
+            ht = ht.union(single_ht)
+    ht = ht.distinct()
+
+    # Checking 1-to-1 match of sample names to GVCFs
+    sample_names = ht.s.collect()
+    for sn in sample_names:
+        matching_gvcfs = [gp for gp in gvcf_paths if sn in gp]
+        if len(matching_gvcfs) > 1:
+            logging.warning(
+                f'Multiple GVCFs found for the sample {sn}:' f'{matching_gvcfs}'
+            )
+        elif len(matching_gvcfs) == 0:
+            logging.warning(f'No GVCFs found for the sample {sn}')
+
+    # Checking 1-to-1 match of GVCFs to sample names, and fillign up a dict
+    for gp in gvcf_paths:
+        matching_sn = [sn for sn in sample_names if sn in gp]
+        if len(matching_sn) > 1:
+            logging.warning(
+                f'Multiple samples found for the GVCF {gp}:' f'{matching_sn}'
+            )
+        elif len(matching_sn) == 0:
+            logging.warning(f'No samples found for the GVCF {gp}')
+        else:
+            ht.filter(ht.s == matching_sn[0]).annotate(gvcf=gp)
+    ht = ht.filter(ht.gvcf != '')
+    return ht
 
 
 if __name__ == '__main__':
