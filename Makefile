@@ -3,6 +3,7 @@ joint-calling:
 	cd ../joint-calling
 	-(git add --all && git commit -m 'WIP' && git push)
 	cd ../tob-wgs/joint-calling
+	pwd
 	git pull --rebase
 	cd ..
 	git add joint-calling
