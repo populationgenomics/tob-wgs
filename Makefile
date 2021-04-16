@@ -1,9 +1,9 @@
 .PHONY: joint-calling
 joint-calling:
 	cd ../joint-calling
-	git add --all
-	git commit -m 'WIP'
-	git push
+	-git add --all
+	-git commit -m 'WIP'
+	-git push
 	cd ../tob-wgs/joint-calling
 	git pull --rebase
 	git push
