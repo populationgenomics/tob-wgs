@@ -27,7 +27,7 @@ run_cmd(
     + f'--version {version} '
     + ('--batch 0 ' if is_test else '--batch 0 --batch 1 ')
     + '--from '
-    + ('test ' if is_test else ' main')
+    + ('test ' if is_test else 'main ')
     + '--to '
     + ('temporary ' if is_test else ' analysis')
     + '--keep-scratch '
