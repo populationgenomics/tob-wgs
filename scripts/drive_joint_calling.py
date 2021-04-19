@@ -29,7 +29,7 @@ run_cmd(
     + '--from '
     + ('test ' if is_test else 'main ')
     + '--to '
-    + ('temporary ' if is_test else 'analysis ')
+    + ('temporary ' if is_test else 'temporary ')
     + '--keep-scratch '
     + '--billing-project tob-wgs '
 )
