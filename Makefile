@@ -1,5 +1,11 @@
 .default: test
 
+.PHONY: test
+test: jc_pkg jc_submodule sleep jc_test
+
+.PHONY: full
+full: jc_pkg jc_submodule sleep jc_full
+
 .PHONY: jc_pkg
 jc_pkg:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' && git push)
@@ -22,9 +28,3 @@ jc_test:
 .PHONY: jc_full
 jc_full:
 	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling-full" --description "joint calling" --access-level test scripts/drive_joint_calling.py full v1
-
-.PHONY: test
-test: jc_pkg jc_submodule sleep jc_test
-
-.PHONY: full
-full: jc_pkg jc_submodule sleep jc_full
