@@ -9,7 +9,7 @@ full:
 	jc_pkg jc_submodule sleep jc_full
 
 .PHONY: jc_pkg
-pkg:
+jc_pkg:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' && git push)
 	cd ../joint-calling && make
 
