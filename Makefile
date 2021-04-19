@@ -1,12 +1,12 @@
 .default: test
 
 .PHONY: test
-test: jc_pkg jc_submodule sleep jc_test
+test: jc_submodule sleep jc_test
 
 .PHONY: full
-full: jc_pkg jc_submodule sleep jc_full
+full: jc_submodule sleep jc_full
 
-.PHONY: jc_pkg
+.PHONY: pkg
 jc_pkg:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' && git push)
 	cd ../joint-calling && make
