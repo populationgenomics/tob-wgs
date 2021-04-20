@@ -1,12 +1,12 @@
-# Tasmanian Ophthalmic Biobank Whole Genome Sequencing
+# Tasmanian Ophthalmic Biobank (TOB) Whole Genome Sequencing
 
 This project will involve analysis of 1,000 samples from the
 [Tasmanian Ophthalmic Biobank](https://www.menzies.utas.edu.au/research/research-centres/tasmanian-ophthalmic-biobank).
 
-Whole-genome sequencing (WGS), genome-wide SNP array genotyping (SNPchip), and
-single-cell blood RNA sequencing (scRNA-seq (~1,000 cells/individual)) have been
-performed for these samples. Our primary focus will be the analysis of the WGS
-and SNPchip data.
+Whole-genome sequencing (**WGS**), genome-wide SNP array genotyping
+(**SNPchip**), and single-cell blood RNA sequencing (**scRNA-seq** (~1,000
+cells/individual)) have been performed for these samples. Our primary focus will
+be the analysis of the WGS and SNPchip data.
 
 The project is a collaboration with the following groups:
 
