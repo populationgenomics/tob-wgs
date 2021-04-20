@@ -29,10 +29,10 @@ my_gcs_list_obj <- function(b) {
                   ftype = guess_file_type(name))
 }
 
-save_obj_rds <- function(o, b) {
-  saveRDS(o, glue("{dir_bucket}/{b}/{date}_list_contents.rds"))
+save_obj_rds <- function(o, b, dir, date) {
+  saveRDS(o, glue("{dir}/{b}/{date}_list_contents.rds"))
 }
 
-read_obj_rds <- function(b) {
-  readRDS(glue("{dir_bucket}/{b}/{date}_list_contents.rds"))
+read_obj_rds <- function(b, dir, date) {
+  readRDS(glue("{dir}/{b}/{date}_list_contents.rds"))
 }

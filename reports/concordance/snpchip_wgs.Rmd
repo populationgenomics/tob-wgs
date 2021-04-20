@@ -26,15 +26,8 @@ require(glue)
 require(here)
 require(reactable)
 require(downloadthis)
-
-require(googleCloudStorageR)
-require(gargle)
-
-source("functions.R")
-
-# conda pkgs
-CONDA_ENV <- "~/conda/envs"
-BCFTOOLS <- glue("{CONDA_ENV}/bioinf/bin/bcftools")
+require(janitor)
+require(plotly)
 ```
 
 ## Introduction
@@ -44,206 +37,211 @@ TOB-WGS project. We have been provided with one multi-sample VCF file containing
 genotype calls from the SNPchip data, and several single-sample GVCF files
 containing genotype calls from the WGS data.
 
-```{r vars}
-project <- "cpg-tob-wgs"
-date <- "2021-04-13"
-dir_bucket <- here("nogit/data/bucket")
-bucket_test <- glue("{project}-test")
-bucket_main <- glue("{project}-main")
-bucket_upload <- glue("{project}-upload")
-snpchip_raw_vcf <- here("nogit/data/snpchip/onek1k_pre_imputation_genotypes.vcf.bgz")
-```
-
-### WGS GVCF files
-
-- Let's first explore the contents of the `r bucket_test` bucket:
-
-```{r list_contents1, eval=FALSE}
-scope <-c("https://www.googleapis.com/auth/cloud-platform")
-token <- gargle::token_fetch(scopes = scope)
-googleCloudStorageR::gcs_auth(token = token)
-
-test_obj <- my_gcs_list_obj(bucket_test)
-main_obj <- my_gcs_list_obj(bucket_main)
-upload_obj <- my_gcs_list_obj(bucket_upload)
-
-save_obj_rds(test_obj, "test")
-save_obj_rds(main_obj, "main")
-save_obj_rds(upload_obj, "upload")
-```
-
-```{r list_contents2}
-test_obj <- read_obj_rds("test")
-main_obj <- read_obj_rds("main")
-upload_obj <- read_obj_rds("upload")
-test_gvcf <-
-  filter(test_obj, ftype == "GVCF") %>%
-  mutate(nm = basename(name),
-         nm = sub(".g.vcf.gz", "", nm))
-main_gvcf <- filter(main_obj, ftype == "GVCF") %>%
-  mutate(nm = basename(name),
-         nm = sub(".g.vcf.gz", "", nm))
-upload_gvcf <- filter(upload_obj, ftype == "GVCF") %>%
-  mutate(nm = basename(name),
-         nm = sub(".g.vcf.gz", "", nm))
-```
-
-- Total of **`r nrow(test_obj)`** files, consisting of **`r nrow(test_gvcf)`**
-  GVCF files:
-
-```{r gvcf_list}
-gvcf_tab <- test_gvcf %>%
-  mutate(size = as.character(size),
-         n = dplyr::row_number()) %>%
-  select(n, name, size) %>%
-  reactable::reactable(
-    pagination = FALSE, highlight = TRUE, searchable = TRUE,
-    filterable = TRUE, bordered = TRUE,
-    fullWidth = FALSE,
-    columns = list(
-      n = colDef(minWidth = 60),
-      name = colDef(minWidth = 320),
-      size = colDef(minWidth = 80)
-    ))
-
-htmlwidgets::prependContent(
-  gvcf_tab,
-  htmltools::h2(class = "title", glue("GVCF files in {bucket_test}")))
-```
-
-```{r gvcf_file_sizes}
-theme_set(theme_bw())
-# ~11.7 GB of GVCFs
-test_gvcf %>%
-  summarise(min = fs::as_fs_bytes(min(size)),
-                   max = fs::as_fs_bytes(max(size)),
-                   q1 = fs::as_fs_bytes(quantile(size, 0.25)),
-                   median = fs::as_fs_bytes(median(size)),
-                   q3 = fs::as_fs_bytes(quantile(size, 0.75)),
-                   total = fs::as_fs_bytes(sum(size)),
-                   .groups = "drop") %>%
-  tidyr::pivot_longer(cols = dplyr::everything()) %>%
-  knitr::kable(caption = glue("{bucket_test} GVCF file size metrics."))
-
-ggplot(test_gvcf, aes(x = size)) +
-  geom_histogram(bins = 40, fill='#aec7e8', color='#1f77b4') +
-  scale_x_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank()) +
-  coord_flip() +
-  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(test_gvcf)} samples in {bucket_test}."))
-
-ggplot(upload_gvcf, aes(x = size)) +
-  geom_histogram(bins = 40, fill='#aec7e8', color='#1f77b4') +
-  scale_x_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank()) +
-  coord_flip() +
-  ggtitle(glue::glue("GVCF file size (bytes) for {nrow(upload_gvcf)} samples in {bucket_upload}."))
-```
-
-- There's also a CSV file with sample mappings:
-
-```{r read_csv_map, message=FALSE}
-sample_map <-
-  here("nogit/data/bucket/test/R_210315_BINKAN1_1K1KDNA_M001.csv") %>%
-  readr::read_csv()
-
-in_test <- test_gvcf %>%
-  mutate(nm = basename(name),
-         nm = sub(".g.vcf.gz", "", nm)) %>%
-  pull(nm)
-
-in_sample_map <- sample_map$sample.sample_name
-in_sample_map[!in_sample_map %in% in_test] # TOB1521 missing from test bucket
-```
-
-- Let's plot the QC metrics in this file:
-
-```{r csv_map_plots, fig.width=14}
-sample_map %>%
-  select(sample = sample.sample_name,
-         freemix = raw_data.FREEMIX,
-         chimeras_pct = raw_data.PCT_CHIMERAS,
-         dup_pct = raw_data.PERCENT_DUPLICATION,
-         insert_size_med = raw_data.MEDIAN_INSERT_SIZE,
-         cov_med = raw_data.MEDIAN_COVERAGE) %>%
-  tidyr::pivot_longer(cols = -sample, names_to = "variable") %>%
-  ggplot(aes(x = value, y = sample)) +
-  geom_point(shape = 21, colour = 'blue', fill = "#1f77b4") +
-  facet_wrap(~variable, scales = "free", nrow = 1) +
-  theme(
-    strip.background = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-```
-
-
 ### SNPchip VCF file
 
-- Let's first look at the sample names and number of SNPs:
+The SNPchip VCF file was provided in 2021-Mar-17 along with the original
+genotype call files. The VCF file was generated using GenomeStudio and
+its Plink plugin. The GRCh37 human genome assembly was used.
+
+#### Sample names
+
+The TOB sample IDs were originally given to the participants at the time of
+blood collection. The genotype platform generated new IDs for the cohort which
+are required in the Plink files (Family and Individual IDs (FID and IID)),
+and a new key ID was generated by combining `FID_IID` (e.g. `1_1`, `2_2`).
+
+We can map the SNPchip sample names to TOB IDs using the spreadsheet provided
+in 2021-Apr-15 by GWCCG.
+
+```{r vars}
+chip_vcf_raw <- here("nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes_2021-Mar-17.vcf.gz")
+chip_ids_file <- here("nogit/data/snpchip/raw/OneK1K_sample_IDs_2021-Apr-15.xlsx")
+```
 
 ```{r snpchip_stats, cache=TRUE}
-snpchip_samplenames <-
-  system(glue("{BCFTOOLS} query -l {snpchip_raw_vcf}"), intern = TRUE) %>%
+BCFTOOLS <- glue("~/conda/envs/bioinf/bin/bcftools")
+
+chip_sample_nms <-
+  system(glue("{BCFTOOLS} query -l {chip_vcf_raw}"), intern = TRUE) %>%
   dplyr::as_tibble() %>%
   purrr::set_names("sample") %>%
-  mutate(n = dplyr::row_number(),
-                n = paste0(n, ")")) %>%
-  select(n, sample)
+  mutate(vcf_ind = dplyr::row_number(),
+         vcf_ind = paste0(vcf_ind, ".")) %>%
+  select(vcf_ind, sample)
 
-snpchip_variants <-
-  system(glue("{BCFTOOLS} stats {snpchip_raw_vcf} | ",
+chip_varcount <-
+  system(glue("{BCFTOOLS} stats {chip_vcf_raw} | ",
               "grep -v '^#' | ",
               "grep 'number of records'"), intern = TRUE) %>%
-  str_split("\t") %>%
+  stringr::str_split("\t") %>%
   purrr::pluck(1, 4)
 ```
 
-- Total of **`r nrow(snpchip_samplenames)`** samples.
-- Total of **`r snpchip_variants`** variants.
+- SNPchip VCF stats:
+  - Total of **`r nrow(chip_sample_nms)`** samples.
+  - Total of **`r chip_varcount`** variants.
 
-```{r snpchip_samplenames2}
-snpchip_samplenames %>%
+- We note that most of the sample names have different FID and IID from
+  column 156 onwards, and the final 5 samples have a `_2` suffix:
+
+```{r snpchip_sample_nms_slice}
+chip_sample_nms %>%
   dplyr::slice(c(1:2, 154:157, (n() - 5):n())) %>%
   knitr::kable()
 ```
 
-- Explore genotypes:
+- Let's examine the sample IDs provided:
+
+```{r snpchip_id2tob_map_explore}
+chip_id2tob <-
+  chip_ids_file %>%
+  readxl::read_excel(skip = 1) %>%
+  janitor::clean_names() %>%
+  mutate(x1 = person == glue("{index_id_fid}_{internal_id_iid}"),
+         tob_id2 = formatC(tob_id, width = 5, format = "d", flag = "0"),
+         tob_id2 = glue("TOB-{tob_id2}"),
+         x2 = tob_id2 == tob_dark_id,
+         tob_id_final = glue("TOB{tob_id}"))
+
+# is 'person' equal to 'FID_IID'?
+chip_id2tob %>% count(x1)
+# is 'tob_dark_id' equal to TOB-0XXXX?
+chip_id2tob %>% count(x2) # 31 FALSE
+# which x2s are FALSE?
+chip_id2tob %>% filter(!x2)
+# So TOB-01856 should be TOB-01857, and the rest simply miss a zero prefix.
+chip_id2tob %>%
+  filter(!x2) %>%
+  select(person, tob_dark_id, tob_id2) %>%
+  mutate(tob_id3 = sub("-0", "-", tob_id2),
+         x3 = tob_id3 == tob_dark_id) %>%
+  filter(!x3)
+
+# all samples in excel file correspond to a SNPchip VCF sample
+table(chip_id2tob$person %in% chip_sample_nms$sample)
+# 51 samples in SNPchip VCF aren't in excel file
+table(chip_sample_nms$sample %in% chip_id2tob$person)
+chip_sample_nms %>% filter(!sample %in% chip_id2tob$person)
+```
+
+- Apart from 51 samples that do not have a TOB ID, now let's just get a clean map:
+
+```{r chip_id2tob_prep}
+chip_sample2tobid <-
+  chip_sample_nms %>%
+  dplyr::left_join(chip_id2tob, by = c("sample" = "person")) %>%
+  dplyr::select(vcf_ind, sample_id = sample, tob_id = tob_id_final)
+
+chip_sample2tobid
+
+# confirm 51 missing values
+map_dbl(chip_sample2tobid, ~sum(is.na(.x)))
+```
+
+- Let's write the TSV locally:
+
+```{r chip_id2tob_write}
+readr::write_tsv(
+  x = chip_sample2tobid,
+  file = here("nogit/data/snpchip/processed/sample2tobid_2021-Apr-20.tsv"))
+```
+
+### Genotypes
 
 ```{r read_vcf, eval=FALSE}
-snp <- readr::read_tsv(snpchip_raw_vcf,
-                     col_types = c(.default = "c", POS = "d"),
-                     comment = "##")
-snp %>%
-  select(chr = `#CHROM`, everything(), -c(QUAL, FILTER, INFO, FORMAT)) %>%
-  saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
+geno <- data.table::fread(cmd = glue("zgrep -v '^##' {chip_vcf_raw}"),
+                          sep = "\t", na.strings = ".", verbose = TRUE,
+                          drop = c("QUAL", "FILTER", "INFO", "FORMAT"),
+                          data.table = FALSE)
+saveRDS(geno, here("nogit/data/snpchip/processed/2021-04-20_gt_tibble.rds"))
 ```
 
 ```{r read_vcf2, eval=FALSE}
-snp <- readRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
-var_counts <-
-  snp %>%
-  select(-c(chr:ALT)) %>%
-  purrr::map(~as.data.frame(table(.x))) %>%
-  dplyr::bind_rows(.id = "sample") %>%
-  dplyr::as_tibble()
+start_time <- Sys.time()
+# 1min40sec
+geno <- readRDS(here("nogit/data/snpchip/processed/2021-04-20_gt_tibble.rds"))
+end_time <- Sys.time()
+end_time - start_time
 
-var_counts %>%
-  rename(GT = .x, Count = Freq) %>%
-  ggplot(aes(y = Count, x = sample)) +
-  geom_point(shape = 21, colour = 'blue', fill = "#1f77b4") +
-  facet_wrap(~GT, scales = "free") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  ggtitle("GT counts per sample",
-          subtitle = "Sample labels not shown on X axis for clarity.")
+d <- geno %>%
+  select(-c(POS:ALT)) %>%
+  rename(chr = `#CHROM`) %>%
+  dplyr::as_tibble()
 ```
 
-```{r gt_counts}
-knitr::include_graphics("gt_counts_per_sample.png")
+```{r plot_prep, eval=FALSE}
+# Instead of computing on full dataset,
+# compute by chromosome (non-parallel) first.
+count_gt_per_chrom <- function(chrom) {
+  d %>%
+    filter(chr %in% chrom) %>%
+    tidyr::pivot_longer(-chr) %>%
+    dplyr::group_by(chr, name) %>%
+    dplyr::count(value)
+}
+
+count_per_chrom <- purrr::map_df(1:22, ~count_gt_per_chrom(.x))
+
+# join with sample2tobid map
+chip_sample2tobid <-
+  here("nogit/data/snpchip/processed/sample2tobid_2021-Apr-20.tsv") %>%
+  readr::read_tsv(col_types = cols(.default = "c"))
+
+count_per_chrom <-
+  count_per_chrom %>%
+  dplyr::ungroup() %>%
+  dplyr::rename(Sample = name, GT = value, Count = n) %>%
+  dplyr::left_join(chip_sample2tobid, by = c("Sample" = "sample_id"))
+
+is_outlier <- function(x, r = 1.5) {
+  (x < quantile(x, 0.25) - r * IQR(x)) |
+    (x > quantile(x, 0.75) + r * IQR(x))
+}
+
+theme_set(theme_bw())
+```
+
+```{r gt_plotting, eval=FALSE}
+count_per_chrom %>%
+  group_by(chr, GT) %>%
+  mutate(
+    outlier = if_else(is_outlier(Count, 6), glue("{tob_id} ({Count})"), NA_character_)) %>%
+  ungroup() %>%
+  ggplot(aes(x = "", y = Count)) +
+  geom_violin() +
+  coord_flip() +
+  facet_grid(chr~GT, scales = "free") +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()) +
+  ggtitle(glue("SNPchip GT counts per chromosome for {nrow(count(count_per_chrom, Sample))} samples.")) +
+  ggsave("gt_count_violin_per_chrom.png", width = 12, height = 25)
+
+pos <- ggplot2::position_jitter(width = 0.20, height = 0, seed = 123)
+
+count_per_chrom %>%
+  group_by(GT, Sample) %>%
+  summarise(Count = sum(Count), .groups = "drop_last") %>%
+  dplyr::left_join(chip_sample2tobid, by = c("Sample" = "sample_id")) %>%
+  mutate(
+    outlier = if_else(is_outlier(Count, 6), glue("{tob_id} ({Count})"), NA_character_)) %>%
+  ggplot(aes(x = "", y = Count)) +
+  geom_violin() +
+  geom_point(position = pos, shape = 21, colour = "blue", fill = "lightblue") +
+  ggrepel::geom_text_repel(position = pos, aes(label = outlier), na.rm = TRUE, hjust = -0.3) +
+  facet_wrap(~GT, scales = "free") +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()) +
+  ggtitle(glue("SNPchip GT counts for {nrow(count(count_per_chrom, Sample))} samples.")) +
+  ggsave("gt_count_violin.png", width = 10, height = 12)
+```
+
+```{r gt_plots}
+knitr::include_graphics("gt_count_violin_per_chrom.png")
+knitr::include_graphics("gt_count_violin.png")
 ```
 
 ## Concordance
@@ -267,10 +265,37 @@ cat <(${BCFTOOLS} view -h ${INPUT_VCF} | sed 's/contig=<ID=/contig=<ID=chr/') \
 
 ```{bash crossmap, eval=FALSE}
 INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_hg19.vcf.gz"
-OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_GRCh38.vcf"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38.vcf"
 CHAIN="${HOME}/projects/tob-wgs/nogit/data/snpchip/hg19ToHg38.over.chain.gz"
 FASTA38="${HOME}/projects/tob-wgs/nogit/data/snpchip/Homo_sapiens_assembly38.fasta"
 CROSSMAP="${HOME}/conda/envs/crossmap/bin/CrossMap.py"
 
 ${CROSSMAP} vcf ${CHAIN} ${INPUT_VCF} ${FASTA38} ${OUTPUT_VCF}
+```
+
+- Sort the converted VCF:
+
+```{bash sort_crossmap, eval=FALSE}
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38.vcf"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38_sorted.vcf.gz"
+BCFTOOLS="${HOME}/conda/envs/bioinf/bin/bcftools"
+BGZIP="${HOME}/conda/envs/bioinf/bin/bgzip"
+
+cat <(${BCFTOOLS} view -h ${INPUT_VCF}) \
+  <(${BCFTOOLS} view -H ${INPUT_VCF} | sort -k1V,1 -k2n,2) | \
+  ${BGZIP} > ${OUTPUT_VCF}
+```
+
+- Now let's read in the converted GRCh38 SNPchip data (work with chr1 subset
+  for now):
+
+```{r eval=FALSE}
+snpchip38 <-
+  here("nogit/data/snpchip/gt_sorted_GRCh38.vcf") %>%
+  readr::read_tsv(col_types = c(.default = "c", POS = "d"), comment = "##")
+vcf1 <- here("nogit/data/test/TOB1524_extract_variants_chr1.vcf.bgz") # chr1
+
+snp %>%
+  select(chr = `#CHROM`, everything(), -c(QUAL, FILTER, INFO, FORMAT)) %>%
+  saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
 ```
