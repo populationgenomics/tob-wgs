@@ -25,3 +25,7 @@ jc_test:
 .PHONY: jc_full
 jc_full:
 	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling-full" --description "joint calling" --access-level test scripts/drive_joint_calling.py full v1
+
+.PHONY: sleep
+sleep:
+	sleep 60
