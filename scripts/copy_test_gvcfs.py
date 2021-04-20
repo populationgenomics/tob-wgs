@@ -6,24 +6,24 @@ import subprocess
 output = os.getenv('OUTPUT')
 assert output and output.startswith('gs://cpg-tob-wgs-test/')
 
-for bn in [0, 1]:
-    subprocess.run(
-        [
-            'gsutil',
-            'cp',
-            f'gs://cpg-tob-wgs-main/gvcf/batch{bn}/*.g.vcf.gz*',
-            f'gs://cpg-tob-wgs-test/gvcf/batch{bn}/',
-        ],
-        check=False,
-    )
+SUBSET_RE = 'TOB15[2-3]'
+QC_METADATA_FILE_NAME = 'R_210315_BINKAN1_1K1KDNA_M001.csv'
 
-    # Copy metadata subset.
-    subprocess.run(
-        [
-            'gsutil',
-            'cp',
-            f'gs://cpg-tob-wgs-main/gvcf/batch{bn}/*.csv',
-            f'gs://cpg-tob-wgs-test/gvcf/batch{bn}/',
-        ],
-        check=False,
-    )
+subprocess.run(
+    [
+        'gsutil',
+        'cp',
+        f'gs://cpg-tob-wgs-main/gvcf/batch0/{SUBSET_RE}?.g.vcf.gz*',
+        'gs://cpg-tob-wgs-test/gvcf/batch0/',
+    ],
+    check=False,
+)
+
+# Copy metadata subset.
+subprocess.run(
+    f'gsutil cat gs://cpg-tob-wgs-main/gvcf/batch0/{QC_METADATA_FILE_NAME} | '
+    f'grep -e "sample\\|{SUBSET_RE}" | '  # Also copy header.
+    f'gsutil cp - gs://cpg-tob-wgs-test/gvcf/batch0/{QC_METADATA_FILE_NAME}',
+    shell=True,
+    check=False,
+)
