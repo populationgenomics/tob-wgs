@@ -36,3 +36,106 @@ save_obj_rds <- function(o, b, dir, date) {
 read_obj_rds <- function(b, dir, date) {
   readRDS(glue("{dir}/{b}/{date}_list_contents.rds"))
 }
+
+chipid2tobid <- function(x, id_map) {
+  stopifnot(length(x) == 1, c("sample_id", "tob_id") %in% names(id_map))
+  tobid <- id_map %>%
+    dplyr::filter(sample_id == x)
+  if (nrow(tobid) == 1) {
+    tobid$tob_id
+  } else if (nrow(tobid) == 0) {
+    message("No matches! Returning NA.")
+    return(NA_character_)
+  } else {
+    stop("Wait, how did you get more than 1 matches??")
+  }
+}
+
+tobid2chipid <- function(x, id_map) {
+  stopifnot(length(x) == 1, c("sample_id", "tob_id") %in% names(id_map))
+  chipid <- id_map %>%
+    dplyr::filter(tob_id == x)
+  if (nrow(chipid) == 1) {
+    chipid$sample_id
+  } else if (nrow(chipid) == 0) {
+    message("No matches! Returning NA.")
+    return(NA_character_)
+  } else {
+    stop("Wait, how did you get more than 1 matches??")
+  }
+}
+
+run_gvcftools <- function(input, output) {
+  idir <- normalizePath(dirname(input))
+  ibname <- basename(input)
+  dir.create(dirname(output), recursive = TRUE, showWarnings = TRUE)
+  odir <- normalizePath(dirname(output))
+  obname <- basename(output)
+
+  docker_cmd <- glue(
+    "docker run --rm ",
+    "-v {idir}:/data/input -v {odir}:/data/output ",
+    "quay.io/biocontainers/gvcftools:0.17.0--he941832_3 /bin/bash -c ")
+  gvcftools_cmd <- glue("'gzip -dc /data/input/{ibname} | extract_variants | gzip -c > /data/output/{obname}'")
+
+  system(glue("{docker_cmd} {gvcftools_cmd}"))
+}
+
+concordance_stats <- function(wgs, snp) {
+  gt_match <- wgs %>%
+    filter(chrpos %in% snp[["chrpos"]]) %>%
+    mutate(gt = sub("\\|", "/", gt)) %>%
+    left_join(snp, by = "chrpos") %>%
+    mutate(gt_match = gt.x == gt.y)
+
+  nrow_snp <- nrow(snp)
+  nrow_wgs <- nrow(wgs)
+  n_wgs_in_snp <- sum(wgs[["chrpos"]] %in% snp[["chrpos"]])
+  n_snp_in_wgs <- sum(snp[["chrpos"]] %in% wgs[["chrpos"]])
+  pct_snp_in_wgs <- n_snp_in_wgs / nrow_snp
+  pct_wgs_in_snp <- n_wgs_in_snp / nrow_wgs
+  n_gt_match <- gt_match %>% filter(gt_match) %>% nrow()
+  n_gt_nomatch <- gt_match %>% filter(!gt_match) %>% nrow()
+  pct_gt_match <- n_gt_match / nrow_snp
+  pct_gt_nomatch <- n_gt_nomatch / nrow_snp
+
+  list(
+    summary = tibble::tibble(
+      nrow_snp = nrow_snp,
+      nrow_wgs = nrow_wgs,
+      n_wgs_in_snp = n_wgs_in_snp,
+      n_snp_in_wgs = n_snp_in_wgs,
+      pct_snp_in_wgs = pct_snp_in_wgs,
+      pct_wgs_in_snp = pct_wgs_in_snp,
+      n_gt_match = n_gt_match,
+      n_gt_nomatch = n_gt_nomatch,
+      pct_gt_match = pct_gt_match,
+      pct_gt_nomatch = pct_gt_nomatch
+    ),
+    gt_match = gt_match
+  )
+}
+
+is_outlier <- function(x, r = 1.5) {
+  (x < quantile(x, 0.25) - r * IQR(x)) |
+    (x > quantile(x, 0.75) + r * IQR(x))
+}
+
+select_snpchip_sample <- function(snpchip, tobid) {
+  snpchip %>%
+    select(chrpos, ref, alt, gt = tobid2chipid(tobid, id_map)) %>%
+    filter(!gt %in% "0/0") # homref
+}
+
+read_wgs_vcf <- function(wgsvcf, tobid) {
+  data.table::fread(
+    cmd = glue("zgrep -v '^##' {wgsvcf}"), sep = "\t", na.strings = ".",
+    drop = c("QUAL", "ID", "FILTER", "INFO", "FORMAT"), data.table = FALSE
+  ) %>%
+    rename(chr = `#CHROM`, pos = POS, ref = REF, alt = ALT) %>%
+    mutate(
+      gt = sub("(^.*?):.*", "\\1", .data[[tobid]]),
+      chrpos = glue("{chr}_{pos}")) %>%
+    select(chrpos, ref, alt, gt) %>%
+    tibble::as_tibble()
+}

@@ -27,7 +27,8 @@ require(here)
 require(reactable)
 require(downloadthis)
 require(janitor)
-require(plotly)
+require(ggrepel)
+require(data.table)
 ```
 
 ## Introduction
@@ -37,13 +38,31 @@ TOB-WGS project. We have been provided with one multi-sample VCF file containing
 genotype calls from the SNPchip data, and several single-sample GVCF files
 containing genotype calls from the WGS data.
 
-### SNPchip VCF file
+The basic steps for calculating concordance between the SNPchip and WGS data
+are:
+
+1. Convert SNPchip VCF from GRCh37 to hg19, then lift over to GRCh38 using
+   [CrossMap](http://crossmap.sourceforge.net/) so that it's the same genome
+   assembly as the WGS GVCFs.
+2. Extract variant sites from the WGS GVCFs using
+   [gvcftools](https://github.com/sequencing/gvcftools). This means that each
+   GVCF now becomes a variant site-only WGS VCF (i.e. the large homozygous
+   reference blocks are discarded).
+3. For a sample with a given TOBID of TOBxxxx, grab the CHR_POS, REF, ALT, and
+   SNPID columns (based on SNPID<->TOBID map) from the SNPchip VCF. Do the same
+   for the corresponding variant site-only WGS VCF. Also discard the variants
+   that are homozygous reference in the SNPchip VCF for TOBxxxx. The WGS VCF
+   will have a lot more variants than the SNPchip VCF.
+4. Keep WGS rows that are in the SNPchip, based on the CHR_POS column. More than
+   99.9% of the SNPchip sites should be there.
+
+## SNPchip VCF file
 
 The SNPchip VCF file was provided in 2021-Mar-17 along with the original
 genotype call files. The VCF file was generated using GenomeStudio and
 its Plink plugin. The GRCh37 human genome assembly was used.
 
-#### Sample names
+### Sample names
 
 The TOB sample IDs were originally given to the participants at the time of
 blood collection. The genotype platform generated new IDs for the cohort which
@@ -193,11 +212,6 @@ count_per_chrom <-
   dplyr::rename(Sample = name, GT = value, Count = n) %>%
   dplyr::left_join(chip_sample2tobid, by = c("Sample" = "sample_id"))
 
-is_outlier <- function(x, r = 1.5) {
-  (x < quantile(x, 0.25) - r * IQR(x)) |
-    (x > quantile(x, 0.75) + r * IQR(x))
-}
-
 theme_set(theme_bw())
 ```
 
@@ -246,56 +260,117 @@ knitr::include_graphics("gt_count_violin.png")
 
 ## Concordance
 
+### SNPchip VCF processing
+
 - First we need to coordinate-sort the SNPchip VCF file, and convert to
   hg19 from GRCh37:
 
 ```{bash sort_hg19, eval=FALSE}
-INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/onek1k_pre_imputation_genotypes.vcf.bgz"
-OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_hg19.vcf.gz"
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes_2021-Mar-17.vcf.gz"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_sorted_hg19.vcf.gz"
 BCFTOOLS="${HOME}/conda/envs/bioinf/bin/bcftools"
 BGZIP="${HOME}/conda/envs/bioinf/bin/bgzip"
+TABIX="${HOME}/conda/envs/bioinf/bin/tabix"
 
 cat <(${BCFTOOLS} view -h ${INPUT_VCF} | sed 's/contig=<ID=/contig=<ID=chr/') \
   <(${BCFTOOLS} view -H ${INPUT_VCF} | sort -k1n,1 -k2n,2 | awk '{ print "chr" $0 }') | \
   ${BGZIP} > ${OUTPUT_VCF}
+${TABIX} -p vcf ${OUTPUT_VCF}
 ```
 
-- Next we can use [Crossmap](http://crossmap.sourceforge.net) to convert the
+- Next we can use `CrossMap` to convert the
   hg19 coordinates to GRCh38:
 
 ```{bash crossmap, eval=FALSE}
-INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_sorted_hg19.vcf.gz"
-OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38.vcf"
-CHAIN="${HOME}/projects/tob-wgs/nogit/data/snpchip/hg19ToHg38.over.chain.gz"
-FASTA38="${HOME}/projects/tob-wgs/nogit/data/snpchip/Homo_sapiens_assembly38.fasta"
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_sorted_hg19.vcf.gz"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_GRCh38.vcf"
+CHAIN="${HOME}/projects/tob-wgs/nogit/data/snpchip/reference/hg19ToHg38.over.chain.gz"
+FASTA38="${HOME}/projects/tob-wgs/nogit/data/snpchip/reference/Homo_sapiens_assembly38.fasta"
 CROSSMAP="${HOME}/conda/envs/crossmap/bin/CrossMap.py"
 
 ${CROSSMAP} vcf ${CHAIN} ${INPUT_VCF} ${FASTA38} ${OUTPUT_VCF}
 ```
 
-- Sort the converted VCF:
+- Sort the converted VCF, and subset chr1:
 
 ```{bash sort_crossmap, eval=FALSE}
-INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38.vcf"
-OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/gt_GRCh38_sorted.vcf.gz"
+INPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_GRCh38.vcf"
+OUTPUT_VCF="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_GRCh38_sorted.vcf.gz"
+OUTPUT_VCF_CHR1="${HOME}/projects/tob-wgs/nogit/data/snpchip/processed/gt_GRCh38_sorted_chr1.vcf.gz"
 BCFTOOLS="${HOME}/conda/envs/bioinf/bin/bcftools"
 BGZIP="${HOME}/conda/envs/bioinf/bin/bgzip"
+TABIX="${HOME}/conda/envs/bioinf/bin/tabix"
 
 cat <(${BCFTOOLS} view -h ${INPUT_VCF}) \
   <(${BCFTOOLS} view -H ${INPUT_VCF} | sort -k1V,1 -k2n,2) | \
   ${BGZIP} > ${OUTPUT_VCF}
+${TABIX} -p vcf ${OUTPUT_VCF}
+${TABIX} ${OUTPUT_VCF} chr1 | ${BGZIP} > ${OUTPUT_VCF_CHR1}
 ```
 
-- Now let's read in the converted GRCh38 SNPchip data (work with chr1 subset
-  for now):
+### WGS GVCF processing
 
-```{r eval=FALSE}
-snpchip38 <-
-  here("nogit/data/snpchip/gt_sorted_GRCh38.vcf") %>%
-  readr::read_tsv(col_types = c(.default = "c", POS = "d"), comment = "##")
-vcf1 <- here("nogit/data/test/TOB1524_extract_variants_chr1.vcf.bgz") # chr1
+- Extract variant sites from the WGS GVCFs using `gvcftools`.
+  This means that each GVCF now becomes a variant site-only WGS VCF.
 
-snp %>%
-  select(chr = `#CHROM`, everything(), -c(QUAL, FILTER, INFO, FORMAT)) %>%
-  saveRDS(here("nogit/data/snpchip/2021-04-12_tibble.rds"))
+```{r gvcftools, eval=FALSE}
+idir <- here("nogit/data/bucket/test/raw")
+odir <- here("nogit/data/bucket/test/processed")
+run_gvcftools(input = glue("{idir}/TOB1524.g.vcf.gz"),
+              output = glue("{odir}/TOB1524_extracted_sites.vcf.gz"))
+run_gvcftools(input = glue("{idir}/TOB1532.g.vcf.gz"),
+              output = glue("{odir}/TOB1532_extracted_sites.vcf.gz"))
+run_gvcftools(input = glue("{idir}/TOB1533.g.vcf.gz"),
+              output = glue("{odir}/TOB1533_extracted_sites.vcf.gz"))
+```
+
+### Concordance
+
+- Now let's check out the concordance between the converted GRCh38 SNPchip data
+  and the variant site-only WGS VCFs:
+
+```{r test1}
+id_map <-
+  here("nogit/data/snpchip/processed/sample2tobid_2021-Apr-20.tsv") %>%
+  readr::read_tsv(col_types = cols(.default = "c"))
+snpchip_fname <- here("nogit/data/snpchip/processed/gt_GRCh38_sorted.vcf.gz")
+
+snpchip <-
+  data.table::fread(
+    cmd = glue("zgrep -v '^##' {snpchip_fname}"),
+    sep = "\t", na.strings = ".",
+    drop = c("QUAL", "FILTER", "INFO", "FORMAT"),
+    data.table = FALSE) %>%
+  tibble::as_tibble() %>%
+  rename(chr = `#CHROM`, pos = POS, ref = REF, alt = ALT) %>%
+  mutate(chrpos = glue("{chr}_{pos}"))
+
+tob1524_snp <- select_snpchip_sample(snpchip, "TOB1524")
+tob1532_snp <- select_snpchip_sample(snpchip, "TOB1532")
+tob1533_snp <- select_snpchip_sample(snpchip, "TOB1533")
+
+tob1524_wgs <-
+  here("nogit/data/bucket/test/processed/TOB1524_extracted_sites.vcf.gz") %>%
+  read_wgs_vcf("TOB1524")
+tob1532_wgs <-
+  here("nogit/data/bucket/test/processed/TOB1532_extracted_sites.vcf.gz") %>%
+  read_wgs_vcf("TOB1532")
+tob1533_wgs <-
+  here("nogit/data/bucket/test/processed/TOB1533_extracted_sites.vcf.gz") %>%
+  read_wgs_vcf("TOB1533")
+
+tob1524_gt_match <- concordance_stats(tob1524_wgs, tob1524_snp)
+tob1532_gt_match <- concordance_stats(tob1532_wgs, tob1532_snp)
+tob1533_gt_match <- concordance_stats(tob1533_wgs, tob1533_snp)
+mixup_1532_vs_1533 <- concordance_stats(tob1532_wgs, tob1533_snp)
+
+purrr::map_df(
+  list(
+    tob1524 = tob1524_gt_match,
+    tob1532 = tob1532_gt_match,
+    tob1533 = tob1533_gt_match,
+    mixup_32_33 = mixup_1532_vs_1533
+  ), "summary",
+  .id = "sample"
+)
 ```
