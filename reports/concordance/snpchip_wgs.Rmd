@@ -29,8 +29,112 @@ require(downloadthis)
 require(janitor)
 require(ggrepel)
 require(data.table)
+require(DT)
+```
 
-source("functions.R")
+```{r funcs}
+tobid2chipid <- function(x, id_map) {
+  stopifnot(length(x) == 1, c("sample_id", "tob_id") %in% names(id_map))
+  chipid <- id_map %>%
+    dplyr::filter(tob_id == x)
+  if (nrow(chipid) == 1) {
+    chipid$sample_id
+  } else if (nrow(chipid) == 0) {
+    message("No matches! Returning NA.")
+    return(NA_character_)
+  } else {
+    stop("Wait, how did you get more than 1 matches??")
+  }
+}
+
+run_gvcftools <- function(input, output) {
+  idir <- normalizePath(dirname(input))
+  ibname <- basename(input)
+  dir.create(dirname(output), recursive = TRUE, showWarnings = TRUE)
+  odir <- normalizePath(dirname(output))
+  obname <- basename(output)
+
+  docker_cmd <- glue(
+    "docker run --rm ",
+    "-v {idir}:/data/input -v {odir}:/data/output ",
+    "quay.io/biocontainers/gvcftools:0.17.0--he941832_3 /bin/bash -c ")
+  gvcftools_cmd <- glue("'gzip -dc /data/input/{ibname} | extract_variants | gzip -c > /data/output/{obname}'")
+
+  system(glue("{docker_cmd} {gvcftools_cmd}"))
+}
+
+concordance_stats <- function(wgs, snp) {
+  gt_match <- snp %>%
+    left_join(wgs, by = "chrpos") %>%
+    # ignore phasing
+    mutate(gt.y = sub("\\|", "/", gt.y),
+           gt_equal = gt.x == gt.y)
+
+  nrow_snp <- nrow(snp)
+  nrow_wgs <- nrow(wgs)
+  n_wgs_in_snp <- sum(wgs[["chrpos"]] %in% snp[["chrpos"]])
+  n_snp_in_wgs <- sum(snp[["chrpos"]] %in% wgs[["chrpos"]])
+  n_snp_not_in_wgs <- sum(!snp[["chrpos"]] %in% wgs[["chrpos"]])
+  n_wgs_not_in_snp <- sum(!wgs[["chrpos"]] %in% snp[["chrpos"]])
+  pct_snp_in_wgs <- n_snp_in_wgs / nrow_snp
+  pct_wgs_in_snp <- n_wgs_in_snp / nrow_wgs
+  n_gt_match <- gt_match %>% filter(gt_equal == TRUE) %>% nrow()
+  n_gt_nomatch <- gt_match %>% filter(gt_equal %in% c(FALSE, NA)) %>% nrow()
+  pct_gt_match <- n_gt_match / nrow_snp
+  pct_gt_nomatch <- n_gt_nomatch / nrow_snp
+
+  list(
+    summary = tibble::tibble(
+      pct_gt_match = pct_gt_match,
+      pct_gt_nomatch = pct_gt_nomatch,
+      nrow_snp = nrow_snp,
+      nrow_wgs = nrow_wgs,
+      n_wgs_in_snp = n_wgs_in_snp,
+      n_snp_in_wgs = n_snp_in_wgs,
+      n_snp_not_in_wgs = n_snp_not_in_wgs,
+      n_wgs_not_in_snp = n_wgs_not_in_snp,
+      pct_snp_in_wgs = pct_snp_in_wgs,
+      pct_wgs_in_snp = pct_wgs_in_snp,
+      n_gt_match = n_gt_match,
+      n_gt_nomatch = n_gt_nomatch
+    ),
+    gt_match = gt_match
+  )
+}
+
+is_outlier <- function(x, m = 1.5) {
+  (x < quantile(x, 0.25) - m * IQR(x)) |
+    (x > quantile(x, 0.75) + m * IQR(x))
+}
+
+select_snpchip_sample <- function(snpchip, tobid, id_map) {
+  snpchip %>%
+    select(chrpos, ref, alt, gt = tobid2chipid(tobid, id_map)) %>%
+    filter(!gt %in% "0/0") # homref
+}
+
+read_wgs_vcf <- function(wgsvcf, tobid) {
+  data.table::fread(
+    cmd = glue("zgrep -v '^##' {wgsvcf}"), sep = "\t", na.strings = ".",
+    drop = c("QUAL", "ID", "FILTER", "INFO", "FORMAT"), data.table = FALSE
+  ) %>%
+    rename(chr = `#CHROM`, pos = POS, ref = REF, alt = ALT) %>%
+    mutate(
+      gt = sub("(^.*?):.*", "\\1", .data[[tobid]]),
+      chrpos = glue("{chr}_{pos}")) %>%
+    select(chrpos, ref, alt, gt) %>%
+    tibble::as_tibble()
+}
+
+count_gt_per_chrom <- function(d, chrom) {
+  # Instead of processing full dataset,
+  # split by chromosome (non-parallel).
+  d %>%
+    filter(chr %in% chrom) %>%
+    tidyr::pivot_longer(-chr) %>%
+    dplyr::group_by(chr, name) %>%
+    dplyr::count(value)
+}
 ```
 
 ## Introduction
@@ -124,12 +228,15 @@ chip_id2tob_raw <-
          x2 = tob_id2 == tob_dark_id,
          tob_id_final = glue("TOB{tob_id}"))
 
+dplyr::glimpse(chip_id2tob_raw)
 # is 'person' equal to 'FID_IID'?
 chip_id2tob_raw %>% count(x1)
 # is 'tob_dark_id' equal to TOB-0XXXX?
 chip_id2tob_raw %>% count(x2) # 31 FALSE
 # which x2s are FALSE?
-chip_id2tob_raw %>% filter(!x2)
+chip_id2tob_raw %>%
+  filter(!x2) %>%
+  select(person, tob_dark_id, tob_id2)
 # So TOB-01856 should be TOB-01857, and the rest simply miss a zero prefix.
 chip_id2tob_raw %>%
   filter(!x2) %>%
@@ -307,6 +414,9 @@ run_gvcftools(input = glue("{idir}/TOB1533.g.vcf.gz"),
 
 ```{r concordance}
 chip_vcf_raw_38 <- here("nogit/data/snpchip/processed/gt_GRCh38_sorted.vcf.gz")
+chip_id2tob_clean <-
+  here("nogit/data/snpchip/processed/sample2tobid_2021-Apr-20.tsv") %>%
+  readr::read_tsv(col_types = cols(.default = "c"))
 chip_geno38 <-
   data.table::fread(
     cmd = glue("zgrep -v '^##' {chip_vcf_raw_38}"),
@@ -337,14 +447,30 @@ tob1532_gt_match <- concordance_stats(tob1532_wgs, tob1532_snp)
 tob1533_gt_match <- concordance_stats(tob1533_wgs, tob1533_snp)
 mixup_1532_vs_1533 <- concordance_stats(tob1532_wgs, tob1533_snp)
 
-purrr::map_df(
-  list(
-    tob1524 = tob1524_gt_match,
-    tob1532 = tob1532_gt_match,
-    tob1533 = tob1533_gt_match,
-    mixup_32_33 = mixup_1532_vs_1533
-  ), "summary",
-  .id = "sample"
-) %>%
-  knitr::kable()
+tab <-
+  purrr::map_df(
+    list(
+      tob1524 = tob1524_gt_match,
+      tob1532 = tob1532_gt_match,
+      tob1533 = tob1533_gt_match,
+      mixup_32_33 = mixup_1532_vs_1533
+    ), "summary",
+    .id = "sample"
+  )
+
+tab %>%
+  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+  DT::datatable(rownames = FALSE, caption = "Concordance Stats",
+                filter = list(position = "top", clear = FALSE, plain = TRUE),
+                extensions = c("Scroller"),
+                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300)) %>%
+  DT::formatStyle(tab %>%
+                    select(where(is_double)) %>%
+                    select(!where(is_integer)) %>% names(),
+    background = DT::styleColorBar(c(0, 1), "lightgreen"),
+    backgroundSize = "90% 90%",
+    backgroundRepeat = "no-repeat", backgroundPosition = "center"
+  ) %>%
+  DT::formatCurrency(tab %>% select(where(is_integer)) %>% names(),
+                     currency = "", interval = 3, mark = ",", digits = 0)
 ```
