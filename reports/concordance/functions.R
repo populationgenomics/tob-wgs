@@ -82,11 +82,14 @@ run_gvcftools <- function(input, output) {
 }
 
 concordance_stats <- function(wgs, snp) {
-  gt_match <- wgs %>%
-    filter(chrpos %in% snp[["chrpos"]]) %>%
-    mutate(gt = sub("\\|", "/", gt)) %>%
-    left_join(snp, by = "chrpos") %>%
-    mutate(gt_match = gt.x == gt.y)
+  gt_match <- snp %>%
+    left_join(wgs, by = "chrpos") %>%
+    mutate(gt_equal = gt.x == gt.y)
+
+    # filter(chrpos %in% snp[["chrpos"]]) %>%
+    # mutate(gt = sub("\\|", "/", gt)) %>%
+    # left_join(snp, by = "chrpos") %>%
+    # mutate(gt_match = gt.x == gt.y)
 
   nrow_snp <- nrow(snp)
   nrow_wgs <- nrow(wgs)
@@ -94,13 +97,15 @@ concordance_stats <- function(wgs, snp) {
   n_snp_in_wgs <- sum(snp[["chrpos"]] %in% wgs[["chrpos"]])
   pct_snp_in_wgs <- n_snp_in_wgs / nrow_snp
   pct_wgs_in_snp <- n_wgs_in_snp / nrow_wgs
-  n_gt_match <- gt_match %>% filter(gt_match) %>% nrow()
-  n_gt_nomatch <- gt_match %>% filter(!gt_match) %>% nrow()
+  n_gt_match <- gt_match %>% filter(gt_equal == TRUE) %>% nrow()
+  n_gt_nomatch <- gt_match %>% filter(gt_equal == FALSE) %>% nrow()
   pct_gt_match <- n_gt_match / nrow_snp
   pct_gt_nomatch <- n_gt_nomatch / nrow_snp
 
   list(
     summary = tibble::tibble(
+      pct_gt_match = pct_gt_match,
+      pct_gt_nomatch = pct_gt_nomatch,
       nrow_snp = nrow_snp,
       nrow_wgs = nrow_wgs,
       n_wgs_in_snp = n_wgs_in_snp,
@@ -108,20 +113,18 @@ concordance_stats <- function(wgs, snp) {
       pct_snp_in_wgs = pct_snp_in_wgs,
       pct_wgs_in_snp = pct_wgs_in_snp,
       n_gt_match = n_gt_match,
-      n_gt_nomatch = n_gt_nomatch,
-      pct_gt_match = pct_gt_match,
-      pct_gt_nomatch = pct_gt_nomatch
+      n_gt_nomatch = n_gt_nomatch
     ),
     gt_match = gt_match
   )
 }
 
-is_outlier <- function(x, r = 1.5) {
-  (x < quantile(x, 0.25) - r * IQR(x)) |
-    (x > quantile(x, 0.75) + r * IQR(x))
+is_outlier <- function(x, m = 1.5) {
+  (x < quantile(x, 0.25) - m * IQR(x)) |
+    (x > quantile(x, 0.75) + m * IQR(x))
 }
 
-select_snpchip_sample <- function(snpchip, tobid) {
+select_snpchip_sample <- function(snpchip, tobid, id_map) {
   snpchip %>%
     select(chrpos, ref, alt, gt = tobid2chipid(tobid, id_map)) %>%
     filter(!gt %in% "0/0") # homref
@@ -138,4 +141,14 @@ read_wgs_vcf <- function(wgsvcf, tobid) {
       chrpos = glue("{chr}_{pos}")) %>%
     select(chrpos, ref, alt, gt) %>%
     tibble::as_tibble()
+}
+
+count_gt_per_chrom <- function(d, chrom) {
+  # Instead of processing full dataset,
+  # split by chromosome (non-parallel).
+  d %>%
+    filter(chr %in% chrom) %>%
+    tidyr::pivot_longer(-chr) %>%
+    dplyr::group_by(chr, name) %>%
+    dplyr::count(value)
 }
