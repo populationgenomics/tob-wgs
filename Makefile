@@ -11,7 +11,7 @@ pkg_test: submodule pkg run_test
 pkg_full: submodule pkg run_full
 
 .PHONY: pkg
-jc_pkg:
+pkg:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' --no-verify && git push)
 	cd ../joint-calling && make
 	sleep 60
