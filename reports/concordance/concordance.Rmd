@@ -181,7 +181,7 @@ read_wgs_vcf <- function(wgsvcf, tob_id) {
   dt %>%
     dplyr::rename(chr = `#CHROM`, pos = POS, ref = REF, alt = ALT) %>%
     dplyr::mutate(
-      gt = sub("(^.*?):.*", "\\1", .data[[tobid]]),
+      gt = sub("(^.*?):.*", "\\1", .data[[tob_id]]),
       chrpos = glue::glue("{chr}_{pos}")) %>%
     dplyr::select(chrpos, ref, alt, gt) %>%
     tibble::as_tibble()
@@ -333,21 +333,21 @@ counts_gt1 <- purrr::map_df(1:22, ~count_gt_per_chrom(chip_geno, .x))
 counts_gt1 <-
   counts_gt1 %>%
   dplyr::ungroup() %>%
-  dplyr::rename(Sample = name, GT = value, Count = n) %>%
-  dplyr::left_join(chip_id2tob_clean, by = c("Sample" = "sample_id"))
+  dplyr::rename(count = n) %>%
+  dplyr::left_join(chip_id2tob_clean, by = c("sample_id"))
 
 theme_set(theme_bw())
 # violin per chromosome per gt
 p1 <- counts_gt1 %>%
-  ggplot(aes(x = "", y = Count)) +
+  ggplot(aes(x = "", y = count)) +
   geom_violin() +
   coord_flip() +
-  facet_grid(chr~GT, scales = "free") +
+  facet_grid(chr~gt, scales = "free") +
   theme(
     axis.title.y = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank()) +
-  ggtitle(glue::glue("SNPchip GT counts per chromosome for {nrow(count(counts_gt1, Sample))} samples."))
+  ggtitle(glue::glue("SNPchip GT counts per chromosome for {nrow(count(counts_gt1, sample_id))} samples."))
 # ggsave("gt_count_violin_per_chrom.png", p1, width = 12, height = 20)
 p1
 ```
@@ -358,24 +358,24 @@ jitter_pos1 <- ggplot2::position_jitter(width = 0.20, height = 0, seed = 123)
 
 # violin per gt
 p2 <- counts_gt1 %>%
-  group_by(GT, Sample) %>%
-  summarise(Count = sum(Count), .groups = "drop_last") %>%
-  dplyr::left_join(chip_id2tob_clean, by = c("Sample" = "sample_id")) %>%
-  mutate(
+  dplyr::group_by(gt, sample_id) %>%
+  dplyr::summarise(count = sum(count), .groups = "drop_last") %>%
+  dplyr::left_join(chip_id2tob_clean, by = "sample_id") %>%
+  dplyr::mutate(
     # too many, so use a large multiplication factor
-    outlier = if_else(is_outlier(Count, 6),
-                      glue::glue("{tob_id} ({Count})"), NA_character_)) %>%
-  ggplot(aes(x = "", y = Count)) +
+    outlier = dplyr::if_else(is_outlier(count, 6),
+                             glue::glue("{tob_id} ({count})"), NA_character_)) %>%
+  ggplot(aes(x = "", y = count)) +
   geom_violin() +
   geom_point(position = jitter_pos1, shape = 21, colour = "blue") +
   ggrepel::geom_text_repel(position = jitter_pos1, aes(label = outlier),
                            na.rm = TRUE, hjust = -0.3) +
-  facet_wrap(~GT, scales = "free") +
+  facet_wrap(~gt, scales = "free") +
   theme(
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank()) +
-  ggtitle(glue::glue("SNPchip GT counts for {nrow(count(counts_gt1, Sample))} samples."))
+  ggtitle(glue::glue("SNPchip GT counts for {nrow(count(counts_gt1, sample_id))} samples."))
 # ggsave("gt_count_violin.png", p2, width = 10, height = 12)
 p2
 
