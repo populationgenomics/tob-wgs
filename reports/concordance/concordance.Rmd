@@ -25,7 +25,7 @@ TOB-WGS project. We have been provided with one multi-sample VCF file containing
 genotype calls from the SNPchip data, and several single-sample GVCF files
 containing genotype calls from the WGS data.
 
-The basic steps for calculating concordance between the SNPchip and WGS data
+The main steps for calculating concordance between the SNPchip and WGS data
 are:
 
 1. Convert SNPchip VCF from GRCh37 to hg19, then lift over to GRCh38 using
@@ -35,13 +35,21 @@ are:
    [gvcftools](https://github.com/sequencing/gvcftools). This means that each
    GVCF now becomes a variant site-only WGS VCF (i.e. the large homozygous
    reference blocks are discarded).
-3. For a sample with a given TOBID of TOBxxxx, grab the CHR_POS, REF, ALT, and
-   SNPID columns (based on SNPID<->TOBID map) from the SNPchip VCF. Do the same
-   for the corresponding variant site-only WGS VCF. Also discard the variants
-   that are homozygous reference in the SNPchip VCF for TOBxxxx. The WGS VCF
-   will have a lot more variants than the SNPchip VCF.
-4. Keep WGS rows that are in the SNPchip, based on the CHR_POS column. More than
-   99.9% of the SNPchip sites should be there.
+3. For a sample with a given TOBID of TOBxxxx, grab the `CHR_POS`, `REF`, `ALT`,
+   and `SNPID-sample` columns (based on SNPID <-> TOBID mapping file) from the
+   SNPchip VCF. Do the same for the corresponding variant site-only WGS VCF.
+   Also discard variants that are homozygous reference in the SNPchip VCF
+   for TOBxxxx. The WGS VCF will have a lot more variants than the SNPchip VCF
+   (~5 million vs. ~0.15 million).
+4. Do a left join of SNPchip with WGS i.e. keep all SNPchip rows and grab the
+   WGS genotypes + `REF`/`ALT` alleles corresponding to the SNPchip `CHR_POS`
+   coordinates - these values will be `NA` for cases where there is no
+   corresponding WGS variant. More than 99% of the SNPchip sites should
+   correspond to a WGS call.
+5. Calculate fraction of genotypes that match between WGS and SNPchip sites
+   (i.e. `n_gt_match / n_snp`).
+
+- Load required R packages:
 
 ```{r load_pkgs}
 require(tidyverse)
@@ -53,52 +61,12 @@ require(here)
 require(janitor)
 require(ggrepel)
 require(assertthat)
+require(sessioninfo)
 ```
 
+- Custom function declaration:
+
 ```{r funcs}
-# Given an id_map df with sample_id and tob_id, and a TOB ID,
-# output the corresponding SNPchip VCF sample_id.
-tobid2chipid <- function(tobid, idmap) {
-  assert_that(
-    is.character(tobid),
-    length(tobid) == 1,
-    is.data.frame(idmap),
-    all(c("sample_id", "tob_id") %in% names(idmap))
-  )
-  chipid <- idmap %>%
-    dplyr::filter(tob_id == tobid)
-  if (nrow(chipid) == 1) {
-    return(chipid$sample_id)
-  } else if (nrow(chipid) == 0) {
-    message("No matches! Returning NA.")
-    return(NA_character_)
-  } else {
-    stop("Wait, how did you get more than 1 matches??")
-  }
-}
-
-# Run dockerised gvcftools to extract variant sites from the input GVCF file
-run_gvcftools <- function(input, output) {
-  assert_that(
-    length(input) == 1, length(output) == 1,
-    file.exists(input),  grepl("vcf\\.gz", input)
-  )
-  idir <- normalizePath(dirname(input))
-  ibname <- basename(input)
-  dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
-  odir <- normalizePath(dirname(output))
-  obname <- basename(output)
-
-  docker_cmd <- glue::glue(
-    "docker run --rm ",
-    "-v {idir}:/data/input -v {odir}:/data/output ",
-    "quay.io/biocontainers/gvcftools:0.17.0--he941832_3 /bin/bash -c ")
-  gvcftools_cmd <-glue::glue("'gzip -dc /data/input/{ibname} | ",
-                        "extract_variants | gzip -c > /data/output/{obname}'")
-
-  system(glue::glue("{docker_cmd} {gvcftools_cmd}"))
-}
-
 # Given two dfs with chr_pos, ref, alt, and gt columns, calculate concordance
 # stats between the two.
 concordance_stats <- function(wgs, snp) {
@@ -148,14 +116,26 @@ concordance_stats <- function(wgs, snp) {
   )
 }
 
-# The given observation x is considered an outlier
-# (see https://statsandr.com/blog/outliers-detection-in-r/).
-# Using the m parameter for cases where there are simply too many outliers; the
-# larger the value of m, the fewer values are considered outliers.
-is_outlier <- function(x, m = 1.5) {
-  assert_that(is.numeric(x), is.numeric(m))
-  (x < quantile(x, 0.25) - m * IQR(x)) |
-    (x > quantile(x, 0.75) + m * IQR(x))
+# Run dockerised gvcftools to extract variant sites from the input GVCF file
+run_gvcftools <- function(input, output) {
+  assert_that(
+    length(input) == 1, length(output) == 1,
+    file.exists(input),  grepl("vcf\\.gz", input)
+  )
+  idir <- normalizePath(dirname(input))
+  ibname <- basename(input)
+  dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
+  odir <- normalizePath(dirname(output))
+  obname <- basename(output)
+
+  docker_cmd <- glue::glue(
+    "docker run --rm ",
+    "-v {idir}:/data/input -v {odir}:/data/output ",
+    "quay.io/biocontainers/gvcftools:0.17.0--he941832_3 /bin/bash -c ")
+  gvcftools_cmd <-glue::glue("'gzip -dc /data/input/{ibname} | ",
+                        "extract_variants | gzip -c > /data/output/{obname}'")
+
+  system(glue::glue("{docker_cmd} {gvcftools_cmd}"))
 }
 
 # Grab sample column with given tob_id from SNPchip df.
@@ -187,6 +167,28 @@ read_wgs_vcf <- function(wgsvcf, tob_id) {
     tibble::as_tibble()
 }
 
+
+# Given an id_map df with sample_id and tob_id, and a TOB ID,
+# output the corresponding SNPchip VCF sample_id.
+tobid2chipid <- function(tobid, idmap) {
+  assert_that(
+    is.character(tobid),
+    length(tobid) == 1,
+    is.data.frame(idmap),
+    all(c("sample_id", "tob_id") %in% names(idmap))
+  )
+  chipid <- idmap %>%
+    dplyr::filter(tob_id == tobid)
+  if (nrow(chipid) == 1) {
+    return(chipid$sample_id)
+  } else if (nrow(chipid) == 0) {
+    message("No matches! Returning NA.")
+    return(NA_character_)
+  } else {
+    stop("Wait, how did you get more than 1 matches??")
+  }
+}
+
 # Subset SNPchip df by chromosome and count
 # genotypes per sample.
 count_gt_per_chrom <- function(d, chrom) {
@@ -199,6 +201,16 @@ count_gt_per_chrom <- function(d, chrom) {
     tidyr::pivot_longer(-chr, names_to = "sample_id", values_to = "gt") %>%
     dplyr::group_by(chr, sample_id) %>%
     dplyr::count(gt)
+}
+
+# The given observation x is considered an outlier
+# (see https://statsandr.com/blog/outliers-detection-in-r/).
+# Using the m parameter for cases where there are simply too many outliers; the
+# larger the value of m, the fewer values are considered outliers.
+is_outlier <- function(x, m = 1.5) {
+  assert_that(is.numeric(x), is.numeric(m))
+  (x < quantile(x, 0.25) - m * IQR(x)) |
+    (x > quantile(x, 0.75) + m * IQR(x))
 }
 ```
 
@@ -314,7 +326,7 @@ readr::write_tsv(
 
 ### Genotypes
 
-```{r read_vcf}
+```{r read_vcf, eval=FALSE}
 chip_geno <-
   data.table::fread(
     cmd = glue::glue("zgrep -v '^##' {chip_vcf_raw}"),
@@ -326,7 +338,7 @@ chip_geno <-
   select(-c(pos:alt)) # keep chromosome + genotypes
 ```
 
-```{r plot_geno1, fig.width=12, fig.height=20}
+```{r plot_geno1, fig.width=12, fig.height=20, eval=FALSE}
 counts_gt1 <- purrr::map_df(1:22, ~count_gt_per_chrom(chip_geno, .x))
 
 # join with id2tob map
@@ -352,7 +364,11 @@ p1 <- counts_gt1 %>%
 p1
 ```
 
-```{r plot_geno2, fig.width=10, fig.height=12}
+```{r include_plots1}
+knitr::include_graphics("gt_count_violin_per_chrom.png")
+```
+
+```{r plot_geno2, fig.width=10, fig.height=12, eval=FALSE}
 # jitter object for proper labels
 jitter_pos1 <- ggplot2::position_jitter(width = 0.20, height = 0, seed = 123)
 
@@ -380,6 +396,10 @@ p2 <- counts_gt1 %>%
 p2
 
 rm(p1, p2, jitter_pos1, chip_geno)
+```
+
+```{r include_plots2}
+knitr::include_graphics("gt_count_violin.png")
 ```
 
 ## Concordance
@@ -519,4 +539,24 @@ tab %>%
   ) %>%
   DT::formatCurrency(tab %>% select(where(is_integer)) %>% names(),
                      currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+## Session Info
+
+```{r session_info, echo=FALSE}
+si <- sessioninfo::session_info(include_base = TRUE)
+si_pl <- unclass(si$platform) %>% as_tibble() %>% t()
+si_pkg <- unclass(si$packages) %>%
+  dplyr::as_tibble() %>%
+  dplyr::select(package, version = ondiskversion, datestamp = date)
+
+dplyr::tibble(var = rownames(si_pl),
+              value = si_pl[, , drop = TRUE]) %>%
+  knitr::kable(caption = "Platform information.")
+
+si_pkg %>%
+  DT::datatable(filter = list(position = "top", clear = FALSE, plain = TRUE),
+                rownames = FALSE, extensions = c("Scroller"),
+                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 200,
+                               dom = 'Bfrtip'))
 ```
