@@ -1,0 +1,284 @@
+---
+author: "Centre for Population Genomics"
+date: "`r as.character(paste(Sys.time(), Sys.timezone()))`"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    code_download: true
+    code_folding: show
+  rmdformats::material:
+    highlight: kate
+params:
+  title: ""
+title: "Exploration of QC metrics for TOB-WGS batches 0 & 1"
+---
+
+```{r knitr_opts, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Introduction
+
+Here we're exploring QC metrics, metadata, and contents of Google Cloud Storage
+buckets associated with the TOB-WGS project.
+
+```{r load_pkgs}
+require(tidyverse)
+require(fs)
+require(glue)
+require(here)
+require(assertthat)
+require(reactable)
+require(ggrepel)
+require(sessioninfo)
+
+# for GCS authentication
+require(googleCloudStorageR)
+require(gargle)
+```
+
+```{r funcs}
+guess_file_type <- function(x) {
+  dplyr::case_when(
+    grepl("\\.bam$", x, ignore.case = TRUE) ~ "BAM",
+    grepl("\\.bai$", x, ignore.case = TRUE) ~ "BAMindex",
+    grepl("\\.cram$", x, ignore.case = TRUE) ~ "CRAM",
+    grepl("\\.crai$", x, ignore.case = TRUE) ~ "CRAMindex",
+    grepl("\\.fastq.gz$", x, ignore.case = TRUE) ~ "FASTQ",
+    grepl("\\.fastq$", x, ignore.case = TRUE) ~ "FASTQ",
+    grepl("\\.fq$", x, ignore.case = TRUE) ~ "FASTQ",
+    grepl("\\.fq\\.gz$", x, ignore.case = TRUE) ~ "FASTQ",
+    grepl("manifest\\.txt$", x, ignore.case = TRUE) ~ "Manifest",
+    grepl("\\.md5$", x, ignore.case = TRUE) ~ "MD5",
+    grepl("md5\\.txt$", x, ignore.case = TRUE) ~ "MD5txt",
+    grepl("\\.vcf$", x, ignore.case = TRUE) ~ "VCF_unz",
+    grepl("\\.g\\.vcf\\.gz$", x, ignore.case = TRUE) ~ "GVCF",
+    grepl("\\.vcf\\.gz$", x, ignore.case = TRUE) ~ "VCF",
+    grepl("\\.tbi$", x, ignore.case = TRUE) ~ "VCFindex",
+    grepl("\\.csv$", x, ignore.case = TRUE) ~ "CSV",
+    grepl("\\.json$", x, ignore.case = TRUE) ~ "JSON",
+    TRUE ~ "OTHER")
+}
+
+gcs_list_objects2 <- function(b) {
+  googleCloudStorageR::gcs_list_objects(bucket = b,
+                                        detail = "summary") %>%
+    dplyr::as_tibble() %>%
+    dplyr::mutate(name = glue::glue("gs://{b}/{name}"),
+                  size = sub(" bytes", "", size), # else returns NA
+                  size = fs::as_fs_bytes(size),
+                  ftype = guess_file_type(name))
+}
+
+# The given observation x is considered an outlier
+# (see https://statsandr.com/blog/outliers-detection-in-r/).
+# Using the m parameter for cases where there are simply too many outliers; the
+# larger the value of m, the fewer values are considered outliers.
+is_outlier <- function(x, m = 1.5) {
+  assert_that(is.numeric(x), is.numeric(m))
+  (x < quantile(x, 0.25) - m * IQR(x)) |
+    (x > quantile(x, 0.75) + m * IQR(x))
+}
+```
+
+
+```{r vars}
+bucket <- "cpg-tob-wgs-main"
+date <- "2021-04-24"
+data_dir <- here(glue("nogit/data/bucket/{bucket}"))
+```
+
+## WGS GVCF files
+
+- Let's first explore the contents of the
+  `r glue("{bucket}")` bucket:
+
+```{r list_contents1, eval=FALSE}
+scope <- c("https://www.googleapis.com/auth/cloud-platform")
+token <- gargle::token_fetch(scopes = scope)
+googleCloudStorageR::gcs_auth(token = token)
+
+obj_list <- gcs_list_objects2(b = bucket)
+saveRDS(obj_list, glue("{data_dir}/{date}_list_contents.rds"))
+```
+
+```{r list_contents2}
+obj_list <- readRDS(glue("{data_dir}/{date}_list_contents.rds"))
+count(obj_list, ftype) %>% knitr::kable(caption = glue("Count of file types in {bucket}."))
+gvcf <-
+  obj_list %>%
+  dplyr::filter(ftype == "GVCF") %>%
+  dplyr::mutate(basename = basename(name),
+                tobid = sub(".g.vcf.gz", "", basename),
+                batch = sub("batch(.)", "\\1", basename(dirname(name)))) %>%
+  dplyr::select(tobid, fullname = name, batch, size, basename)
+```
+
+- Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`**
+  GVCF files:
+
+```{r gvcf_list}
+gvcf_tab <- gvcf %>%
+  dplyr::mutate(size = as.character(size),
+                n = dplyr::row_number()) %>%
+  dplyr::select(n, fullname, batch, size) %>%
+  reactable::reactable(
+    pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
+    filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
+    columns = list(
+      n = colDef(minWidth = 60),
+      fullname = colDef(minWidth = 420),
+      batch = colDef(minWidth = 60),
+      size = colDef(minWidth = 80)
+    )
+  )
+
+htmlwidgets::prependContent(
+  gvcf_tab,
+  htmltools::h2(class = "title", glue("GVCF files in {bucket} (Total: {nrow(gvcf)})")))
+```
+
+```{r gvcf_file_sizes}
+theme_set(theme_bw())
+
+gvcf %>%
+  summarise(
+    min = fs::as_fs_bytes(min(size)),
+    max = fs::as_fs_bytes(max(size)),
+    q1 = fs::as_fs_bytes(quantile(size, 0.25)),
+    median = fs::as_fs_bytes(median(size)),
+    q3 = fs::as_fs_bytes(quantile(size, 0.75)),
+    total = fs::as_fs_bytes(sum(size)),
+    .groups = "drop") %>%
+  tidyr::pivot_longer(cols = dplyr::everything()) %>%
+  knitr::kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in {bucket}."))
+
+# jitter object for proper labels
+jitter_pos1 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
+
+gvcf %>%
+  dplyr::mutate(
+    outlier = dplyr::if_else(is_outlier(size, 3),
+                             glue::glue("{tobid} ({size})"), NA_character_)) %>%
+  ggplot(aes(x = batch, y = size)) +
+  geom_violin(fill="lightblue") +
+  geom_point(position = jitter_pos1, shape = 21, color = "darkblue", fill = "red") +
+  ggrepel::geom_text_repel(position = jitter_pos1, aes(label = outlier),
+                           na.rm = TRUE, hjust = -0.3) +
+  scale_y_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
+  theme(panel.grid.minor = element_blank()) +
+  ggtitle(glue::glue("Size (bytes) for {nrow(gvcf)} GVCF files in {bucket}."))
+```
+
+## QC metrics
+
+We have access to CSV files with summaries of sample QC metrics. Additional
+files have been provided containing:
+
+- the standard deviation of CRAM insert size, as calculated by Picard's
+  CollectInsertSizeMetrics;
+- the gender of each sample;
+- the age of each sample;
+
+
+```{r qc_plot_prep}
+qc1 <-
+  here(glue("{data_dir}/gvcf_batch1_R_210315_BINKAN1_1K1KDNA_M002.csv")) %>%
+  readr::read_csv()
+qc_insert_size_stdev <-
+  here(glue("{data_dir}/InsertSizeStandardDeviationBatch1-2.csv")) %>%
+  readr::read_csv()
+qc_gender <-
+  here(glue("{data_dir}/gender.xlsx")) %>%
+  readxl::read_excel(
+    skip = 2,
+    col_names = c("sample_id", "sample.sample_name", "gender",
+                  paste0("nanodrop_", c("conc", "260/280", "230/280")),
+                  paste0("qubit_", c("assay_conc", "stock_conc")),
+                  "volume", "location")) %>%
+  dplyr::filter(!is.na(sample_id)) %>%
+  dplyr::select(sample = sample.sample_name, gender)
+qc_age <-
+  here(glue("{data_dir}/age.csv")) %>%
+  readr::read_csv(col_types = cols(.default = "c", age = "d")) %>%
+  dplyr::select(sample = TOBIID, age)
+
+p_data <- qc1 %>%
+  dplyr::left_join(qc_insert_size_stdev) %>%
+  dplyr::select(sample = sample.sample_name,
+                `freemix contamination` = raw_data.FREEMIX,
+                `chimeras pct` = raw_data.PCT_CHIMERAS,
+                `duplicate pct` = raw_data.PERCENT_DUPLICATION,
+                `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+                `insert size std dev` = raw_data.STANDARD_DEVIATION,
+                `coverage median` = raw_data.MEDIAN_COVERAGE) %>%
+  tidyr::pivot_longer(cols = -sample, names_to = "metric") %>%
+  dplyr::left_join(qc_gender, by = "sample") %>%
+  dplyr::left_join(qc_age, by = "sample") %>%
+  dplyr::left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
+  dplyr::mutate(batch = glue("batch {batch}"))
+
+```
+
+```{r plot_all_metrics, fig.height=18, fig.width=12}
+# jitter object for proper labels
+jitter_pos2 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
+
+p_data %>%
+  dplyr::filter(!metric == "insert size std dev") %>%
+  dplyr::group_by(metric) %>%
+  dplyr::mutate(
+    value_rounded = round(value, 3),
+    outlier = if_else(is_outlier(value),
+                      glue("{sample} ({value_rounded})"),
+                      NA_character_)) %>%
+  ggplot(aes(x = "", y = value)) +
+  geom_point(position = jitter_pos2, shape = 21, colour = "blue") +
+  ggrepel::geom_text_repel(position = jitter_pos2, aes(label = outlier),
+                           na.rm = TRUE, hjust = 9.3) +
+  geom_violin(fill = NA) +
+  facet_grid(metric ~ batch, scales = "free") +
+  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  ggtitle(glue("QC metrics by batch for ",
+               "{length(unique(p_data$sample))} TOB-WGS samples.")) +
+  theme(strip.text.x = element_text(face = "bold.italic"),
+        strip.text.y = element_text(size = 12,face = "bold.italic"))
+```
+
+```{r plot_insert_size, fig.height=16}
+# plot insert size
+p_data %>%
+  dplyr::filter(grepl("insert size", metric)) %>%
+  tidyr::pivot_wider(names_from = metric) %>%
+  dplyr::rename(med = `insert size median`,
+                sd = `insert size std dev`) %>%
+  dplyr::mutate(sample = forcats::fct_reorder(sample, med)) %>%
+  ggplot(aes(y = sample, x = med)) +
+  geom_errorbar(aes(y = sample, xmin = med - sd, xmax = med + sd),
+                color = "grey50", width = 0.50) +
+  geom_point(shape = 21, fill = "blue") +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank()) +
+  xlab("Median insert size") +
+  ggtitle(glue("Sample median insert size +- standard deviation for ",
+               "{length(unique(p_data$sample))} TOB-WGS samples."))
+```
+
+## Session Info
+
+```{r session_info, echo=FALSE}
+si <- sessioninfo::session_info(include_base = TRUE)
+si_pl <- unclass(si$platform) %>% as_tibble() %>% t()
+si_pkg <- unclass(si$packages) %>%
+  dplyr::as_tibble() %>%
+  dplyr::select(package, version = ondiskversion, datestamp = date)
+dplyr::tibble(var = rownames(si_pl),
+              value = si_pl[, , drop = TRUE]) %>%
+  knitr::kable(caption = "Platform information.")
+si_pkg %>%
+  DT::datatable(filter = list(position = "top", clear = FALSE, plain = TRUE),
+                rownames = FALSE, extensions = c("Scroller"),
+                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 200,
+                               dom = 'Bfrtip'))
+```
