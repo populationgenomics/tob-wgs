@@ -14,14 +14,16 @@ subprocess.run(
         'gsutil',
         'cp',
         f'gs://cpg-tob-wgs-main/gvcf/batch0/{SUBSET_RE}?.g.vcf.gz*',
-        output,
-    ]
+        'gs://cpg-tob-wgs-test/gvcf/batch0/',
+    ],
+    check=False,
 )
 
 # Copy metadata subset.
 subprocess.run(
     f'gsutil cat gs://cpg-tob-wgs-main/gvcf/batch0/{QC_METADATA_FILE_NAME} | '
     f'grep -e "sample\\|{SUBSET_RE}" | '  # Also copy header.
-    f'gsutil cp - {output}/{QC_METADATA_FILE_NAME}',
+    f'gsutil cp - gs://cpg-tob-wgs-test/gvcf/batch0/{QC_METADATA_FILE_NAME}',
     shell=True,
+    check=False,
 )
