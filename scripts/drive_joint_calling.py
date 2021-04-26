@@ -36,4 +36,5 @@ run_cmd(
     + '--keep-scratch '
     + '--reuse-scratch-run-id 8aa2b4 '
     + '--billing-project tob-wgs '
+    + '--skip-vqsr '
 )
