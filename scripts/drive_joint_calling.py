@@ -34,7 +34,7 @@ run_cmd(
     + '--to '
     + ('temporary ' if is_test else 'temporary ')
     + '--keep-scratch '
-    + '--reuse-scratch-run-id 8aa2b4 '
+    #    + '--reuse-scratch-run-id 8aa2b4 '
     + '--billing-project tob-wgs '
     + '--skip-vqsr '
 )
