@@ -24,7 +24,7 @@ submodule:
 
 .PHONY: run_test
 run_test:
-	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling" --description "joint calling" --access-level test scripts/drive_joint_calling.py test
+	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling" --description "joint calling" --access-level test scripts/drive_joint_calling.py test v2
 
 .PHONY: run_full
 run_full:
