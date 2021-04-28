@@ -24,11 +24,11 @@ submodule:
 
 .PHONY: run_test
 run_test:
-	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling" --description "joint calling" --access-level test joint-calling/workflows/drive_joint_calling.py --is-test --callset tob-wgs --version v2 --keep-scratch --overwrite
+	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling" --description "joint calling" --access-level test joint-calling/workflows/joint_calling.sh --access-level test --callset tob-wgs --version v2 --keep-scratch --overwrite
 
 .PHONY: run_full
 run_full:
-	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling-full" --description "joint calling" --access-level test joint-calling/workflows/drive_joint_calling.py --batch 0 --batch 1 --callset tob-wgs --version v2 --keep-scratch
+	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling-full" --description "joint calling" --access-level test joint-calling/workflows/joint_calling.sh --access-level full --batch 0 --batch 1 --callset tob-wgs --version v2 --keep-scratch
 
 .PHONY: sleep
 sleep:
