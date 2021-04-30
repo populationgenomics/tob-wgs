@@ -20,4 +20,4 @@ run_full:
 
 .PHONY run_unit_test
 run_unit_test:
-        analysis-runner --dataset tob-wgs --access-level test --output-dir "gs://cpg-tob-wgs-temporary/test/evaluation-test" --description "test evaluation" joint-calling/workflows/joint_calling.sh test/test_rf_evaluation.py
+	analysis-runner --dataset tob-wgs --access-level test --output-dir "gs://cpg-tob-wgs-temporary/test/evaluation-test" --description "test evaluation" joint-calling/workflows/joint_calling.sh test/test_rf_evaluation.py
