@@ -1,3 +1,5 @@
+VERSION := v0
+
 .PHONY: pkg
 pkg:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' --no-verify && git push)
@@ -12,12 +14,37 @@ submodule:
 
 .PHONY: run_test
 run_test:
-	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling" --description "joint calling" --access-level test joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py --access-level test --callset tob-wgs --version v2 --keep-scratch --reuse
+	analysis-runner \
+	--dataset tob-wgs \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf/test" \
+	--description "joint calling" \
+	--access-level test \
+	joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py\
+    --access-level test \
+    --callset tob-wgs \
+    --version test-$(VERSION) \
+    --keep-scratch \
+    --reuse
 
 .PHONY: run_full
 run_full:
-	analysis-runner --dataset tob-wgs --output-dir "gs://cpg-tob-wgs-temporary/joint-calling-full" --description "joint calling" --access-level test joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py --access-level full --batch 0 --batch 1 --callset tob-wgs --version v2 --keep-scratch
+	analysis-runner \
+	--dataset tob-wgs \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf" \
+	--description "joint calling" \
+	--access-level test \
+	joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py \
+	--access-level full \
+	--batch 0 --batch 1 \
+	--callset tob-wgs \
+	--version $(VERSION) \
+	--keep-scratch
 
 .PHONY: run_unit_test
 run_unit_test:
-	analysis-runner --dataset tob-wgs --access-level test --output-dir "gs://cpg-tob-wgs-temporary/test/evaluation-test" --description "test evaluation" joint-calling/workflows/joint_calling.sh test/test_rf_evaluation.py
+	analysis-runner \
+	--dataset tob-wgs \
+	--access-level test \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf/unit-test" \
+	--description "test evaluation" \
+	joint-calling/workflows/joint_calling.sh test/test_rf_evaluation.py
