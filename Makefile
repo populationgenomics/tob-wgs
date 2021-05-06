@@ -19,7 +19,7 @@ run_test:
 	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf/test" \
 	--description "joint calling" \
 	--access-level test \
-	joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py\
+	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py\
     --access-level test \
     --callset tob-wgs \
     --version test-$(VERSION) \
@@ -33,7 +33,7 @@ run_full:
 	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf" \
 	--description "joint calling" \
 	--access-level test \
-	joint-calling/workflows/joint_calling.sh workflows/batch_workflow.py \
+	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--access-level full \
 	--batch 0 --batch 1 \
 	--callset tob-wgs \
