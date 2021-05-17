@@ -1,0 +1,4 @@
+[submodule "joint-calling"]
+	path = joint-calling
+	url = https://github.com/populationgenomics/joint-calling
+	branch = main
