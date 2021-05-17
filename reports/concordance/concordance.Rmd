@@ -231,13 +231,14 @@ We can map the SNPchip sample names to TOB IDs using the Excel spreadsheet
 provided in 2021-Apr-15 by GWCCG.
 
 ```{r vars}
-chip_vcf_raw <- here("nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes_2021-Mar-17.vcf.gz")
+chip_vcf_raw <- here("nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes_2021-Mar-17.vcf.bgz")
 chip_ids_file <- here("nogit/data/snpchip/raw/OneK1K_sample_IDs_2021-Apr-15.xlsx")
 ```
 
 ```{r snpchip_stats}
 BCFTOOLS <- glue::glue("~/conda/envs/bioinf/bin/bcftools")
 
+# grab the sample names from the SNPchip VCF - 1,034 samples
 chip_sample_nms <-
   system(glue::glue("{BCFTOOLS} query -l {chip_vcf_raw}"), intern = TRUE) %>%
   dplyr::as_tibble() %>%
@@ -270,6 +271,7 @@ chip_sample_nms %>%
 - Let's examine the sample IDs provided in the Excel spreadsheet:
 
 ```{r snpchip_id2tob_map_explore}
+# 983 samples in Excel spreadsheet
 chip_id2tob_raw <-
   chip_ids_file %>%
   readxl::read_excel(skip = 1) %>%
@@ -304,8 +306,8 @@ table(chip_sample_nms$sample %in% chip_id2tob_raw$person)
 chip_sample_nms %>% filter(!sample %in% chip_id2tob_raw$person)
 ```
 
-- Apart from 51 samples that do not have a TOB ID, now let's just get a clean
-  map:
+- Apart from 51 SNPchip VCF samples that do not have a TOB ID, let's just get a
+  clean map:
 
 ```{r chip_id2tob_prep}
 chip_id2tob_clean <-
@@ -321,7 +323,17 @@ map_dbl(chip_id2tob_clean, ~sum(is.na(.x)))
 # write the TSV locally:
 readr::write_tsv(
   x = chip_id2tob_clean,
-  file = here("nogit/data/snpchip/processed/sample2tobid_2021-Apr-20.tsv"))
+  file = here("nogit/data/snpchip/processed",
+              "sample2tobid_2021-Apr-20.tsv"))
+
+# export samples that have TOB IDs, for use with bcftools reheader
+chip_id2tob_clean %>%
+  dplyr::filter(!is.na(tob_id)) %>%
+  dplyr::select(sample_id, tob_id) %>%
+  readr::write_tsv(
+    file = here("nogit/data/snpchip/processed",
+                "sample2tobid_bcftools_reheader_2021-May-17.tsv"),
+    col_names = FALSE)
 ```
 
 ### Genotypes
