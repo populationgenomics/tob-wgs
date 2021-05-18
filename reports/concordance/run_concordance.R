@@ -1,3 +1,12 @@
 #!/usr/bin/env Rscript
 
-sort(unname(installed.packages()[, 1]))
+require(tidyverse)
+require(glue)
+
+gcs_outdir <- Sys.getenv("OUTPUT")
+container_output <- "/data/mtcars.tsv"
+x <- mtcars
+readr::write_tsv(x, file = container_output)
+system("gcloud -q auth activate-service-account --key-file=/gsa-key/key.json")
+system(glue("gcloud cp {container_output} {gcs_outdir}"))
+head(x)
