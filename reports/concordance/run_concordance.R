@@ -7,7 +7,7 @@ gcs_outdir <- Sys.getenv("OUTPUT")
 mtcars_tsv <- "mtcars.tsv"
 mtcars_plot <- "mtcars_disp_vs_hp.png"
 d <- mtcars
-readr::write_tsv(d, file = container_output)
+readr::write_tsv(d, file = mtcars_tsv)
 
 p <- d %>%
   ggplot(aes(x = disp, y = hp)) +
