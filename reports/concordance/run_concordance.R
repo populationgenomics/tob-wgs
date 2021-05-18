@@ -18,6 +18,6 @@ snpchip_vcf_raw <- glue("{gcs_indir}/onek1k_pre_imputation_genotypes.vcf.gz")
 # get snpchip sample names from VCF
 
 cat("Testing micromamba")
-system("micromamba install bcftools -c bioconda -c conda-forge")
+system("micromamba install --name base -c bioconda -c conda-forge bcftools")
 system("bcftools --help")
 cat(glue("[{date()}] Finished!!!"))
