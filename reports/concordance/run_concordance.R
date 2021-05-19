@@ -24,7 +24,7 @@ system(glue("gsutil cp {snpchipid2tobid_excel} {snpchip_vcf_raw} ."))
 
 # 1,034 samples in SNPchip VCF
 chip_sample_nms <-
-  system(glue("{bcftools} query -l {snpchip_vcf_raw}"), intern = TRUE) %>%
+  system(glue("bcftools query -l {snpchip_vcf_raw}"), intern = TRUE) %>%
   as_tibble_col("sample")
 
 # 983 samples in Excel spreadsheet
