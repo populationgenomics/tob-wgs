@@ -16,11 +16,13 @@ system("micromamba install --name base -c bioconda -c conda-forge bcftools")
 
 gcs_outdir <- Sys.getenv("OUTPUT")
 gcs_indir <- "gs://cpg-tob-wgs-snpchipdata/data"
-snpchipid2tobid_excel <- glue("{gcs_indir}/OneK1K_sample_IDs_2021-Apr-15.xlsx")
-snpchip_vcf_raw <- glue("{gcs_indir}/onek1k_pre_imputation_genotypes.vcf.gz")
+snpchipid2tobid_excel_gcs <- glue("{gcs_indir}/OneK1K_sample_IDs_2021-Apr-15.xlsx")
+snpchip_vcf_raw_gcs <- glue("{gcs_indir}/onek1k_pre_imputation_genotypes.vcf.gz")
+snpchipid2tobid_excel <- basename(snpchipid2tobid_excel_gcs)
+snpchip_vcf_raw <- basename(snpchip_vcf_raw_gcs)
 
 # copy VCF + spreadsheet into container
-system(glue("gsutil cp {snpchipid2tobid_excel} {snpchip_vcf_raw} ."))
+system(glue("gsutil cp {snpchipid2tobid_excel_gcs} {snpchip_vcf_raw_gcs} ."))
 
 # 1,034 samples in SNPchip VCF
 chip_sample_nms <-
