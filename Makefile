@@ -38,7 +38,7 @@ run_full:
 	--batch 0 --batch 1 \
 	--callset tob-wgs \
 	--version $(VERSION) \
-	--keep-scratch
+	--keep-scratch --reuse
 
 .PHONY: run_unit_test
 run_unit_test:
