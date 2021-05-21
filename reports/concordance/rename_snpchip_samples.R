@@ -15,10 +15,6 @@ require(readxl, include.only = "read_excel")
 require(stringr, include.only = "str_order")
 require(tibble, include.only = "as_tibble_col")
 
-# authorise gcp service account
-#gcp_auth_sa <- "gcloud -q auth activate-service-account --key-file=/gsa-key/key.json"
-#system(gcp_auth_sa)
-
 cat(glue("[{date()}] Installing bcftools.\n"))
 system("micromamba install --name base -c bioconda -c conda-forge bcftools")
 
@@ -63,8 +59,9 @@ system(glue("bcftools reheader ",
             "-o {snpchip_vcf_rehead} ",
             "{snpchip_vcf_raw}"))
 
-# copy output to bucket
+# copy output to analysis bucket
 gcs_outdir <- Sys.getenv("OUTPUT")
+stopifnot(grepl("gs://cpg-tob-wgs-analysis/snpchip", gcs_outdir))
 system(glue("gsutil cp {snpchip_vcf_rehead} {gcs_outdir}"))
 
 cat(glue("[{date()}] Finished!!!\n"))
