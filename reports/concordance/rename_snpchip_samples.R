@@ -16,14 +16,14 @@ require(stringr, include.only = "str_order")
 require(tibble, include.only = "as_tibble_col")
 
 # authorise gcp service account
-gcp_auth_sa <- "gcloud -q auth activate-service-account --key-file=/gsa-key/key.json"
-system(gcp_auth_sa)
+#gcp_auth_sa <- "gcloud -q auth activate-service-account --key-file=/gsa-key/key.json"
+#system(gcp_auth_sa)
 
 cat(glue("[{date()}] Installing bcftools.\n"))
 system("micromamba install --name base -c bioconda -c conda-forge bcftools")
 
 # set up inputs
-gcs_indir <- "gs://cpg-tob-wgs-snpchipdata/data"
+gcs_indir <- "gs://cpg-tob-wgs-main/snpchip/v1"
 snpchip_vcf_raw_gcs <- glue("{gcs_indir}/onek1k_pre_imputation_genotypes.vcf.gz")
 snpchip_vcf_raw <- basename(snpchip_vcf_raw_gcs)
 snpchipid2tobid_excel_gcs <- glue("{gcs_indir}/OneK1K_sample_IDs_2021-Apr-15.xlsx")
