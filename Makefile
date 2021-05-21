@@ -1,4 +1,4 @@
-VERSION := v0
+VERSION := v1
 
 .PHONY: update_joint_calling_submodule
 update_joint_calling_submodule:
@@ -31,4 +31,5 @@ joint_calling_full:
 	--access-level full \
 	--batch 0 --batch 1 --batch 2 \
 	--callset tob-wgs \
-	--version $(VERSION)
+	--version $(VERSION) \
+	--reuse
