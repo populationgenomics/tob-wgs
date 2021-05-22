@@ -11,7 +11,11 @@ output:
     highlight: kate
 params:
   title: ""
-title: "Exploration of QC metrics for TOB-WGS batches 0 & 1"
+  bucket_suffix: "test"
+  gender_tsv: "gender.tsv"
+  age_csv: "age.csv"
+  qc_csv: "qc.csv"
+title: "Exploration of QC metrics for TOB-WGS"
 ---
 
 ```{r knitr_opts, include=FALSE}
@@ -24,18 +28,19 @@ Here we're exploring QC metrics, metadata, and contents of Google Cloud Storage
 buckets associated with the TOB-WGS project.
 
 ```{r load_pkgs}
-require(tidyverse)
-require(fs)
-require(glue)
-require(here)
-require(assertthat)
-require(reactable)
-require(ggrepel)
-require(sessioninfo)
+library(tidyverse)
+library(fs)
+library(glue)
+library(here)
+library(assertthat)
+library(reactable)
+library(ggrepel)
+library(sessioninfo)
+library(DT)
 
 # for GCS authentication
-require(googleCloudStorageR)
-require(gargle)
+library(googleCloudStorageR)
+library(gargle)
 ```
 
 ```{r funcs}
@@ -84,9 +89,10 @@ is_outlier <- function(x, m = 1.5) {
 
 
 ```{r vars}
-bucket <- "cpg-tob-wgs-main"
-date <- "2021-04-24"
+bucket <- glue("cpg-tob-wgs-", params$bucket_suffix)
+date <- "2021-05-21"
 data_dir <- here(glue("nogit/data/bucket/{bucket}"))
+dir.create(data_dir, recursive=TRUE)
 ```
 
 ## WGS GVCF files
@@ -102,6 +108,7 @@ googleCloudStorageR::gcs_auth(token = token)
 obj_list <- gcs_list_objects2(b = bucket)
 saveRDS(obj_list, glue("{data_dir}/{date}_list_contents.rds"))
 ```
+
 
 ```{r list_contents2}
 obj_list <- readRDS(glue("{data_dir}/{date}_list_contents.rds"))
@@ -181,17 +188,12 @@ files have been provided containing:
 - the gender of each sample;
 - the age of each sample;
 
-
 ```{r qc_plot_prep}
-qc1 <-
-  here(glue("{data_dir}/gvcf_batch1_R_210315_BINKAN1_1K1KDNA_M002.csv")) %>%
+qc1 <- params$qc_csv %>% 
   readr::read_csv()
-qc_insert_size_stdev <-
-  here(glue("{data_dir}/InsertSizeStandardDeviationBatch1-2.csv")) %>%
-  readr::read_csv()
-qc_gender <-
-  here(glue("{data_dir}/gender.xlsx")) %>%
-  readxl::read_excel(
+
+qc_gender <- params$gender_tsv %>% 
+  read_tsv(
     skip = 2,
     col_names = c("sample_id", "sample.sample_name", "gender",
                   paste0("nanodrop_", c("conc", "260/280", "230/280")),
@@ -199,26 +201,23 @@ qc_gender <-
                   "volume", "location")) %>%
   dplyr::filter(!is.na(sample_id)) %>%
   dplyr::select(sample = sample.sample_name, gender)
-qc_age <-
-  here(glue("{data_dir}/age.csv")) %>%
+
+qc_age <- params$age_csv %>%
   readr::read_csv(col_types = cols(.default = "c", age = "d")) %>%
   dplyr::select(sample = TOBIID, age)
 
 p_data <- qc1 %>%
-  dplyr::left_join(qc_insert_size_stdev) %>%
   dplyr::select(sample = sample.sample_name,
                 `freemix contamination` = raw_data.FREEMIX,
                 `chimeras pct` = raw_data.PCT_CHIMERAS,
                 `duplicate pct` = raw_data.PERCENT_DUPLICATION,
                 `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-                `insert size std dev` = raw_data.STANDARD_DEVIATION,
                 `coverage median` = raw_data.MEDIAN_COVERAGE) %>%
   tidyr::pivot_longer(cols = -sample, names_to = "metric") %>%
   dplyr::left_join(qc_gender, by = "sample") %>%
   dplyr::left_join(qc_age, by = "sample") %>%
   dplyr::left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
   dplyr::mutate(batch = glue("batch {batch}"))
-
 ```
 
 ```{r plot_all_metrics, fig.height=18, fig.width=12}
@@ -226,7 +225,6 @@ p_data <- qc1 %>%
 jitter_pos2 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
 
 p_data %>%
-  dplyr::filter(!metric == "insert size std dev") %>%
   dplyr::group_by(metric) %>%
   dplyr::mutate(
     value_rounded = round(value, 3),
@@ -244,25 +242,6 @@ p_data %>%
                "{length(unique(p_data$sample))} TOB-WGS samples.")) +
   theme(strip.text.x = element_text(face = "bold.italic"),
         strip.text.y = element_text(size = 12,face = "bold.italic"))
-```
-
-```{r plot_insert_size, fig.height=16}
-# plot insert size
-p_data %>%
-  dplyr::filter(grepl("insert size", metric)) %>%
-  tidyr::pivot_wider(names_from = metric) %>%
-  dplyr::rename(med = `insert size median`,
-                sd = `insert size std dev`) %>%
-  dplyr::mutate(sample = forcats::fct_reorder(sample, med)) %>%
-  ggplot(aes(y = sample, x = med)) +
-  geom_errorbar(aes(y = sample, xmin = med - sd, xmax = med + sd),
-                color = "grey50", width = 0.50) +
-  geom_point(shape = 21, fill = "blue") +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank()) +
-  xlab("Median insert size") +
-  ggtitle(glue("Sample median insert size +- standard deviation for ",
-               "{length(unique(p_data$sample))} TOB-WGS samples."))
 ```
 
 ## Session Info
