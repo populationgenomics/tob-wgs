@@ -1,6 +1,7 @@
 #!/bin/bash
 
-test -f qc.csv || gsutil cp gs://cpg-tob-wgs-main/gvcf/batch2/R_210315_BINKAN1_1K1KDNA_M003.csv qc.csv
+#gstuil cp gs://cpg-tob-wgs-main/gvcf/batch2/R_210315_BINKAN1_1K1KDNA_M003.csv qc.csv
+test -f qc.csv || gsutil cp gs://cpg-tob-wgs-test/gvcf/batch0/R_210315_BINKAN1_1K1KDNA_M001.csv qc.csv
 test -f gender.tsv || gsutil cp gs://cpg-tob-wgs-analysis/gender.tsv gender.tsv
 test -f age.csv || gsutil cp gs://cpg-tob-wgs-analysis/age.csv age.csv
 
