@@ -1,4 +1,4 @@
-VERSION := v0
+VERSION := v1
 
 .PHONY: pkg
 pkg:
