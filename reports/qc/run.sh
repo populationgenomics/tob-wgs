@@ -38,7 +38,7 @@ function run() {
 run 0 test test temporary
 
 # Run on full data in a standard access level
-if [ $PROD -eq YES ]
+if [[ $PROD = "YES" ]]
 then
 	run $BATCH analysis main web
 fi
