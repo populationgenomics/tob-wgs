@@ -25,7 +25,7 @@ function run() {
 	local main_suf=$3
 	local web_suf=$4
 
-	test -f qc.csv || gsutil cp "gs://cpg-tob-wgs-main/gvcf/batch${batch}/*.csv" qc.csv
+	test -f qc.csv || gsutil cp "gs://cpg-tob-wgs-${main_suf}/gvcf/batch${batch}/*.csv" qc.csv
 	test -f gender.tsv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/gender.tsv gender.tsv
 	test -f age.csv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/age.csv age.csv
 	Rscript -e "rmarkdown::render('qc.Rmd', output_file='qc.html', params=list(gender_tsv='gender.tsv', age_csv='age.csv', qc_csv='qc.csv', bucket_suffix='${main_suf}'))"
