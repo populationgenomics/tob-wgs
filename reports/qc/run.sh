@@ -2,6 +2,8 @@
 
 set -ex
 
+micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c conda-forge r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager
+
 while [[ $# -gt 0 ]]
 do
 key="$1"
