@@ -98,13 +98,12 @@ date <- "2021-05-21"
 - Let's first explore the contents of the
   `r glue("{bucket}")` bucket:
 
-```{r list_contents1, eval=FALSE}
+```{r list_contents1}
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
 token <- gargle::token_fetch(scopes = scope)
 googleCloudStorageR::gcs_auth(token = token)
 obj_list <- gcs_list_objects2(b = bucket)
 ```
-
 
 ```{r list_contents2}
 count(obj_list, ftype) %>% knitr::kable(caption = glue("Count of file types in {bucket}."))
