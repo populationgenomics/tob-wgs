@@ -15,7 +15,7 @@ params:
   gender_tsv: "gender.tsv"
   age_csv: "age.csv"
   qc_csv: "qc.csv"
-title: "Exploration of QC metrics for TOB-WGS"
+title: "QC report for TOB-WGS"
 ---
 
 ```{r knitr_opts, include=FALSE}
