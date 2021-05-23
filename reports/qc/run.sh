@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 while [[ $# -gt 0 ]]
 do
