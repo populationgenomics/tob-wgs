@@ -13,7 +13,7 @@ joint_calling_test_to_temporary:
 	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test" \
 	--description "Joint calling" \
 	--access-level test \
-	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py\
+	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
 	--to temporary \
     --callset tob-wgs \
@@ -28,7 +28,7 @@ joint_calling_test_to_test:
 	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test" \
 	--description "Joint calling" \
 	--access-level test \
-	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py\
+	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
 	--to test \
     --callset tob-wgs \
