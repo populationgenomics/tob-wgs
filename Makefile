@@ -7,10 +7,10 @@ update_joint_calling_submodule:
 	(git add joint-calling && git commit -m 'Update joint-calling submodule' && git push)
 
 .PHONY: joint_calling_test_to_temporary
-joint_calling_test:
+joint_calling_test_to_temporary:
 	analysis-runner \
 	--dataset tob-wgs \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf/test" \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test" \
 	--description "Joint calling" \
 	--access-level test \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py\
@@ -22,10 +22,10 @@ joint_calling_test:
     --reuse
 
 .PHONY: joint_calling_test_to_test
-joint_calling_test:
+joint_calling_test_to_test:
 	analysis-runner \
 	--dataset tob-wgs \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf/test" \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test" \
 	--description "Joint calling" \
 	--access-level test \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py\
@@ -37,10 +37,10 @@ joint_calling_test:
     --reuse
 
 .PHONY: joint_calling_main_to_main
-joint_calling_full:
+joint_calling_main_to_main:
 	analysis-runner \
 	--dataset tob-wgs \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-vcf" \
+	--output-dir "gs://cpg-tob-wgs-hail/joint-calling" \
 	--description "Joint calling" \
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
