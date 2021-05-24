@@ -16,10 +16,10 @@ joint_calling_test_to_temporary:
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
 	--to temporary \
-    --callset tob-wgs \
-    --version test-$(VERSION) \
-    --keep-scratch \
-    --reuse
+	--callset tob-wgs \
+	--version test-$(VERSION) \
+	--keep-scratch \
+	--reuse
 
 .PHONY: joint_calling_test_to_test
 joint_calling_test_to_test:
@@ -31,10 +31,10 @@ joint_calling_test_to_test:
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
 	--to test \
-    --callset tob-wgs \
-    --version $(VERSION) \
-    --keep-scratch \
-    --reuse
+	--callset tob-wgs \
+	--version $(VERSION) \
+	--keep-scratch \
+	--reuse
 
 .PHONY: joint_calling_main_to_main
 joint_calling_main_to_main:
