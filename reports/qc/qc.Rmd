@@ -11,10 +11,10 @@ output:
     highlight: kate
 params:
   title: ""
-  bucket_suffix: "test"
-  gender_tsv: "gender.tsv"
-  age_csv: "age.csv"
-  qc_csv: "qc.csv"
+  gvcf_bucket_suffix: "test"
+  gender_tsv: "work/gender.tsv"
+  age_csv: "work/age.csv"
+  qc_csv: "work/qc.csv"
 title: "QC report for TOB-WGS"
 ---
 
@@ -31,7 +31,6 @@ buckets associated with the TOB-WGS project.
 library(tidyverse)
 library(fs)
 library(glue)
-library(here)
 library(assertthat)
 library(reactable)
 library(ggrepel)
@@ -89,7 +88,7 @@ is_outlier <- function(x, m = 1.5) {
 
 
 ```{r vars}
-bucket <- glue("cpg-tob-wgs-", params$bucket_suffix)
+bucket <- glue("cpg-tob-wgs-", params$gvcf_bucket_suffix)
 date <- "2021-05-21"
 ```
 
