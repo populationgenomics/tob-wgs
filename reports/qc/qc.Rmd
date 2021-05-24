@@ -11,10 +11,11 @@ output:
     highlight: kate
 params:
   title: ""
-  bucket_suffix: "test"
-  gender_tsv: "gender.tsv"
-  age_csv: "age.csv"
-  qc_csv: "qc.csv"
+  gvcf_bucket_suffix: "test"
+  gender_tsv: "work/gender.tsv"
+  age_csv: "work/age.csv"
+  qc_csv: "work/qc.csv"
+  meta_tsv: "work/meta.tsv"
 title: "QC report for TOB-WGS"
 ---
 
@@ -31,7 +32,6 @@ buckets associated with the TOB-WGS project.
 library(tidyverse)
 library(fs)
 library(glue)
-library(here)
 library(assertthat)
 library(reactable)
 library(ggrepel)
@@ -89,7 +89,7 @@ is_outlier <- function(x, m = 1.5) {
 
 
 ```{r vars}
-bucket <- glue("cpg-tob-wgs-", params$bucket_suffix)
+bucket <- glue("cpg-tob-wgs-", params$gvcf_bucket_suffix)
 date <- "2021-05-21"
 ```
 
@@ -183,60 +183,84 @@ files have been provided containing:
 - the age of each sample;
 
 ```{r qc_plot_prep}
-qc1 <- params$qc_csv %>% 
-  readr::read_csv()
+qc_kccg <- params$qc_csv %>% 
+  read_csv() %>% 
+  select(
+    sample = sample.sample_name,
+    contamination = raw_data.FREEMIX,
+    chimeras = raw_data.PCT_CHIMERAS,
+    duplicates = raw_data.PERCENT_DUPLICATION,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    `coverage median` = raw_data.MEDIAN_COVERAGE
+  )
 
-qc_gender <- params$gender_tsv %>% 
+sample_qc_meta = params$meta_tsv %>% 
+  read_tsv() %>% 
+  select(
+    sample = s,
+    singleton = sample_qc.n_singleton,
+    snp = sample_qc.n_snp,
+    ti_tv = sample_qc.r_ti_tv,
+    het_hom = sample_qc.r_het_hom_var,
+    indel_ratio = sample_qc.r_insertion_deletion
+  )
+
+gender <- params$gender_tsv %>% 
   read_tsv(
     skip = 2,
-    col_names = c("sample_id", "sample.sample_name", "gender",
-                  paste0("nanodrop_", c("conc", "260/280", "230/280")),
-                  paste0("qubit_", c("assay_conc", "stock_conc")),
-                  "volume", "location")) %>%
-  dplyr::filter(!is.na(sample_id)) %>%
-  dplyr::select(sample = sample.sample_name, gender)
+    col_names = c(
+      "sample_id", 
+      "sample.sample_name", 
+      "gender",
+      paste0("nanodrop_", c("conc", "260/280", "230/280")),
+      paste0("qubit_", c("assay_conc", "stock_conc")),
+      "volume", 
+      "location"
+    )) %>%
+  filter(!is.na(sample_id)) %>%
+  select(sample = sample.sample_name, gender)
 
-qc_age <- params$age_csv %>%
-  readr::read_csv(col_types = cols(.default = "c", age = "d")) %>%
-  dplyr::select(sample = TOBIID, age)
+age <- params$age_csv %>%
+  read_csv(col_types = cols(.default = "c", age = "d")) %>%
+  select(sample = TOBIID, age)
 
-p_data <- qc1 %>%
-  dplyr::select(sample = sample.sample_name,
-                `freemix contamination` = raw_data.FREEMIX,
-                `chimeras pct` = raw_data.PCT_CHIMERAS,
-                `duplicate pct` = raw_data.PERCENT_DUPLICATION,
-                `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-                `coverage median` = raw_data.MEDIAN_COVERAGE) %>%
+p_data <- qc_kccg %>% 
+  left_join(sample_qc_meta, by = "sample") %>% 
   tidyr::pivot_longer(cols = -sample, names_to = "metric") %>%
-  dplyr::left_join(qc_gender, by = "sample") %>%
-  dplyr::left_join(qc_age, by = "sample") %>%
-  dplyr::left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
-  dplyr::mutate(batch = glue("batch {batch}"))
+  left_join(gender, by = "sample") %>%
+  left_join(age, by = "sample") %>%
+  left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
+  mutate(batch = glue("batch {batch}"))
+
+cutoffs <- tibble(
+  metric   =  c("singleton", "snp",     "het_hom", "chimeras", "coverage median", "duplicates", "contamination", "insert size median"),
+  upper_lim = c(100000,       8000000,   3.3,       0.05,       NA,                0.3,          0.05,            NA),
+  lower_lim = c(NA,           2400000,   NA,        NA,         15,                NA,           NA,              250)
+)
+
+cutoffs = cutoffs %>% filter(metric %in% (p_data$metric %>% unique))
 ```
-
-```{r plot_all_metrics, fig.height=18, fig.width=12}
-# jitter object for proper labels
-jitter_pos2 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
-
-p_data %>%
-  dplyr::group_by(metric) %>%
-  dplyr::mutate(
-    value_rounded = round(value, 3),
-    outlier = if_else(is_outlier(value),
-                      glue("{sample} ({value_rounded})"),
-                      NA_character_)) %>%
-  ggplot(aes(x = "", y = value)) +
-  geom_point(position = jitter_pos2, shape = 21, colour = "blue") +
-  ggrepel::geom_text_repel(position = jitter_pos2, aes(label = outlier),
-                           na.rm = TRUE, hjust = 9.3) +
-  geom_violin(fill = NA) +
-  facet_grid(metric ~ batch, scales = "free") +
+```{r fig.width=8}
+p_data %>% 
+  group_by(metric) %>% 
+  mutate(
+    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
+  ) %>%
+  ggplot() +
+  geom_jitter(aes(x = "", y = value), shape = 21, fill = "blue") +
+  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
+  geom_violin(aes(x = "", y = value), fill = "transparent") +
+  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
+  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
+  facet_wrap(~metric, scales = "free", nrow = 1) +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
+  ggtitle(glue("QC metrics (for {nrow(df)} TOB-WGS samples).")) +
+  xlab("") +
   ggtitle(glue("QC metrics by batch for ",
-               "{length(unique(p_data$sample))} TOB-WGS samples.")) +
-  theme(strip.text.x = element_text(face = "bold.italic"),
-        strip.text.y = element_text(size = 12,face = "bold.italic"))
+               "{length(unique(p_data$sample))} TOB-WGS samples."))
 ```
+
 
 ## Session Info
 
