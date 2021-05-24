@@ -15,6 +15,7 @@ params:
   gender_tsv: "work/gender.tsv"
   age_csv: "work/age.csv"
   qc_csv: "work/qc.csv"
+  meta_tsv: "work/meta.tsv"
 title: "QC report for TOB-WGS"
 ---
 
@@ -182,16 +183,22 @@ files have been provided containing:
 - the age of each sample;
 
 ```{r qc_plot_prep}
-qc1 <- params$qc_csv %>% 
-  readr::read_csv()
+qc1 <- params$qc_csv %>% readr::read_csv()
+
+meta_df = params$meta_tsv %>% read_tsv()
 
 qc_gender <- params$gender_tsv %>% 
   read_tsv(
     skip = 2,
-    col_names = c("sample_id", "sample.sample_name", "gender",
-                  paste0("nanodrop_", c("conc", "260/280", "230/280")),
-                  paste0("qubit_", c("assay_conc", "stock_conc")),
-                  "volume", "location")) %>%
+    col_names = c(
+      "sample_id", 
+      "sample.sample_name", 
+      "gender",
+      paste0("nanodrop_", c("conc", "260/280", "230/280")),
+      paste0("qubit_", c("assay_conc", "stock_conc")),
+      "volume", 
+      "location"
+    )) %>%
   dplyr::filter(!is.na(sample_id)) %>%
   dplyr::select(sample = sample.sample_name, gender)
 
@@ -200,12 +207,22 @@ qc_age <- params$age_csv %>%
   dplyr::select(sample = TOBIID, age)
 
 p_data <- qc1 %>%
-  dplyr::select(sample = sample.sample_name,
-                `freemix contamination` = raw_data.FREEMIX,
-                `chimeras pct` = raw_data.PCT_CHIMERAS,
-                `duplicate pct` = raw_data.PERCENT_DUPLICATION,
-                `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-                `coverage median` = raw_data.MEDIAN_COVERAGE) %>%
+  dplyr::select(
+    sample = sample.sample_name,
+    `freemix contamination` = raw_data.FREEMIX,
+    `chimeras pct` = raw_data.PCT_CHIMERAS,
+    `duplicate pct` = raw_data.PERCENT_DUPLICATION,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    `coverage median` = raw_data.MEDIAN_COVERAGE
+  ) %>%
+  dplyr::left_join(meta_df %>% dplyr::select(
+    sample = s,
+    singleton = sample_qc.n_singleton,
+    snp = sample_qc.n_snp,
+    ti_tv = sample_qc.r_ti_tv,
+    het_hom = sample_qc.r_het_hom_var,
+    indel_ratio = sample_qc.r_insertion_deletion
+  ), by = "sample") %>% 
   tidyr::pivot_longer(cols = -sample, names_to = "metric") %>%
   dplyr::left_join(qc_gender, by = "sample") %>%
   dplyr::left_join(qc_age, by = "sample") %>%
@@ -223,7 +240,8 @@ p_data %>%
     value_rounded = round(value, 3),
     outlier = if_else(is_outlier(value),
                       glue("{sample} ({value_rounded})"),
-                      NA_character_)) %>%
+                      NA_character_)
+    ) %>%
   ggplot(aes(x = "", y = value)) +
   geom_point(position = jitter_pos2, shape = 21, colour = "blue") +
   ggrepel::geom_text_repel(position = jitter_pos2, aes(label = outlier),
