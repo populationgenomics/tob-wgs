@@ -27,7 +27,7 @@ joint_calling_test_to_test:
 	--dataset tob-wgs \
 	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test" \
 	--description "Joint calling" \
-	--access-level test \
+	--access-level standard \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
 	--to test \
