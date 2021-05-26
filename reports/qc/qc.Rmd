@@ -177,10 +177,8 @@ gvcf %>%
 We have access to CSV files with summaries of sample QC metrics. Additional
 files have been provided containing:
 
-- the standard deviation of CRAM insert size, as calculated by Picard's
-  CollectInsertSizeMetrics;
-- the gender of each sample;
-- the age of each sample;
+- the gender of each sample,
+- the age of each sample.
 
 ```{r qc_plot_prep}
 qc_kccg <- params$qc_csv %>% 
@@ -240,6 +238,8 @@ cutoffs <- tibble(
 
 cutoffs = cutoffs %>% filter(metric %in% (p_data$metric %>% unique))
 ```
+Plotting distibutions of several metrics. 
+
 ```{r fig.width=8}
 p_data %>% 
   group_by(metric) %>% 
@@ -252,15 +252,33 @@ p_data %>%
   geom_violin(aes(x = "", y = value), fill = "transparent") +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
-  facet_wrap(~metric, scales = "free", nrow = 1) +
+  facet_wrap(~metric, scales = "free", nrow = 2) +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
-  ggtitle(glue("QC metrics (for {nrow(df)} TOB-WGS samples).")) +
-  xlab("") +
-  ggtitle(glue("QC metrics by batch for ",
-               "{length(unique(p_data$sample))} TOB-WGS samples."))
+  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} TOB-WGS samples).")) +
+  xlab("")
 ```
 
+Same, but groupped by batch.
+
+```{r fig.width=10}
+p_data %>% 
+  group_by(metric) %>% 
+  mutate(
+    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
+  ) %>%
+  ggplot() +
+  geom_jitter(aes(x = "", y = value), shape = 21, fill = "blue") +
+  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
+  geom_violin(aes(x = "", y = value), fill = "transparent") +
+  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
+  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
+  facet_grid(metric ~ batch, scales = "free") +
+  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
+  xlab("") +
+  ggtitle(glue("QC metrics by batch for {length(unique(p_data$sample))} TOB-WGS samples."))
+```
 
 ## Session Info
 
