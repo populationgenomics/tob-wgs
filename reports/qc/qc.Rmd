@@ -14,8 +14,8 @@ params:
   gvcf_bucket_suffix: "test"
   gender_tsv: "work/gender.tsv"
   age_csv: "work/age.csv"
-  qc_csv: "work/qc.csv"
   meta_tsv: "work/meta.tsv"
+  qc_csv: "work/qc.csv"
 title: "QC report for TOB-WGS"
 ---
 
@@ -37,11 +37,13 @@ library(reactable)
 library(ggrepel)
 library(sessioninfo)
 library(DT)
+library(ggforce)
 
 # for GCS authentication
 library(googleCloudStorageR)
 library(gargle)
 ```
+
 
 ```{r funcs}
 guess_file_type <- function(x) {
@@ -67,13 +69,18 @@ guess_file_type <- function(x) {
 }
 
 gcs_list_objects2 <- function(b) {
-  googleCloudStorageR::gcs_list_objects(bucket = b,
-                                        detail = "summary") %>%
-    dplyr::as_tibble() %>%
-    dplyr::mutate(name = glue::glue("gs://{b}/{name}"),
-                  size = sub(" bytes", "", size), # else returns NA
-                  size = fs::as_fs_bytes(size),
-                  ftype = guess_file_type(name))
+  googleCloudStorageR::gcs_list_objects(
+    bucket = b, 
+    prefix = "gvcf",
+    detail = "summary"
+  ) %>%
+  dplyr::as_tibble() %>%
+  dplyr::mutate(
+    name = glue::glue("gs://{b}/{name}"),
+    size = sub(" bytes", "", size), # else returns NA
+    size = fs::as_fs_bytes(size),
+    ftype = guess_file_type(name)
+  )
 }
 
 # The given observation x is considered an outlier
@@ -181,17 +188,6 @@ files have been provided containing:
 - the age of each sample.
 
 ```{r qc_plot_prep}
-qc_kccg <- params$qc_csv %>% 
-  read_csv() %>% 
-  select(
-    sample = sample.sample_name,
-    contamination = raw_data.FREEMIX,
-    chimeras = raw_data.PCT_CHIMERAS,
-    duplicates = raw_data.PERCENT_DUPLICATION,
-    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-    `coverage median` = raw_data.MEDIAN_COVERAGE
-  )
-
 sample_qc_meta = params$meta_tsv %>% 
   read_tsv() %>% 
   select(
@@ -200,7 +196,20 @@ sample_qc_meta = params$meta_tsv %>%
     snp = sample_qc.n_snp,
     ti_tv = sample_qc.r_ti_tv,
     het_hom = sample_qc.r_het_hom_var,
-    indel_ratio = sample_qc.r_insertion_deletion
+    indel_ratio = sample_qc.r_insertion_deletion,
+    sample_filters = sample_filters,
+    high_quality = high_quality,
+    `chr20 mean dp` = chr20_mean_dp
+  )
+
+qc_kccg <- params$qc_csv %>% 
+  read_csv() %>% 
+  select(
+    sample = sample.sample_name,
+    contamination = raw_data.FREEMIX,
+    chimeras = raw_data.PCT_CHIMERAS,
+    duplicates = raw_data.PERCENT_DUPLICATION,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
   )
 
 gender <- params$gender_tsv %>% 
@@ -214,7 +223,8 @@ gender <- params$gender_tsv %>%
       paste0("qubit_", c("assay_conc", "stock_conc")),
       "volume", 
       "location"
-    )) %>%
+    )
+  ) %>%
   filter(!is.na(sample_id)) %>%
   select(sample = sample.sample_name, gender)
 
@@ -224,32 +234,32 @@ age <- params$age_csv %>%
 
 p_data <- qc_kccg %>% 
   left_join(sample_qc_meta, by = "sample") %>% 
-  tidyr::pivot_longer(cols = -sample, names_to = "metric") %>%
+  tidyr::pivot_longer(cols = -c("sample", "sample_filters", "high_quality"), names_to = "metric") %>%
   left_join(gender, by = "sample") %>%
   left_join(age, by = "sample") %>%
   left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
-  mutate(batch = glue("batch {batch}"))
+  mutate(batch = glue("batch {batch}")) %>% 
+  group_by(metric) %>% 
+  mutate(
+    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
+  )
 
 cutoffs <- tibble(
-  metric   =  c("singleton", "snp",     "het_hom", "chimeras", "coverage median", "duplicates", "contamination", "insert size median"),
-  upper_lim = c(100000,       8000000,   3.3,       0.05,       NA,                0.3,          0.05,            NA),
-  lower_lim = c(NA,           2400000,   NA,        NA,         15,                NA,           NA,              250)
+  metric   =  c("singleton", "snp",     "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
+  upper_lim = c(100000,       8000000,   3.3,       0.05,       NA,              0.3,          0.05,            NA),
+  lower_lim = c(NA,           2400000,   NA,        NA,         15,              NA,           NA,              250)
 )
 
 cutoffs = cutoffs %>% filter(metric %in% (p_data$metric %>% unique))
 ```
 Plotting distibutions of several metrics. 
 
-```{r fig.width=8}
+```{r fig.width=8, fig.height=8}
 p_data %>% 
-  group_by(metric) %>% 
-  mutate(
-    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
-  ) %>%
   ggplot() +
-  geom_jitter(aes(x = "", y = value), shape = 21, fill = "blue") +
-  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
   geom_violin(aes(x = "", y = value), fill = "transparent") +
+  geom_sina(aes(x = "", y = value)) +
+  geom_text_repel(aes(x = "", y = value, label = outlier), color="black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
   facet_wrap(~metric, scales = "free", nrow = 2) +
@@ -261,16 +271,13 @@ p_data %>%
 
 Same, but groupped by batch.
 
-```{r fig.width=10}
+```{r fig.width=6, fig.height=16}
 p_data %>% 
-  group_by(metric) %>% 
-  mutate(
-    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
-  ) %>%
+#  bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
   ggplot() +
-  geom_jitter(aes(x = "", y = value), shape = 21, fill = "blue") +
-  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
   geom_violin(aes(x = "", y = value), fill = "transparent") +
+  geom_sina(aes(x = "", y = value)) +
+  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
   facet_grid(metric ~ batch, scales = "free") +
