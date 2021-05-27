@@ -277,6 +277,8 @@ plot_width <- n_batches * 4
 plot_height <- n_metrics * 2
 ```
 
+Same, by groupped by batch:
+
 ```{r fig.width=plot_width, fig.height=plot_height}
 p_data %>%
   # bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
