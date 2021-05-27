@@ -254,7 +254,7 @@ cutoffs = cutoffs %>% filter(metric %in% (p_data$metric %>% unique))
 ```
 Plotting distibutions of several metrics. 
 
-```{r fig.width=8, fig.height=8}
+```{r fig.width=12, fig.height=12}
 p_data %>% 
   ggplot() +
   geom_violin(aes(x = "", y = value), fill = "transparent") +
@@ -271,7 +271,7 @@ p_data %>%
 
 Same, but groupped by batch.
 
-```{r fig.width=6, fig.height=16}
+```{r fig.width=9, fig.height=24}
 p_data %>% 
 #  bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
   ggplot() +
