@@ -12,10 +12,10 @@ output:
 params:
   title: ""
   gvcf_bucket_suffix: "test"
-  gender_tsv: "work/gender.tsv"
-  age_csv: "work/age.csv"
-  meta_tsv: "work/meta.tsv"
-  qc_csv: "work/qc.csv"
+  gender_tsv: "work/test/gender.tsv"
+  age_csv: "work/test/age.csv"
+  meta_tsv: "work/test/meta.tsv"
+  qc_csv: "work/test/qc.csv"
 title: "QC report for TOB-WGS"
 ---
 
@@ -44,6 +44,10 @@ library(googleCloudStorageR)
 library(gargle)
 ```
 
+```{r read_params, eval=FALSE, echo=FALSE}
+# for interactive debugging
+params <- rmarkdown::yaml_front_matter("qc.Rmd")$params
+```
 
 ```{r funcs}
 guess_file_type <- function(x) {
@@ -68,15 +72,15 @@ guess_file_type <- function(x) {
     TRUE ~ "OTHER")
 }
 
-gcs_list_objects2 <- function(b) {
+gcs_list_objects2 <- function(b, prefix) {
   googleCloudStorageR::gcs_list_objects(
-    bucket = b, 
-    prefix = "gvcf",
+    bucket = b,
+    prefix = prefix,
     detail = "summary"
   ) %>%
-  dplyr::as_tibble() %>%
-  dplyr::mutate(
-    name = glue::glue("gs://{b}/{name}"),
+  as_tibble() %>%
+  mutate(
+    name = glue("gs://{b}/{name}"),
     size = sub(" bytes", "", size), # else returns NA
     size = fs::as_fs_bytes(size),
     ftype = guess_file_type(name)
@@ -94,43 +98,41 @@ is_outlier <- function(x, m = 1.5) {
 }
 ```
 
-
 ```{r vars}
 bucket <- glue("cpg-tob-wgs-", params$gvcf_bucket_suffix)
-date <- "2021-05-21"
+gcs_prefix <- "gvcf"
 ```
 
 ## WGS GVCF files
 
-- Let's first explore the contents of the
-  `r glue("{bucket}")` bucket:
+- Let's first explore the contents of `r glue("'{bucket}/{gcs_prefix}'")`:
 
 ```{r list_contents1}
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
 token <- gargle::token_fetch(scopes = scope)
 googleCloudStorageR::gcs_auth(token = token)
-obj_list <- gcs_list_objects2(b = bucket)
+obj_list <- gcs_list_objects2(b = bucket, prefix = gcs_prefix)
 ```
 
 ```{r list_contents2}
-count(obj_list, ftype) %>% knitr::kable(caption = glue("Count of file types in {bucket}."))
+count(obj_list, ftype) %>% knitr::kable(caption = glue("Count of file types in '{bucket}/{gcs_prefix}'."))
 gvcf <-
   obj_list %>%
-  dplyr::filter(ftype == "GVCF") %>%
-  dplyr::mutate(basename = basename(name),
+  filter(ftype == "GVCF") %>%
+  mutate(basename = basename(name),
                 tobid = sub(".g.vcf.gz", "", basename),
                 batch = sub("batch(.)", "\\1", basename(dirname(name)))) %>%
-  dplyr::select(tobid, fullname = name, batch, size, basename)
+  select(tobid, fullname = name, batch, size, basename)
 ```
 
 - Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`**
   GVCF files:
 
 ```{r gvcf_list}
-gvcf_tab <- gvcf %>%
-  dplyr::mutate(size = as.character(size),
+gvcf %>%
+  mutate(size = as.character(size),
                 n = dplyr::row_number()) %>%
-  dplyr::select(n, fullname, batch, size) %>%
+  select(n, fullname, batch, size) %>%
   reactable::reactable(
     pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
     filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
@@ -140,11 +142,11 @@ gvcf_tab <- gvcf %>%
       batch = colDef(minWidth = 60),
       size = colDef(minWidth = 80)
     )
-  )
-
-htmlwidgets::prependContent(
-  gvcf_tab,
-  htmltools::h2(class = "title", glue("GVCF files in {bucket} (Total: {nrow(gvcf)})")))
+  ) %>%
+  htmlwidgets::prependContent(
+    htmltools::h2(
+      class = "title",
+      glue("GVCF files in '{bucket}/{gcs_prefix}' (Total: {nrow(gvcf)})")))
 ```
 
 ```{r gvcf_file_sizes}
@@ -152,44 +154,41 @@ theme_set(theme_bw())
 
 gvcf %>%
   summarise(
-    min = fs::as_fs_bytes(min(size)),
-    max = fs::as_fs_bytes(max(size)),
-    q1 = fs::as_fs_bytes(quantile(size, 0.25)),
-    median = fs::as_fs_bytes(median(size)),
-    q3 = fs::as_fs_bytes(quantile(size, 0.75)),
-    total = fs::as_fs_bytes(sum(size)),
+    min = as_fs_bytes(min(size)),
+    max = as_fs_bytes(max(size)),
+    q1 = as_fs_bytes(quantile(size, 0.25)),
+    median = as_fs_bytes(median(size)),
+    q3 = as_fs_bytes(quantile(size, 0.75)),
+    total = as_fs_bytes(sum(size)),
     .groups = "drop") %>%
   tidyr::pivot_longer(cols = dplyr::everything()) %>%
-  knitr::kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in {bucket}."))
+  knitr::kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 
 # jitter object for proper labels
 jitter_pos1 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
 
 gvcf %>%
-  dplyr::mutate(
+  mutate(
     outlier = dplyr::if_else(is_outlier(size, 3),
-                             glue::glue("{tobid} ({size})"), NA_character_)) %>%
+                             glue("{tobid} ({size})"), NA_character_)) %>%
   ggplot(aes(x = batch, y = size)) +
   geom_violin(fill="lightblue") +
-  geom_point(position = jitter_pos1, shape = 21, color = "darkblue", fill = "red") +
-  ggrepel::geom_text_repel(position = jitter_pos1, aes(label = outlier),
-                           na.rm = TRUE, hjust = -0.3) +
+  ggforce::geom_sina(shape = 21, color = "darkblue", fill = "red", seed = 42) +
+  ggrepel::geom_text_repel(aes(label = outlier),
+                           na.rm = TRUE, hjust = -0.6, seed = 42) +
   scale_y_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
   theme(panel.grid.minor = element_blank()) +
-  ggtitle(glue::glue("Size (bytes) for {nrow(gvcf)} GVCF files in {bucket}."))
+  ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 ```
 
 ## QC metrics
 
 We have access to CSV files with summaries of sample QC metrics. Additional
-files have been provided containing:
-
-- the gender of each sample,
-- the age of each sample.
+files have been provided containing the recorded age and sex of each sample.
 
 ```{r qc_plot_prep}
-sample_qc_meta = params$meta_tsv %>% 
-  read_tsv() %>% 
+sample_qc_meta <- params$meta_tsv %>%
+  read_tsv() %>%
   select(
     sample = s,
     singleton = sample_qc.n_singleton,
@@ -202,8 +201,8 @@ sample_qc_meta = params$meta_tsv %>%
     `chr20 mean dp` = chr20_mean_dp
   )
 
-qc_kccg <- params$qc_csv %>% 
-  read_csv() %>% 
+qc_kccg <- params$qc_csv %>%
+  read_csv() %>%
   select(
     sample = sample.sample_name,
     contamination = raw_data.FREEMIX,
@@ -212,16 +211,16 @@ qc_kccg <- params$qc_csv %>%
     `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
   )
 
-gender <- params$gender_tsv %>% 
+gender <- params$gender_tsv %>%
   read_tsv(
     skip = 2,
     col_names = c(
-      "sample_id", 
-      "sample.sample_name", 
+      "sample_id",
+      "sample.sample_name",
       "gender",
       paste0("nanodrop_", c("conc", "260/280", "230/280")),
       paste0("qubit_", c("assay_conc", "stock_conc")),
-      "volume", 
+      "volume",
       "location"
     )
   ) %>%
@@ -232,59 +231,52 @@ age <- params$age_csv %>%
   read_csv(col_types = cols(.default = "c", age = "d")) %>%
   select(sample = TOBIID, age)
 
-p_data <- qc_kccg %>% 
-  left_join(sample_qc_meta, by = "sample") %>% 
+p_data <- qc_kccg %>%
+  left_join(sample_qc_meta, by = "sample") %>%
   tidyr::pivot_longer(cols = -c("sample", "sample_filters", "high_quality"), names_to = "metric") %>%
   left_join(gender, by = "sample") %>%
   left_join(age, by = "sample") %>%
-  left_join(gvcf %>% dplyr::select(sample = tobid, batch), by = "sample") %>%
-  mutate(batch = glue("batch {batch}")) %>% 
-  group_by(metric) %>% 
+  left_join(gvcf %>% select(sample = tobid, batch), by = "sample") %>%
+  mutate(batch = glue("batch {batch}")) %>%
+  group_by(metric) %>%
   mutate(
-    outlier = if_else(is_outlier(value), glue("{sample} ({value})"), NA_character_)
+    value2 = round(value, 3),
+    outlier = if_else(is_outlier(value), glue("{sample} ({value2})"), NA_character_)
   )
 
 cutoffs <- tibble(
-  metric   =  c("singleton", "snp",     "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
-  upper_lim = c(100000,       8000000,   3.3,       0.05,       NA,              0.3,          0.05,            NA),
-  lower_lim = c(NA,           2400000,   NA,        NA,         15,              NA,           NA,              250)
+  metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
+  upper_lim = c(100000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
+  lower_lim = c(NA,           2400000,  NA,        NA,         15,              NA,           NA,              250)
 )
 
-cutoffs = cutoffs %>% filter(metric %in% (p_data$metric %>% unique))
+cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
+n_batches <- length(unique(p_data$batch))
+n_metrics <- length(unique(p_data$metric))
+plot_width <- n_batches * 4
+plot_height <- n_metrics * 2
 ```
-Plotting distibutions of several metrics. 
 
-```{r fig.width=8, fig.height=8}
-p_data %>% 
-  ggplot() +
-  geom_violin(aes(x = "", y = value), fill = "transparent") +
-  geom_sina(aes(x = "", y = value)) +
-  geom_text_repel(aes(x = "", y = value, label = outlier), color="black", na.rm = TRUE, size = 2.3) +
-  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
-  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
-  facet_wrap(~metric, scales = "free", nrow = 2) +
+Here we plot distributions of several metrics:
+
+```{r fig.width=plot_width, fig.height=plot_height}
+p_data %>%
+  # bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
+  ggplot(aes(x = "", y = value)) +
+  geom_violin(fill = "transparent") +
+  ggforce::geom_sina(shape = 21, alpha = 0.40, fill = "red", seed = 42) +
+  ggrepel::geom_text_repel(aes(x = "", y = value, label = outlier),
+                           color = "black", na.rm = TRUE, size = 2.3, seed = 42) +
+  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
+  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
+  facet_grid(metric~batch, scales = "free") +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
-  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} TOB-WGS samples).")) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
-```
-
-Same, but groupped by batch.
-
-```{r fig.width=6, fig.height=16}
-p_data %>% 
-#  bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
-  ggplot() +
-  geom_violin(aes(x = "", y = value), fill = "transparent") +
-  geom_sina(aes(x = "", y = value)) +
-  geom_text_repel(aes(x = "", y = value, label = outlier), na.rm = TRUE, size = 2.3) +
-  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
-  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
-  facet_grid(metric ~ batch, scales = "free") +
-  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
-  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
-  xlab("") +
-  ggtitle(glue("QC metrics by batch for {length(unique(p_data$sample))} TOB-WGS samples."))
 ```
 
 ## Session Info
@@ -293,9 +285,9 @@ p_data %>%
 si <- sessioninfo::session_info(include_base = TRUE)
 si_pl <- unclass(si$platform) %>% as_tibble() %>% t()
 si_pkg <- unclass(si$packages) %>%
-  dplyr::as_tibble() %>%
-  dplyr::select(package, version = ondiskversion, datestamp = date)
-dplyr::tibble(var = rownames(si_pl),
+  as_tibble() %>%
+  select(package, version = ondiskversion, datestamp = date)
+tibble(var = rownames(si_pl),
               value = si_pl[, , drop = TRUE]) %>%
   knitr::kable(caption = "Platform information.")
 si_pkg %>%
