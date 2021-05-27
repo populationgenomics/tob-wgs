@@ -20,7 +20,7 @@ esac
 done
 
 micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c conda-forge \
-	r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager
+	r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager r-ggforce
 
 function run() {
 	local batch=$1
