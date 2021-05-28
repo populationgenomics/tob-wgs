@@ -208,7 +208,7 @@ qc_kccg <- params$qc_csv %>%
     contamination = raw_data.FREEMIX,
     chimeras = raw_data.PCT_CHIMERAS,
     duplicates = raw_data.PERCENT_DUPLICATION,
-    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE
   )
 
 gender <- params$gender_tsv %>%
@@ -251,13 +251,33 @@ cutoffs <- tibble(
 )
 
 cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
+```
+
+Here we plot distributions of several metrics:
+
+```{r fig.width=12, fig.height=12}
+p_data %>% 
+  ggplot() +
+  geom_violin(aes(x = "", y = value), fill = "transparent") +
+  geom_sina(aes(x = "", y = value)) +
+  geom_text_repel(aes(x = "", y = value, label = outlier), color="black", na.rm = TRUE, size = 2.3) +
+  geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
+  geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
+  facet_wrap(~metric, scales = "free", nrow = 2) +
+  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
+  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} TOB-WGS samples).")) +
+  xlab("")
+```
+
+```{r}
 n_batches <- length(unique(p_data$batch))
 n_metrics <- length(unique(p_data$metric))
 plot_width <- n_batches * 4
 plot_height <- n_metrics * 2
 ```
 
-Here we plot distributions of several metrics:
+Same, grouped by batch:
 
 ```{r fig.width=plot_width, fig.height=plot_height}
 p_data %>%
