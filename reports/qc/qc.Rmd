@@ -277,7 +277,7 @@ plot_width <- n_batches * 4
 plot_height <- n_metrics * 2
 ```
 
-Same, by groupped by batch:
+Same, grouped by batch:
 
 ```{r fig.width=plot_width, fig.height=plot_height}
 p_data %>%
