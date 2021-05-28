@@ -169,8 +169,12 @@ jitter_pos1 <- ggplot2::position_jitter(width = 0.10, height = 0, seed = 321)
 
 gvcf %>%
   mutate(
-    outlier = dplyr::if_else(is_outlier(size, 3),
-                             glue("{tobid} ({size})"), NA_character_)) %>%
+    outlier = dplyr::if_else(
+      is_outlier(size, 3),
+      glue("{tobid} ({size})"), 
+      NA_character_
+    )
+  ) %>%
   ggplot(aes(x = batch, y = size)) +
   geom_violin(fill="lightblue") +
   ggforce::geom_sina(shape = 21, color = "darkblue", fill = "red", seed = 42) +
@@ -198,7 +202,9 @@ sample_qc_meta <- params$meta_tsv %>%
     indel_ratio = sample_qc.r_insertion_deletion,
     sample_filters = sample_filters,
     high_quality = high_quality,
-    `chr20 mean dp` = chr20_mean_dp
+    `chr20 mean dp` = chr20_mean_dp,
+    is_female,
+    sex_karyotype
   )
 
 qc_kccg <- params$qc_csv %>%
@@ -231,9 +237,15 @@ age <- params$age_csv %>%
   read_csv(col_types = cols(.default = "c", age = "d")) %>%
   select(sample = TOBIID, age)
 
+all_data = qc_kccg %>%
+  left_join(sample_qc_meta, by = "sample") %>% 
+  left_join(gender, by = "sample") %>%
+  left_join(age, by = "sample") %>%
+  left_join(gvcf %>% select(sample = tobid, batch), by = "sample")
+
 p_data <- qc_kccg %>%
   left_join(sample_qc_meta, by = "sample") %>%
-  tidyr::pivot_longer(cols = -c("sample", "sample_filters", "high_quality"), names_to = "metric") %>%
+  tidyr::pivot_longer(cols = -c("sample", "sample_filters", "high_quality", "is_female", "sex_karyotype"), names_to = "metric") %>%
   left_join(gender, by = "sample") %>%
   left_join(age, by = "sample") %>%
   left_join(gvcf %>% select(sample = tobid, batch), by = "sample") %>%
@@ -241,8 +253,12 @@ p_data <- qc_kccg %>%
   group_by(metric) %>%
   mutate(
     value2 = round(value, 3),
-    outlier = if_else(is_outlier(value), glue("{sample} ({value2})"), NA_character_)
-  )
+    label = NA_character_,
+    label = if_else(is_outlier(value) & !high_quality, glue("{sample} ({value2}), {sample_filters}"), label),
+    label = if_else(is_outlier(value) & high_quality,  glue("{sample} ({value2})"), label),
+    label = if_else(!is_outlier(value) & !high_quality, glue("{sample}, {sample_filters}"), label)
+  ) %>% 
+  mutate(`Bad quality` = !high_quality)
 
 cutoffs <- tibble(
   metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
@@ -253,14 +269,15 @@ cutoffs <- tibble(
 cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
 ```
 
+
 Here we plot distributions of several metrics:
 
 ```{r fig.width=12, fig.height=12}
 p_data %>% 
   ggplot() +
   geom_violin(aes(x = "", y = value), fill = "transparent") +
-  geom_sina(aes(x = "", y = value)) +
-  geom_text_repel(aes(x = "", y = value, label = outlier), color="black", na.rm = TRUE, size = 2.3) +
+  geom_jitter(aes(x = "", y = value, colour = high_quality, shape = batch), fill = "transparent", size = 2) +
+  geom_text_repel(aes(x = "", y = value, label = label), color="black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color='red') +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color='blue') +
   facet_wrap(~metric, scales = "free", nrow = 2) +
@@ -273,31 +290,56 @@ p_data %>%
 ```{r}
 n_batches <- length(unique(p_data$batch))
 n_metrics <- length(unique(p_data$metric))
-plot_width <- n_batches * 4
-plot_height <- n_metrics * 2
+plot_width <- n_batches * 8
+plot_height <- n_metrics * 4
 ```
 
 Same, grouped by batch:
 
 ```{r fig.width=plot_width, fig.height=plot_height}
 p_data %>%
-  # bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
+  #bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
   ggplot(aes(x = "", y = value)) +
+  geom_jitter(aes(color = high_quality), fill = "transparent", size = 1) +
   geom_violin(fill = "transparent") +
-  ggforce::geom_sina(shape = 21, alpha = 0.40, fill = "red", seed = 42) +
-  ggrepel::geom_text_repel(aes(x = "", y = value, label = outlier),
-                           color = "black", na.rm = TRUE, size = 2.3, seed = 42) +
+  ggrepel::geom_text_repel(
+    aes(x = "", y = value, label = label),
+    color = "black", na.rm = TRUE, size = 2.3
+  ) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(metric~batch, scales = "free") +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
-  theme(axis.ticks.x = element_blank(),
-        axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank()) +
+  theme(
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) +
   ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
 ```
+
+Samples with duplication rate > 0.15 in the 3rd batch:
+
+```{r}
+all_data %>% filter(batch == "2", duplicates > 0.15) %>% dplyr::pull(sample)
+```
+
+Samples with duplication rate < 0.15 in the 3rd batch:
+
+```{r}
+all_data %>% filter(batch == "2", duplicates < 0.15)
+```
+
+Matching inferred and reported sex. Samples that don't match:
+
+```{r}
+all_data %>% filter((sex_karyotype == "XX" & gender != "F") | (sex_karyotype == "XY" & gender != "M")) %>% 
+  select(sample, sex_karyotype, reported=gender, batch, `chr20 mean dp`, contamination, sample_filters, high_quality)
+```
+
+
 
 ## Session Info
 
