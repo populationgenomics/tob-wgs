@@ -329,7 +329,7 @@ all_data %>% filter(batch == "2", duplicates > 0.15) %>% dplyr::pull(sample)
 Samples with duplication rate < 0.15 in the 3rd batch:
 
 ```{r}
-all_data %>% filter(batch == "2") %>% filter(duplicates < 0.15)
+all_data %>% filter(batch == "2", duplicates < 0.15)
 ```
 
 Matching inferred and reported sex. Samples that don't match:
