@@ -332,7 +332,7 @@ Samples with duplication rate < 0.15 in the 3rd batch:
 all_data %>% filter(batch == "2") %>% filter(duplicates < 0.15)
 ```
 
-Matching inferred and reported sex. Sample that don't match:
+Matching inferred and reported sex. Samples that don't match:
 
 ```{r}
 all_data %>% filter((sex_karyotype == "XX" & gender != "F") | (sex_karyotype == "XY" & gender != "M")) %>% 
