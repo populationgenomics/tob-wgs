@@ -298,7 +298,7 @@ Same, grouped by batch:
 
 ```{r fig.width=plot_width, fig.height=plot_height}
 p_data %>%
-  bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
+  #bind_rows(p_data %>% mutate(batch = "batch1"), p_data %>% mutate(batch = "batch2")) %>%  # for testing
   ggplot(aes(x = "", y = value)) +
   geom_jitter(aes(color = high_quality), fill = "transparent", size = 1) +
   geom_violin(fill = "transparent") +
