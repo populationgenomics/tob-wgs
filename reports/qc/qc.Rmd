@@ -339,12 +339,6 @@ all_data %>% filter((sex_karyotype == "XX" & gender != "F") | (sex_karyotype == 
   select(sample, sex_karyotype, reported=gender, batch, `chr20 mean dp`, contamination, sample_filters, high_quality)
 ```
 
-Unique variants compared to gnomAD
-
-```{r}
-
-```
-
 
 
 ## Session Info
