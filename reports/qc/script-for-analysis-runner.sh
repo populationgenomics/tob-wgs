@@ -44,7 +44,7 @@ meta_tsv='${dir}/meta.tsv', \
 gvcf_bucket_suffix='${main_suf}'\
 ))
 code
-	gsutil cp qc.html gs://cpg-tob-wgs-${web_suf}/qc/qc-{joint_calling_run_version}.html
+	gsutil cp qc.html gs://cpg-tob-wgs-${web_suf}/qc/qc-${joint_calling_run_version}.html
 }
 
 # Run test first
