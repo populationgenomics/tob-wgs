@@ -1,4 +1,4 @@
-VERSION := v3
+VERSION := v2
 
 .PHONY: update_joint_calling_submodule
 update_joint_calling_submodule:
