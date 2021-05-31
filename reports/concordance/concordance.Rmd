@@ -1,0 +1,167 @@
+---
+author: "Centre for Population Genomics"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_download: true
+    code_folding: show
+  rmdformats::material:
+    highlight: kate
+params:
+  TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
+  INPUT_ID_MAP: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/raw/OneK1K_sample_IDs_2021-Apr-15.xlsx"
+  INPUT_SNPCHIP_VCF: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes.vcf.gz"
+  INPUT_37TO38_CHAIN: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/reference/grch37_to_grch38.over.chain.gz"
+  INPUT_WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/raw/test-v1-raw.mt"
+  OUTPUT_DIR: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed"
+title: "`r paste(params$TITLE)`"
+---
+
+```{r knitr_opts, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{css, echo=FALSE}
+.py {
+background-color: lightblue;
+}
+```
+
+## Introduction
+
+Here we're exploring genotype concordance between SNPchip and WGS data for the
+TOB-WGS project. We have been provided with one multi-sample VCF file containing
+genotype calls from the SNPchip data (`onek1k_pre_imputation_genotypes.vcf.gz`),
+and several single-sample GVCF files containing genotype calls from the WGS data
+(merged into a Hail [MatrixTable](https://hail.is/docs/0.2/hail.MatrixTable.html)
+for processing).
+
+The main steps for calculating concordance between the SNPchip and WGS data
+are:
+
+1. Rename the samples in the SNPchip VCF based on the
+   `OneK1K_sample_IDs_2021-Apr-15.xlsx` map of SNPchip IDs to TOB IDs
+   (provided in 2021-Apr-15).
+2. Convert the SNPchip VCF from the GRCh37 human genome assembly to GRCh38
+   using `[Hail liftover]` so that it's the same assembly as the WGS
+   MatrixTable.
+3. Use `[Hail sparse_split_multi]` to keep biallelic and multiallelic variants
+   in the WGS MatrixTable (i.e. remove monoallelic variants).
+4. Use `[Hail concordance]` to calculate the concordance between the
+   SNPchip and WGS calls.
+
+   [Hail liftover]: https://hail.is/docs/0.2/functions/genetics.html#hail.expr.functions.liftover
+   [Hail concordance]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.concordance
+   [Hail sparse_split_multi]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.sparse_split_multi
+
+- Load required R packages:
+
+```{r load_pkgs}
+library(dplyr, include.only = c("%>%", "select", "mutate"))
+library(DT, include.only = c("datatable"))
+library(glue, include.only = "glue")
+library(readr, include.only = "write_tsv")
+library(readxl, include.only = "read_excel")
+library(reticulate, include.only = "use_condaenv")
+library(sessioninfo, include.only = "session_info")
+```
+
+```{r read_params, eval=FALSE, echo=FALSE}
+# for interactive debugging
+params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
+```
+
+```{r conda_setup}
+reticulate::use_condaenv("hail", required = TRUE)
+```
+
+```{python hail_setup, class.source="py"}
+import os
+import csv
+import hail as hl
+hl.init(default_reference='GRCh38')
+
+LIFTOVER_MT = os.path.join(r.params['OUTPUT_DIR'], '1-snpchip_grch38.mt')
+```
+
+## Step 1: Rename VCF samples
+
+```{r generate_id_map}
+chipid2tobid_tsv <- "chipid2tobid.tsv"
+params$INPUT_ID_MAP %>%
+  read_excel(skip = 1) %>%
+  mutate(tob_id = glue("TOB{TOB_ID}")) %>%
+  select(sample = PERSON, tob_id) %>%
+  write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
+```
+
+```{r bcftools_reheader}
+vcf_reheader <- glue("{params$OUTPUT_DIR}/0-snpchip_rehead.vcf.gz")
+system(glue("bcftools reheader ",
+            "-s {chipid2tobid_tsv} ",
+            "-o {vcf_reheader} ",
+            "{params$INPUT_SNPCHIP_VCF}"))
+```
+
+## Step 2: Liftover from GRCh37 to GRCh38
+
+```{python hail_liftover, class.source="py", eval=FALSE}
+def liftover(x, chain):
+    """
+    Liftover matrix table x from GRCh37 to GRCh38
+    """
+    rg37 = hl.get_reference('GRCh37')
+    rg38 = hl.get_reference('GRCh38')
+    rg37.add_liftover(chain, rg38)
+    x = x.annotate_rows(new_locus=hl.liftover(x.locus, 'GRCh38'))
+    x = x.filter_rows(hl.is_defined(x.new_locus))
+    x = x.key_rows_by(locus=x.new_locus)
+    return x
+
+# Liftover to GRCh38 and write
+mt = hl.import_vcf(r.vcf_reheader, reference_genome='GRCh37', force_bgz=True)
+mt = liftover(mt, r.params['INPUT_37TO38_CHAIN'])
+mt.write(LIFTOVER_MT)
+```
+
+## Step 3: Split multiallelic variants
+
+```{python hail_split_multi, class.source="py", eval=FALSE}
+snp = hl.read_matrix_table(LIFTOVER_MT).key_rows_by('locus', 'alleles')
+wgs = hl.experimental.sparse_split_multi(hl.read_matrix_table(WGS_MT))
+wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
+```
+
+## Step 4: Concordance calculation
+
+```{python class.source="py", eval=FALSE}
+global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
+
+# write concordance stats per sample
+cols_conc.export(f'{OUT_DIR}/concordance_columns.tsv', delimiter='\t')
+
+# write global concordance stats
+global_conc = [
+    [161468795, 3, 24345103, 61592632, 34038643],
+    [3530, 0, 13, 882, 642],
+    [6218918, 0, 19786, 609, 71],
+    [10622, 0, 644, 1918191, 154],
+    [7001, 0, 214, 2833, 999103],
+]
+
+with open(f'{OUT_DIR}/concordance_global.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerows(global_conc)
+```
+
+## Results
+
+```{r plot_results}
+dplyr::mutate(bam_metrics2 = purrr::map(
+    bam_metrics, ~jsonlite::fromJSON(.) %>% dplyr::bind_rows())) %>%
+  tidyr::unnest(bam_metrics2) %>%
+  # for matching with our pop: foo -> Foo
+  dplyr::mutate(subpop = stringr::str_to_title(labeled_subpop)) %>%
+```
