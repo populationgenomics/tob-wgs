@@ -59,11 +59,10 @@ code
 	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/qc/qc-${joint_calling_run_version}.html
 }
 
-# Run test first
-run 1 test test $VERSION 1
-
 # Run on full data in a standard access level
 if [[ $PROD = "YES" ]]
 then
 	run $BATCH analysis main $VERSION 0
+else
+	run 1 test test $VERSION 1
 fi
