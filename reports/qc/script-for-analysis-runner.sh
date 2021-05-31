@@ -33,8 +33,15 @@ function run() {
 	local main_suf=$3
 	local web_suf=$4
 	local joint_calling_run_version=$5
+	local is_test=$6
 
 	local dir=work/${analysis_suf}
+	local test="FALSE"
+	local out_version="${joint_calling_run_version}"
+	if [ $is_test == 1 ]; then
+		test="TRUE"
+		out_version="test-${out_version}"
+	fi
 
 	test -f ${dir}/gender.tsv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/gender.tsv ${dir}/gender.tsv
 	test -f ${dir}/age.csv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/age.csv ${dir}/age.csv
@@ -42,7 +49,7 @@ function run() {
 	test -f ${dir}/meta.tsv || gsutil cp gs://cpg-tob-wgs-temporary/joint-calling/${joint_calling_run_version}/sample_qc/meta.tsv ${dir}/meta.tsv
 	R --vanilla <<code
 rmarkdown::render('qc.Rmd', output_file='qc.html', params=list(\
-test=FALSE, \
+test=${test}, \
 gender_tsv='${dir}/gender.tsv', \
 age_csv='${dir}/age.csv', \
 qc_csv='${dir}/qc.csv', \
@@ -50,14 +57,14 @@ meta_tsv='${dir}/meta.tsv', \
 gvcf_bucket_suffix='${main_suf}'\
 ))
 code
-	gsutil cp qc.html gs://cpg-tob-wgs-${web_suf}/qc/qc-${joint_calling_run_version}.html
+	gsutil cp qc.html gs://cpg-tob-wgs-web/qc/qc-${out_version}.html
 }
 
 # Run test first
-run 1 test test temporary test-$VERSION
+run 1 test test temporary $VERSION 1
 
 # Run on full data in a standard access level
 if [[ $PROD = "YES" ]]
 then
-	run $BATCH analysis main web $VERSION
+	run $BATCH analysis main web $VERSION 0
 fi
