@@ -10,9 +10,7 @@ import hail as hl
 def query(test: bool, output_path: str):  # pylint: disable=too-many-locals
     """Query script entry point."""
 
-    hgdp1kg_tobwgs_joined_path = (
-        'gs://cpg-tob-wgs-analysis/1kg_hgdp_tobwgs_pca/v0/hgdp1kg_tobwgs_joined.mt/'
-    )
+    hgdp1kg_tobwgs_joined_path = 'gs://cpg-tob-wgs-analysis/1kg_hgdp_tobwgs_pca/v0/hgdp1kg_tobwgs_joined_all_samples.mt/'
     if test:
         hgdp1kg_tobwgs_joined_path = hgdp1kg_tobwgs_joined_path.replace(
             'gs://cpg-tob-wgs-analysis', 'gs://cpg-tob-wgs-test'
