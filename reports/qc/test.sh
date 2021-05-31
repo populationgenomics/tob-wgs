@@ -11,9 +11,11 @@ function run() {
 	local dir=work/${analysis_suf}
 	local test="FALSE"
 	local out_version="${joint_calling_run_version}"
-	if [ $is_test == 1 ]; then
+	local meta_csv_path="gs://cpg-tob-wgs-temporary/joint-calling/${joint_calling_run_version}/sample_qc/meta.tsv"
+	if [ $is_test -eq 1 ]; then
 		test="TRUE"
 		out_version="test-${out_version}"
+		meta_csv_path="gs://cpg-tob-wgs-test/joint-calling/test-${joint_calling_run_version}/sample_qc/meta.tsv"
 	fi
 
 	test -f ${dir}/gender.tsv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/gender.tsv ${dir}/gender.tsv

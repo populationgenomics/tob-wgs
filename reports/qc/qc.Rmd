@@ -213,7 +213,8 @@ qc_kccg <- params$qc_csv %>%
     contamination = raw_data.FREEMIX,
     chimeras = raw_data.PCT_CHIMERAS,
     duplicates = raw_data.PERCENT_DUPLICATION,
-    `insert size median` = raw_data.MEDIAN_INSERT_SIZE
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    lane = sample.flowcell_lane
   )
 
 gender <- params$gender_tsv %>%
@@ -276,7 +277,7 @@ Here we plot distributions of several metrics:
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, shape = batch, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
@@ -307,7 +308,7 @@ plot_height <- n_metrics * 3
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
   ggrepel::geom_text_repel(
     color = "black", na.rm = TRUE, size = 2.3
   ) +
@@ -467,6 +468,7 @@ all_data %>% filter(batch == "1", duplicates <= 0.12) %>% dplyr::pull(sample)
 ```{r}
 all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
 ```
+
 ```{r}
 all_data %>% filter(batch == "3", duplicates <= 0.15) %>% dplyr::pull(sample)
 ```
