@@ -1,12 +1,13 @@
 """Generates loadings, scores, and eigenvalues for the HGDP,1KG, and tob-wgs dataset"""
 
+from os.path import join
 import click
 import hail as hl
 
 
 @click.command()
 @click.option('--test', is_flag=True)
-@click.option('--output', help='GCS output path', required=True)
+@click.option('--output', help='GCS output dir', required=True)
 def query(test: bool, output: str):  # pylint: disable=too-many-locals
     """Query script entry point."""
 
@@ -18,7 +19,7 @@ def query(test: bool, output: str):  # pylint: disable=too-many-locals
 
     hgdp1kg_tobwgs_joined = hl.read_matrix_table(hgdp1kg_tobwgs_joined_path)
     qc_ht = hl.sample_qc(hgdp1kg_tobwgs_joined, name='sample_qc')
-    qc_ht.write(output)
+    qc_ht.write(join(output, 'hgdp1kg_tobwgs_joined_all_samples_sample_qc.ht'))
 
 
 if __name__ == '__main__':

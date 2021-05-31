@@ -18,7 +18,7 @@ batch = hb.Batch(name='sample_qc combined hgdp1kg tobwgs', backend=service_backe
 
 dataproc.hail_dataproc_job(
     batch,
-    f'query.py --output={OUTPUT}',
+    f'query.py --test --output={OUTPUT}',
     max_age='24h',
     num_workers=20,
     packages=['click'],
