@@ -16,6 +16,11 @@ case $key in
     shift # past argument
     shift # past value
     ;;
+    -v|--version)
+    VERSION="$2"
+    shift # past argument
+    shift # past value
+    ;;
 esac
 done
 
@@ -37,6 +42,7 @@ function run() {
 	test -f ${dir}/meta.tsv || gsutil cp gs://cpg-tob-wgs-temporary/joint-calling/${joint_calling_run_version}/sample_qc/meta.tsv ${dir}/meta.tsv
 	R --vanilla <<code
 rmarkdown::render('qc.Rmd', output_file='qc.html', params=list(\
+test=FALSE, \
 gender_tsv='${dir}/gender.tsv', \
 age_csv='${dir}/age.csv', \
 qc_csv='${dir}/qc.csv', \
@@ -48,10 +54,10 @@ code
 }
 
 # Run test first
-run 0 test test temporary test-v1
+run 1 test test temporary test-$VERSION
 
 # Run on full data in a standard access level
 if [[ $PROD = "YES" ]]
 then
-	run $BATCH analysis main web v1
+	run $BATCH analysis main web $VERSION
 fi
