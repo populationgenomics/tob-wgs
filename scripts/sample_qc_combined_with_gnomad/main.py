@@ -20,7 +20,7 @@ dataproc.hail_dataproc_job(
     batch,
     f'query.py --output={OUTPUT}',
     max_age='24h',
-    num_workers=50,
+    num_workers=20,
     packages=['click'],
     job_name='hgdp1kg-tobwgs-sample-qc',
 )
