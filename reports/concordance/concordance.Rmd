@@ -15,7 +15,7 @@ params:
   INPUT_SNPCHIP_VCF: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes.vcf.gz"
   INPUT_37TO38_CHAIN: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/reference/grch37_to_grch38.over.chain.gz"
   INPUT_WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/raw/test-v1-raw.mt"
-  OUTPUT_DIR: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed"
+  OUT_DIR: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed"
 title: "`r paste(params$TITLE)`"
 ---
 
@@ -60,12 +60,17 @@ are:
 
 ```{r load_pkgs}
 library(dplyr, include.only = c("%>%", "select", "mutate"))
-library(DT, include.only = c("datatable"))
+library(DT, include.only = c("datatable", "formatCurrency"))
+library(ggplot2)
 library(glue, include.only = "glue")
-library(readr, include.only = "write_tsv")
+library(readr, include.only = c("write_tsv", "read_csv", "read_tsv", "cols"))
 library(readxl, include.only = "read_excel")
 library(reticulate, include.only = "use_condaenv")
+library(rlang, include.only = "is_integer")
+library(scales, include.only = "comma")
 library(sessioninfo, include.only = "session_info")
+library(stringr, include.only = "str_pad")
+library(tidyselect, include.only = "vars_select_helpers")
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
@@ -77,18 +82,18 @@ params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
 reticulate::use_condaenv("hail", required = TRUE)
 ```
 
-```{python hail_setup, class.source="py"}
+```{python hail_setup, class.source="py", eval=FALSE}
 import os
 import csv
 import hail as hl
 hl.init(default_reference='GRCh38')
 
-LIFTOVER_MT = os.path.join(r.params['OUTPUT_DIR'], '1-snpchip_grch38.mt')
+LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
 ```
 
 ## Step 1: Rename VCF samples
 
-```{r generate_id_map}
+```{r generate_id_map, eval=FALSE}
 chipid2tobid_tsv <- "chipid2tobid.tsv"
 params$INPUT_ID_MAP %>%
   read_excel(skip = 1) %>%
@@ -97,8 +102,8 @@ params$INPUT_ID_MAP %>%
   write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
 ```
 
-```{r bcftools_reheader}
-vcf_reheader <- glue("{params$OUTPUT_DIR}/0-snpchip_rehead.vcf.gz")
+```{r bcftools_reheader, eval=FALSE}
+vcf_reheader <- glue("{params$OUT_DIR}/0-snpchip_rehead.vcf.gz")
 system(glue("bcftools reheader ",
             "-s {chipid2tobid_tsv} ",
             "-o {vcf_reheader} ",
@@ -140,7 +145,7 @@ wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
 # write concordance stats per sample
-cols_conc.export(f'{OUT_DIR}/concordance_columns.tsv', delimiter='\t')
+cols_conc.export(f'{r.params['OUT_DIR']}/concordance_columns.tsv', delimiter='\t')
 
 # write global concordance stats
 global_conc = [
@@ -151,17 +156,66 @@ global_conc = [
     [7001, 0, 214, 2833, 999103],
 ]
 
-with open(f'{OUT_DIR}/concordance_global.csv', 'w', newline='') as f:
+with open(f'{r.params['OUT_DIR']}/concordance_global.csv', 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerows(global_conc)
 ```
 
 ## Results
 
-```{r plot_results}
-dplyr::mutate(bam_metrics2 = purrr::map(
-    bam_metrics, ~jsonlite::fromJSON(.) %>% dplyr::bind_rows())) %>%
-  tidyr::unnest(bam_metrics2) %>%
-  # for matching with our pop: foo -> Foo
-  dplyr::mutate(subpop = stringr::str_to_title(labeled_subpop)) %>%
+```{r results_global}
+conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
+
+global_conc <- glue("{params$OUT_DIR}/concordance_global.csv") %>%
+  readr::read_csv(col_types = readr::cols(.default = "d"),
+                  col_names = glue("{conc_names}_right")) %>%
+  as.matrix()
+rownames(global_conc) <- glue("{conc_names}_left")
+
+total_concordant <- sum(
+  global_conc["homref_left", "homref_right"],
+  global_conc["het_left", "het_right"],
+  global_conc["homalt_left", "homalt_right"]
+)
+
+total_discordant <- sum(global_conc[3:5, 3:5]) - total_concordant
+cat(glue("Total Concordant: {str_pad(comma(total_concordant), 9)}\n",
+         "Total Discordant: {str_pad(comma(total_discordant), 9)}\n"))
+```
+
+```{r results_samples}
+clean_mat <- function(m) {
+  colnames(m) <- glue("{conc_names}_right")
+  rownames(m) <- glue("{conc_names}_left")
+  total_concordant <- sum(
+    m["homref_left", "homref_right"],
+    m["het_left", "het_right"],
+    m["homalt_left", "homalt_right"]
+  )
+
+  total_discordant <- sum(m[3:5, 3:5]) - total_concordant
+
+  tibble::tibble(
+    total_discordant = total_discordant,
+    total_concordant = total_concordant
+  )
+}
+
+res <- glue("{params$OUT_DIR}/concordance_columns.tsv") %>%
+  readr::read_tsv(col_types = "ccd") %>%
+  mutate(conc2 = purrr::map(
+    concordance, ~jsonlite::fromJSON(.) %>% clean_mat)) %>%
+  tidyr::unnest(conc2) %>%
+  mutate(discordant_correct = n_discordant == total_discordant) %>%
+  select(sample = s, total_discordant, total_concordant)
+
+res %>%
+  datatable(rownames = FALSE, caption = "Concordance Stats",
+            filter = list(position = "top", clear = FALSE, plain = TRUE),
+            extensions = c("Scroller"),
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700)) %>%
+  DT::formatCurrency(res %>%
+                       select(vars_select_helpers$where(is_integer)) %>%
+                       names(),
+                     currency = "", interval = 3, mark = ",", digits = 0)
 ```
