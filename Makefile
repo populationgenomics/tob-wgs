@@ -41,10 +41,10 @@ joint_calling_main_to_main:
 	analysis-runner \
 	--dataset tob-wgs \
 	--output-dir "gs://cpg-tob-wgs-hail/joint-calling" \
-	--description "Joint calling" \
+	--description "Joint calling full" \
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
-	--batch 0 --batch 1 --batch 2 \
+	--batch 1 --batch 2 --batch 3 --batch 4 \
 	--from main \
 	--to main \
 	--callset tob-wgs \
