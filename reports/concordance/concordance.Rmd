@@ -23,9 +23,9 @@ title: "`r paste(params$TITLE)`"
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-```{css, echo=FALSE}
+```{css css_setup, echo=FALSE}
 .py {
-background-color: lightblue;
+background-color: lightcyan;
 }
 ```
 
@@ -59,17 +59,20 @@ are:
 - Load required R packages:
 
 ```{r load_pkgs}
-library(dplyr, include.only = c("%>%", "select", "mutate"))
-library(DT, include.only = c("datatable", "formatCurrency"))
-library(ggplot2)
+library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows"))
+library(DT, include.only = c("datatable", "formatCurrency", "formatStyle"))
 library(glue, include.only = "glue")
-library(readr, include.only = c("write_tsv", "read_csv", "read_tsv", "cols"))
+library(htmltools, include.only = c("tags", "div"))
+library(jsonlite, include.only = "fromJSON")
+library(purrr, include.only = "map")
+library(readr, include.only = c("write_tsv", "read_tsv", "cols"))
 library(readxl, include.only = "read_excel")
-library(reticulate, include.only = "use_condaenv")
-library(rlang, include.only = "is_integer")
+library(reticulate, include.only = c("use_condaenv", "py"))
+library(rlang, include.only = c("is_integer", "is_double"))
 library(scales, include.only = "comma")
 library(sessioninfo, include.only = "session_info")
 library(stringr, include.only = "str_pad")
+library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
 ```
 
@@ -82,18 +85,16 @@ params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
 reticulate::use_condaenv("hail", required = TRUE)
 ```
 
-```{python hail_setup, class.source="py", eval=FALSE}
+```{python hail_setup, class.source="py"}
 import os
 import csv
 import hail as hl
 hl.init(default_reference='GRCh38')
-
-LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
 ```
 
 ## Step 1: Rename VCF samples
 
-```{r generate_id_map, eval=FALSE}
+```{r generate_id_map}
 chipid2tobid_tsv <- "chipid2tobid.tsv"
 params$INPUT_ID_MAP %>%
   read_excel(skip = 1) %>%
@@ -102,7 +103,7 @@ params$INPUT_ID_MAP %>%
   write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
 ```
 
-```{r bcftools_reheader, eval=FALSE}
+```{r bcftools_reheader}
 vcf_reheader <- glue("{params$OUT_DIR}/0-snpchip_rehead.vcf.gz")
 system(glue("bcftools reheader ",
             "-s {chipid2tobid_tsv} ",
@@ -128,94 +129,116 @@ def liftover(x, chain):
 # Liftover to GRCh38 and write
 mt = hl.import_vcf(r.vcf_reheader, reference_genome='GRCh37', force_bgz=True)
 mt = liftover(mt, r.params['INPUT_37TO38_CHAIN'])
-mt.write(LIFTOVER_MT)
+
+LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
+mt.write(LIFTOVER_MT, overwrite=True)
 ```
 
 ## Step 3: Split multiallelic variants
 
-```{python hail_split_multi, class.source="py", eval=FALSE}
+```{python hail_split_multi, class.source="py"}
+LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
+wgs = hl.read_matrix_table(r.params['INPUT_WGS_MT'])
 snp = hl.read_matrix_table(LIFTOVER_MT).key_rows_by('locus', 'alleles')
-wgs = hl.experimental.sparse_split_multi(hl.read_matrix_table(WGS_MT))
+
+#---- Use chr22 subset for concordance test ----#
+wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
+snp = snp.filter_rows(snp.locus.contig == 'chr22')
+
+# split multiallelic and keep biallelic rows
+wgs = hl.experimental.sparse_split_multi(wgs)
 wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 ```
 
 ## Step 4: Concordance calculation
 
-```{python class.source="py", eval=FALSE}
+```{python hail_concordance, class.source="py"}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
 # write concordance stats per sample
-cols_conc.export(f'{r.params['OUT_DIR']}/concordance_columns.tsv', delimiter='\t')
+concordance_per_sample_fname = f'{r.params["OUT_DIR"]}/concordance_columns_chr22.tsv'
+cols_conc.export(concordance_per_sample_fname, delimiter='\t')
 
 # write global concordance stats
-global_conc = [
-    [161468795, 3, 24345103, 61592632, 34038643],
-    [3530, 0, 13, 882, 642],
-    [6218918, 0, 19786, 609, 71],
-    [10622, 0, 644, 1918191, 154],
-    [7001, 0, 214, 2833, 999103],
-]
-
-with open(f'{r.params['OUT_DIR']}/concordance_global.csv', 'w', newline='') as f:
-    writer = csv.writer(f)
+concordance_global_fname = f'{r.params["OUT_DIR"]}/concordance_global_chr22.tsv'
+with open(concordance_global_fname, 'w', newline='') as f:
+    writer = csv.writer(f, delimiter='\t')
     writer.writerows(global_conc)
 ```
 
 ## Results
 
-```{r results_global}
-conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
+```{r concordance_results}
+get_mat_stats <- function(m) {
+  mat_rename <- function(m) {
+    conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
+    colnames(m) <- glue("{conc_names}_right")
+    rownames(m) <- glue("{conc_names}_left")
+    m
+  }
 
-global_conc <- glue("{params$OUT_DIR}/concordance_global.csv") %>%
-  readr::read_csv(col_types = readr::cols(.default = "d"),
-                  col_names = glue("{conc_names}_right")) %>%
-  as.matrix()
-rownames(global_conc) <- glue("{conc_names}_left")
+  mat_conc_stats <- function(m) {
+    conc_tot <- sum(
+      m["homref_left", "homref_right"],
+      m["het_left", "het_right"],
+      m["homalt_left", "homalt_right"])
 
-total_concordant <- sum(
-  global_conc["homref_left", "homref_right"],
-  global_conc["het_left", "het_right"],
-  global_conc["homalt_left", "homalt_right"]
-)
+    disc_tot <- sum(m[3:5, 3:5]) - conc_tot
 
-total_discordant <- sum(global_conc[3:5, 3:5]) - total_concordant
-cat(glue("Total Concordant: {str_pad(comma(total_concordant), 9)}\n",
-         "Total Discordant: {str_pad(comma(total_discordant), 9)}\n"))
-```
+    # hets, homalts, and missing
+    left_tot <- sum(m[c(2, 4, 5), ])
+    right_tot <- sum(m[, c(2, 4, 5)])
 
-```{r results_samples}
-clean_mat <- function(m) {
-  colnames(m) <- glue("{conc_names}_right")
-  rownames(m) <- glue("{conc_names}_left")
-  total_concordant <- sum(
-    m["homref_left", "homref_right"],
-    m["het_left", "het_right"],
-    m["homalt_left", "homalt_right"]
-  )
+    conc_over_left <- conc_tot / left_tot
+    conc_over_right <- conc_tot / right_tot
+    disc_over_left <- disc_tot / left_tot
+    disc_over_right <- disc_tot / right_tot
 
-  total_discordant <- sum(m[3:5, 3:5]) - total_concordant
-
-  tibble::tibble(
-    total_discordant = total_discordant,
-    total_concordant = total_concordant
-  )
+    tibble(disc_tot = disc_tot,
+           conc_tot = conc_tot,
+           right_tot = right_tot,
+           left_tot = left_tot,
+           `conc / left` = conc_over_left,
+           `conc / right` = conc_over_right,
+           `disc / left` = disc_over_left,
+           `disc / right` = disc_over_right)
+  }
+  m %>% mat_rename() %>% mat_conc_stats()
 }
 
-res <- glue("{params$OUT_DIR}/concordance_columns.tsv") %>%
-  readr::read_tsv(col_types = "ccd") %>%
-  mutate(conc2 = purrr::map(
-    concordance, ~jsonlite::fromJSON(.) %>% clean_mat)) %>%
-  tidyr::unnest(conc2) %>%
-  mutate(discordant_correct = n_discordant == total_discordant) %>%
-  select(sample = s, total_discordant, total_concordant)
+# global concordance (can get from the per-sample total sum)
+# py$concordance_global_fname %>%
+#   read_tsv(col_types = cols(.default = "d"),
+#                   col_names = FALSE) %>%
+#   as.matrix() %>%
+#   get_mat_stats() %>%
+#   knitr::kable(format.args = list(big.mark = ","))
 
+res <- py$concordance_per_sample_fname %>%
+  read_tsv(col_types = "ccd") %>%
+  mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
+  unnest(conc2) %>%
+  select(sample = s, `conc / left`, `conc / right`,
+         conc_tot, disc_tot,
+         right_tot, left_tot,
+         `disc / left`, `disc / right`)
+
+cap <- tags$caption(
+  div("Concordance statistics per sample."),
+  div("conc: concordant; disc: discordant;"),
+  div("left/right: left and right datasets used in hail.concordance(left, right)."))
 res %>%
-  datatable(rownames = FALSE, caption = "Concordance Stats",
+  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+  datatable(rownames = FALSE,
+            caption = cap,
             filter = list(position = "top", clear = FALSE, plain = TRUE),
             extensions = c("Scroller"),
             options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700)) %>%
-  DT::formatCurrency(res %>%
-                       select(vars_select_helpers$where(is_integer)) %>%
-                       names(),
+  DT::formatStyle(res %>% select(where(is_double)) %>% names(),
+    background = DT::styleColorBar(c(0, 1), "lightgreen"),
+    backgroundSize = "90% 90%",
+    backgroundRepeat = "no-repeat", backgroundPosition = "center"
+  ) %>%
+  DT::formatCurrency(res %>% select(where(is_integer)) %>% names(),
                      currency = "", interval = 3, mark = ",", digits = 0)
 ```
