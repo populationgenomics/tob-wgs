@@ -42,8 +42,8 @@ function run() {
 		meta_csv_path="gs://cpg-tob-wgs-test/joint-calling/test-${joint_calling_run_version}/sample_qc/meta.tsv"
 	fi
 
-	test -f ${dir}/gender.tsv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/gender.tsv ${dir}/gender.tsv
-	test -f ${dir}/age.csv || gsutil cp gs://cpg-tob-wgs-${analysis_suf}/age.csv ${dir}/age.csv
+	test -f ${dir}/gender.tsv || gsutil cp gs://cpg-tob-wgs-test/gender.tsv ${dir}/gender.tsv
+	test -f ${dir}/age.csv || gsutil cp gs://cpg-tob-wgs-test/age.csv ${dir}/age.csv
 	test -f ${dir}/qc.csv || gsutil cp "gs://cpg-tob-wgs-${main_suf}/gvcf/batch${batch}/*.csv" ${dir}/qc.csv
 	test -f ${dir}/meta.tsv || gsutil cp $meta_csv_path ${dir}/meta.tsv
 	R --vanilla <<code
