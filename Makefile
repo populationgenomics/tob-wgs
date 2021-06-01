@@ -1,15 +1,21 @@
 VERSION := v2
-REUSE_TEST := "--overwrite"
-REUSE_PROD := "--reuse"
 SCATTER_COUNT_TEST := 10
-SCATTER_COUNT_PROD := 200
-CALLSET := "tob-wgs"
+SCATTER_COUNT_PROD := 100
+CALLSET := tob-wgs
 
-.PHONY: update_joint_calling_submodule
-update_joint_calling_submodule:
+.PHONY: joint_calling_update_submodule
+joint_calling_update_submodule:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' --no-verify && git push)
 	(cd joint-calling && git pull --rebase)
 	(git add joint-calling && git commit -m 'Update joint-calling submodule' && git push)
+
+.PHONY: joint_calling_clean_tmp
+joint_calling_clean_tmp:
+	gsutil -q rm -rf gs://cpg-tob-wgs-test-tmp/joint-calling/$(VERSION)
+
+.PHONY: joint_calling_clean_test
+joint_calling_clean_test:
+	gsutil -q rm -rf gs://cpg-tob-wgs-test/joint-calling/$(VERSION)
 
 .PHONY: joint_calling_test_to_tmp
 joint_calling_test_to_tmp:
@@ -26,7 +32,7 @@ joint_calling_test_to_tmp:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	$(REUSE_TEST)
+	--reuse
 
 .PHONY: joint_calling_test_to_tmp_extend
 joint_calling_test_to_tmp_extend:
@@ -44,7 +50,7 @@ joint_calling_test_to_tmp_extend:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	$(REUSE_TEST)
+	--reuse
 
 .PHONY: joint_calling_test_to_test
 joint_calling_test_to_test:
@@ -60,7 +66,7 @@ joint_calling_test_to_test:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	$(REUSE_PROD)
+	--reuse
 
 .PHONY: joint_calling_main_to_main
 joint_calling_main_to_main:
@@ -76,4 +82,4 @@ joint_calling_main_to_main:
 	--to main \
 	--callset $(CALLSET) \
 	--version $(VERSION) \
-	$(REUSE_PROD)
+	--reuse
