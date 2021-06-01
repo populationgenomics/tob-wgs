@@ -15,7 +15,7 @@ joint_calling_test_to_temporary:
 	--access-level test \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--from test \
-	--to temporary \
+	--to test-tmp \
 	--callset tob-wgs \
 	--version $(VERSION) \
 	--keep-scratch \
