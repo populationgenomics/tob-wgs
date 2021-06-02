@@ -1,0 +1,53 @@
+#!/usr/bin/env Rscript
+
+suppressPackageStartupMessages(require(argparser))
+suppressPackageStartupMessages(require(glue))
+suppressPackageStartupMessages(require(rmarkdown))
+
+
+p <- arg_parser(
+  description = "Concordance between SNPchip and WGS genotypes",
+  name = "concordance", hide.opts = TRUE)
+p <- add_argument(p,
+                  arg = "--idmap",
+                  help = "Path to SNPchip ID to TOB ID Excel map.")
+p <- add_argument(p,
+                  arg = "--snpchip",
+                  help = "Path to raw SNPchip VCF.")
+p <- add_argument(p,
+                  arg = "--chain",
+                  help = "Path to GRCh37 to GRCh38 liftover chain.")
+p <- add_argument(p,
+                  arg = "--wgs",
+                  help = "Path to WGS MatrixTable.")
+p <- add_argument(p,
+                  arg = "--outdir",
+                  help = "Output directory.")
+a <- parse_args(p)
+
+if (!dir.exists(a$outdir)) {
+  dir.create(a$outdir)
+}
+outdir <- normalizePath(a$outdir)
+
+cat(paste0("[", as.character(Sys.time()), "]"), "START concordance!\n")
+
+params_list <- list(
+  OUT_DIR = a$outdir,
+  INPUT_SNPCHIP_VCF = a$snpchip,
+  INPUT_WGS_MT = a$wgs,
+  INPUT_37TO38_CHAIN = a$chain,
+  INPUT_ID_MAP = a$idmap
+)
+
+cat("params_list:\n")
+print(params_list)
+
+rmarkdown::render(
+  input = "concordance.Rmd",
+  output_file = "concordance_snpchip_with_wgs.html",
+  output_dir = outdir,
+  params = params_list
+)
+
+cat(paste0("[", as.character(Sys.time()), "]", " END concordance!\n"))

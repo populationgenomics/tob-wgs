@@ -212,7 +212,7 @@ res <- py$concordance_per_sample_fname %>%
   unnest(conc2) %>%
   select(sample = s, `conc / left`, `conc / right`,
          conc_tot, disc_tot,
-         right_tot, left_tot,
+         left_tot, right_tot,
          `disc / left`, `disc / right`)
 
 cap <- tags$caption(
