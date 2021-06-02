@@ -8,7 +8,7 @@ function run() {
 	local dir=work/${main_suf}
 
 	local test="FALSE"
-	if [ $main_suf -eq "test" ]; then
+	if [ $main_suf = "test" ]; then
 		test="TRUE"
 	fi
 
