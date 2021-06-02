@@ -21,12 +21,13 @@ assert output and output.startswith('gs://cpg-tob-wgs-test/')
 @click.option('--version', help='Joint-calling run version', required=True)
 def main(version):
     """Entry point"""
+
     subprocess.run(
         [
             'gsutil',
             'cp',
             f'gs://cpg-tob-wgs-main/joint-calling/{version}/meta.tsv',
-            f'gs://cpg-tob-wgs-test/metadata/joint-calling/{version}/meta.tsv',
+            f'gs://cpg-tob-wgs-main-metadata/joint-calling/{version}/meta.tsv',
         ],
         check=False,
     )
