@@ -60,7 +60,7 @@ are:
 
 ```{r load_pkgs}
 library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows"))
-library(DT, include.only = c("datatable", "formatCurrency", "formatStyle"))
+library(DT, include.only = c("datatable", "formatCurrency", "formatStyle", "styleColorBar"))
 library(glue, include.only = "glue")
 library(htmltools, include.only = c("tags", "div"))
 library(jsonlite, include.only = "fromJSON")
@@ -74,15 +74,12 @@ library(sessioninfo, include.only = "session_info")
 library(stringr, include.only = "str_pad")
 library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
+use_condaenv("hail", required = TRUE)
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
 # for interactive debugging
 params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
-```
-
-```{r conda_setup}
-reticulate::use_condaenv("hail", required = TRUE)
 ```
 
 ```{python hail_setup, class.source="py"}
@@ -223,14 +220,15 @@ res %>%
   mutate(across(where(is.numeric), ~round(.x, 4))) %>%
   datatable(rownames = FALSE,
             caption = cap,
+            class = "cell-border display compact",
             filter = list(position = "top", clear = FALSE, plain = TRUE),
-            extensions = c("Scroller"),
-            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700)) %>%
-  DT::formatStyle(res %>% select(where(is_double)) %>% names(),
-    background = DT::styleColorBar(c(0, 1), "lightgreen"),
-    backgroundSize = "90% 90%",
-    backgroundRepeat = "no-repeat", backgroundPosition = "center"
-  ) %>%
-  DT::formatCurrency(res %>% select(where(is_integer)) %>% names(),
-                     currency = "", interval = 3, mark = ",", digits = 0)
+            extensions = c("Scroller", "KeyTable"),
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
+                           keys = TRUE, dom = "lfrtip")) %>%
+  formatStyle(res %>% select(where(is_double)) %>% names(),
+              background = styleColorBar(c(0, 1), "lightgreen"),
+              backgroundSize = "90% 90%",
+              backgroundRepeat = "no-repeat", backgroundPosition = "center") %>%
+  formatCurrency(res %>% select(where(is_integer)) %>% names(),
+                 currency = "", interval = 3, mark = ",", digits = 0)
 ```
