@@ -26,7 +26,12 @@ meta_tsv='${dir}/meta.tsv', \
 gvcf_bucket_suffix='${main_suf}'\
 ))
 code
-	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/qc/qc-${joint_calling_run_version}.html
+	qc_fpath=qc/qc-${joint_calling_run_version}.html
+	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/${qc_fpath}
+
+	echo ""
+	echo "Copied to the ${main_suf}-web bucket. The report will be available under the following URL:"
+	echo "https://${main_suf}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
 }
 
 run batch1 test v2
