@@ -453,7 +453,45 @@ data %>%
 Exploring the bimodal duplication rate distribution across batches.
 
 ```{r}
-all_data %>% count(batch,  duplicates > 0.15, duplicates < 0.15,  duplicates > 0.12, duplicates > 0.12)
+all_data %>% 
+  count(batch, duplicates > 0.15, duplicates < 0.15,  duplicates > 0.12, duplicates > 0.12) %>%
+  datatable()
+```
+
+Duplication rate against the lane and batch, groupped by batch
+
+```{r}
+p_data %>%
+  filter(metric == 'duplicates') %>% 
+  ggplot(aes(x = "", y = value, label = label, group = metric)) +
+  geom_violin(fill = "transparent") +
+  geom_sina(aes(colour = lane), seed = 42) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  facet_wrap(~batch) +
+  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
+  xlab("")
+```
+
+Duplication rate against the lane and batch, groupped by lane
+
+```{r}
+p_data %>%
+  filter(metric == 'duplicates') %>% 
+  ggplot(aes(x = "", y = value, label = label, group = metric)) +
+  geom_violin(fill = "transparent") +
+  geom_sina(aes(colour = batch), seed = 42) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  facet_wrap(~lane) +
+  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
+  xlab("")
 ```
 
 ```{r}
@@ -463,7 +501,6 @@ all_data %>% filter(batch == "1", duplicates > 0.12) %>% dplyr::pull(sample)
 ```{r}
 all_data %>% filter(batch == "1", duplicates <= 0.12) %>% dplyr::pull(sample)
 ```
-
 
 ```{r}
 all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
