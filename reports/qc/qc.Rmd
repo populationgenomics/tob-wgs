@@ -458,7 +458,7 @@ all_data %>%
   datatable()
 ```
 
-Duplication rate against the lane and batch, groupped by batch
+Duplication rate against the lane and batch, grouped by batch:
 
 ```{r}
 p_data %>%
@@ -476,7 +476,7 @@ p_data %>%
   xlab("")
 ```
 
-Duplication rate against the lane and batch, groupped by lane
+Duplication rate against the lane and batch, grouped by lane:
 
 ```{r}
 p_data %>%
