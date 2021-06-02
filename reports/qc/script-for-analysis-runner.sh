@@ -42,7 +42,7 @@ function run() {
 	test -f ${dir}/gender.tsv || gsutil cp "gs://cpg-tob-wgs-test/gender.tsv" ${dir}/gender.tsv
 	test -f ${dir}/age.csv    || gsutil cp "gs://cpg-tob-wgs-test/age.csv" ${dir}/age.csv
 	test -f ${dir}/qc.csv     || gsutil cp "gs://cpg-tob-wgs-${main_suf}/gvcf/${batch}/*.csv" ${dir}/qc.csv
-	test -f ${dir}/meta.tsv   || gsutil cp "gs://cpg-tob-wgs-${main_suf}/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.csv
+	test -f ${dir}/meta.tsv   || gsutil cp "gs://cpg-tob-wgs-${main_suf}/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	R --vanilla <<code
 rmarkdown::render('qc.Rmd', output_file='qc.html', params=list(\
 test=${test}, \
