@@ -69,12 +69,9 @@ library(readr, include.only = c("write_tsv", "read_tsv", "cols"))
 library(readxl, include.only = "read_excel")
 library(reticulate, include.only = c("use_condaenv", "py"))
 library(rlang, include.only = c("is_integer", "is_double"))
-library(scales, include.only = "comma")
-library(sessioninfo, include.only = "session_info")
-library(stringr, include.only = "str_pad")
 library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
-use_condaenv("hail", required = TRUE)
+use_condaenv("hailr", required = TRUE)
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
