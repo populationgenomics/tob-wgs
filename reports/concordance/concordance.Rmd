@@ -134,7 +134,7 @@ LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
 mt.write(LIFTOVER_MT, overwrite=True)
 ```
 
-## Step 3: Split multiallelic variants
+## Step 3: Split multiallelic variants (test on chr22)
 
 ```{python hail_split_multi, class.source="py"}
 LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
@@ -150,7 +150,7 @@ wgs = hl.experimental.sparse_split_multi(wgs)
 wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 ```
 
-## Step 4: Concordance calculation
+## Step 4: Concordance calculation (test on chr22)
 
 ```{python hail_concordance, class.source="py"}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
@@ -205,14 +205,6 @@ get_mat_stats <- function(m) {
   }
   m %>% mat_rename() %>% mat_conc_stats()
 }
-
-# global concordance (can get from the per-sample total sum)
-# py$concordance_global_fname %>%
-#   read_tsv(col_types = cols(.default = "d"),
-#                   col_names = FALSE) %>%
-#   as.matrix() %>%
-#   get_mat_stats() %>%
-#   knitr::kable(format.args = list(big.mark = ","))
 
 res <- py$concordance_per_sample_fname %>%
   read_tsv(col_types = "ccd") %>%
