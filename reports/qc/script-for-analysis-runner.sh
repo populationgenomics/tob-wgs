@@ -57,8 +57,7 @@ code
 	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/${qc_fpath}
 
 	echo ""
-	echo "Copied to the ${main_suf}-web bucket. The report will be available under the following URL:"
-	echo "https://${main_suf}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
+	echo "Copied to the ${main_suf}-web bucket. The report will be available under https://${main_suf}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
 }
 
 # Run on full data in a standard access level
