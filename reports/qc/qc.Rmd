@@ -346,7 +346,7 @@ p_data %>%
   xlab("")
 ```
 
-Table listing all samples {nrow(all_data)} samples in {n_batches} batches.
+Table listing all {nrow(all_data)} samples in {n_batches} batches.
 
 ```{r}
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
@@ -541,7 +541,7 @@ p_data %>%
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~flowcell1) +
-  ggtitle(glue("Duplication rate groupped by flowcell, colored by batch")) +
+  ggtitle(glue("Duplication rate grouped by flowcell, colored by batch")) +
   xlab("") + ylab('Duplication rate')
 ```
 
