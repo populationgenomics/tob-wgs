@@ -11,11 +11,8 @@ output:
     highlight: kate
 params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
-  INPUT_ID_MAP: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/raw/OneK1K_sample_IDs_2021-Apr-15.xlsx"
-  INPUT_SNPCHIP_VCF: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/raw/onek1k_pre_imputation_genotypes.vcf.gz"
-  INPUT_37TO38_CHAIN: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/reference/grch37_to_grch38.over.chain.gz"
-  INPUT_WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/raw/test-v1-raw.mt"
-  OUT_DIR: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed"
+  SNP_MT: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed/1-snpchip_grch38.mt"
+  WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/raw/test-v1-raw.mt"
 title: "`r paste(params$TITLE)`"
 ---
 
@@ -64,14 +61,14 @@ library(DT, include.only = c("datatable", "formatCurrency", "formatStyle", "styl
 library(glue, include.only = "glue")
 library(htmltools, include.only = c("tags", "div"))
 library(jsonlite, include.only = "fromJSON")
-library(purrr, include.only = "map")
+library(purrr, include.only = c("map", "set_names"))
 library(readr, include.only = c("write_tsv", "read_tsv", "cols"))
 library(readxl, include.only = "read_excel")
 library(reticulate, include.only = c("use_condaenv", "py"))
 library(rlang, include.only = c("is_integer", "is_double"))
 library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
-use_condaenv("hailr", required = TRUE)
+use_condaenv("concordance", required = TRUE)
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
@@ -80,29 +77,28 @@ params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
 ```
 
 ```{python hail_setup, class.source="py"}
-import os
-import csv
 import hail as hl
 hl.init(default_reference='GRCh38')
 ```
 
 ## Step 1: Rename VCF samples
 
-```{r generate_id_map}
+```{r generate_id_map, eval=FALSE}
 chipid2tobid_tsv <- "chipid2tobid.tsv"
-params$INPUT_ID_MAP %>%
+
+"OneK1K_sample_IDs_2021-Apr-15.xlsx" %>%
   read_excel(skip = 1) %>%
   mutate(tob_id = glue("TOB{TOB_ID}")) %>%
   select(sample = PERSON, tob_id) %>%
   write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
 ```
 
-```{r bcftools_reheader}
-vcf_reheader <- glue("{params$OUT_DIR}/0-snpchip_rehead.vcf.gz")
+```{r bcftools_reheader, eval=FALSE}
+vcf_reheader <- "snpchip_rehead_grch37.vcf.gz"
 system(glue("bcftools reheader ",
             "-s {chipid2tobid_tsv} ",
             "-o {vcf_reheader} ",
-            "{params$INPUT_SNPCHIP_VCF}"))
+            "onek1k_pre_imputation_genotypes.vcf.gz"))
 ```
 
 ## Step 2: Liftover from GRCh37 to GRCh38
@@ -122,18 +118,15 @@ def liftover(x, chain):
 
 # Liftover to GRCh38 and write
 mt = hl.import_vcf(r.vcf_reheader, reference_genome='GRCh37', force_bgz=True)
-mt = liftover(mt, r.params['INPUT_37TO38_CHAIN'])
-
-LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
-mt.write(LIFTOVER_MT, overwrite=True)
+mt = liftover(mt, 'grch37_to_grch38.over.chain.gz')
+mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 ```
 
 ## Step 3: Split multiallelic variants (test on chr22)
 
 ```{python hail_split_multi, class.source="py"}
-LIFTOVER_MT = os.path.join(r.params['OUT_DIR'], '1-snpchip_grch38.mt')
-wgs = hl.read_matrix_table(r.params['INPUT_WGS_MT'])
-snp = hl.read_matrix_table(LIFTOVER_MT).key_rows_by('locus', 'alleles')
+wgs = hl.read_matrix_table(r.params['WGS_MT'])
+snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
 #---- Use chr22 subset for concordance test ----#
 wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
@@ -149,25 +142,22 @@ wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 ```{python hail_concordance, class.source="py"}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
-# write concordance stats per sample
-concordance_per_sample_fname = f'{r.params["OUT_DIR"]}/concordance_columns_chr22.tsv'
-cols_conc.export(concordance_per_sample_fname, delimiter='\t')
-
-# write global concordance stats
-concordance_global_fname = f'{r.params["OUT_DIR"]}/concordance_global_chr22.tsv'
-with open(concordance_global_fname, 'w', newline='') as f:
-    writer = csv.writer(f, delimiter='\t')
-    writer.writerows(global_conc)
+# export concordance stats per sample
+conc_per_sample = cols_conc.to_pandas()
 ```
 
 ## Results
 
 ```{r concordance_results}
-get_mat_stats <- function(m) {
-  mat_rename <- function(m) {
+get_conc_stats <- function(l) {
+  list_to_matrix <- function(l) {
     conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
+    m <- l %>%
+      set_names(glue("{conc_names}_left")) %>%
+      bind_rows() %>%
+      as.matrix() %>%
+      t()
     colnames(m) <- glue("{conc_names}_right")
-    rownames(m) <- glue("{conc_names}_left")
     m
   }
 
@@ -197,12 +187,11 @@ get_mat_stats <- function(m) {
            `disc / left` = disc_over_left,
            `disc / right` = disc_over_right)
   }
-  m %>% mat_rename() %>% mat_conc_stats()
+  l %>% list_to_matrix() %>% mat_conc_stats()
 }
 
-res <- py$concordance_per_sample_fname %>%
-  read_tsv(col_types = "ccd") %>%
-  mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
+res <- py$conc_per_sample %>%
+  mutate(conc2 = map(concordance, ~get_conc_stats(.x))) %>%
   unnest(conc2) %>%
   select(sample = s, `conc / left`, `conc / right`,
          conc_tot, disc_tot,
@@ -219,9 +208,9 @@ res %>%
             caption = cap,
             class = "cell-border display compact",
             filter = list(position = "top", clear = FALSE, plain = TRUE),
-            extensions = c("Scroller", "KeyTable"),
+            extensions = c("Scroller", "KeyTable", "Buttons"),
             options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
-                           keys = TRUE, dom = "lfrtip")) %>%
+                           buttons = 'csv', keys = TRUE, dom = "Blfrtip")) %>%
   formatStyle(res %>% select(where(is_double)) %>% names(),
               background = styleColorBar(c(0, 1), "lightgreen"),
               backgroundSize = "90% 90%",
