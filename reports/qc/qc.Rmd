@@ -11,7 +11,7 @@ output:
     highlight: kate
 params:
   title: ""
-  gender_tsv: "work/gender.tsv"
+  reported_sex_tsv: "work/reported_sex.tsv"
   age_csv: "work/age.csv"
   meta_tsv: "work/meta.tsv"
   qc_csv: "work/qc.csv"
@@ -238,7 +238,7 @@ sample_qc_meta <- params$meta_tsv %>%
     chrX_ploidy
   )
 
-gender <- params$gender_tsv %>%
+reported_sex <- params$reported_sex_tsv %>%
   read_tsv(
     skip = 2,
     col_names = c(

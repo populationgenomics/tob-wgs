@@ -39,14 +39,14 @@ function run() {
 	local joint_calling_run_version=$3
 	local dir=work
 
-	test -f ${dir}/gender.tsv || gsutil cp "gs://cpg-tob-wgs-main-metadata/gender.tsv" ${dir}/gender.tsv
-	test -f ${dir}/age.csv    || gsutil cp "gs://cpg-tob-wgs-main-metadata/age.csv" ${dir}/age.csv
-	test -f ${dir}/qc.csv     || gsutil cp "gs://cpg-tob-wgs-main-metadata/${batch}/*.csv" ${dir}/qc.csv
-	test -f ${dir}/meta.tsv   || gsutil cp "gs://cpg-tob-wgs-main-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
+	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-main-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
+	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-main-metadata/age.csv" ${dir}/age.csv
+	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-main-metadata/${batch}/*.csv" ${dir}/qc.csv
+	test -f ${dir}/meta.tsv         || gsutil cp "gs://cpg-tob-wgs-main-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	cat qc.Rmd | sed 's/r fig.width=[1-9]*, fig.height=[1-9]*/r fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
 rmarkdown::render('qc-for-html.Rmd', output_file='qc.html', params=list(\
-gender_tsv='${dir}/gender.tsv', \
+reported_sex_tsv='${dir}/reported_sex.tsv', \
 age_csv='${dir}/age.csv', \
 qc_csv='${dir}/qc.csv', \
 meta_tsv='${dir}/meta.tsv'
