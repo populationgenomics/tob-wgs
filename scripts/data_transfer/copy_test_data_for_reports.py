@@ -14,7 +14,7 @@ import subprocess
 import click
 
 output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-test/')
+assert output and output.startswith('gs://cpg-tob-wgs-main-metadata/')
 
 
 @click.command()
