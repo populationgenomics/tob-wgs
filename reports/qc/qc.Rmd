@@ -252,7 +252,7 @@ gender <- params$gender_tsv %>%
     )
   ) %>%
   filter(!is.na(sample_id)) %>%
-  select(sample = sample.sample_name, gender)
+  select(sample = sample.sample_name, reported_sex = gender)
 
 age <- params$age_csv %>%
   read_csv(col_types = cols(.default = "c", age = "d")) %>%
@@ -260,7 +260,7 @@ age <- params$age_csv %>%
 
 all_data <- qc_kccg %>%
   left_join(sample_qc_meta, by = "sample") %>%
-  left_join(gender, by = "sample") %>%
+  left_join(reported_sex, by = "sample") %>%
   left_join(age, by = "sample") %>%
   left_join(gvcf %>% select(sample = tobid, batch), by = "sample")
 
@@ -371,7 +371,7 @@ data = all_data %>%
     n = dplyr::row_number(),
     sample, 
     batch,
-    `sex inferred/reported` = str_c(sex_karyotype, "/", gender),
+    `sex inferred/reported` = str_c(sex_karyotype, "/", reported_sex),
     chrY_ploidy = chrY_ploidy,
     chrX_ploidy = chrX_ploidy,
     `chr20 mean DP` = `chr20 mean dp`, 
@@ -571,8 +571,8 @@ Sex ploidies
 
 ```{r}
 sex_data = all_data %>% 
-  select(sample, chrX_ploidy, chrY_ploidy, sex_karyotype, gender, age) %>% 
-  mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & gender != 'F' | sex_karyotype == "XY" & gender != "M", T, F)) %>%
+  select(sample, chrX_ploidy, chrY_ploidy, sex_karyotype, reported_sex, age) %>% 
+  mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & reported_sex != 'F' | sex_karyotype == "XY" & reported_sex != "M", T, F)) %>%
   mutate(label = ifelse(sex_mismatched, glue("{sample}, {sex_karyotype}, age: {age}"), NA_character_)) %>%
   arrange(sex_mismatched)
 ```
@@ -580,7 +580,7 @@ sex_data = all_data %>%
 X ploidy vs Y ploidy. Samples with matched reported and inferred sex is labelled.
 
 ```{r}
-sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = gender)) + 
+sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = reported_sex)) + 
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
@@ -588,7 +588,7 @@ sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = gender)) +
 Y ploidy vs age. Samples with matched reported and inferred sex is labelled. chY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
-sex_data %>% ggplot(aes(y = chrY_ploidy, x = age, color = gender)) + 
+sex_data %>% ggplot(aes(y = chrY_ploidy, x = age, color = reported_sex)) + 
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
