@@ -91,10 +91,10 @@ gcs_list_objects2 <- function(b, prefix) {
 # (see https://statsandr.com/blog/outliers-detection-in-r/).
 # Using the m parameter for cases where there are simply too many outliers; the
 # larger the value of m, the fewer values are considered outliers.
-is_outlier <- function(x, m = 1.5) {
+is_outlier <- function(x, m = 2) {
   assert_that(is.numeric(x), is.numeric(m))
-  (x < quantile(x, 0.25) - m * IQR(x)) |
-    (x > quantile(x, 0.75) + m * IQR(x))
+  (x < quantile(x, 0.25, na.rm = T) - m * IQR(x, na.rm = T)) |
+  (x > quantile(x, 0.75, na.rm = T) + m * IQR(x, na.rm = T))
 }
 ```
 
@@ -213,7 +213,8 @@ qc_kccg <- params$qc_csv %>%
     chimeras = raw_data.PCT_CHIMERAS,
     duplicates = raw_data.PERCENT_DUPLICATION,
     `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-    lane = sample.flowcell_lane
+    lane = sample.flowcell_lane,
+    `median coverage` = raw_data.MEDIAN_COVERAGE
   )
 
 gender <- params$gender_tsv %>%
@@ -272,11 +273,11 @@ plot_height <- n_metrics * 1
 
 Here we plot distributions of several metrics:
 
-```{r fig.width=plot_width, fig.height=plot_height}
+```{r fig.width=6, fig.height=5}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
@@ -299,15 +300,16 @@ if (params$test && length(unique(p_data$batch)) == 1) {
 
 n_batches <- length(unique(p_data$batch))
 n_metrics <- length(unique(p_data$metric))
+
 plot_width <- n_batches * 3
 plot_height <- n_metrics * 3
 ```
 
-```{r fig.width=plot_width, fig.height=plot_height}
+```{r fig.width=5, fig.height=6}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42) +
   ggrepel::geom_text_repel(
     color = "black", na.rm = TRUE, size = 2.3
   ) +
@@ -459,9 +461,10 @@ all_data %>%
 
 Duplication rate against the lane and batch, grouped by batch:
 
-```{r}
+```{r fig.width=5}
 p_data %>%
   filter(metric == 'duplicates') %>% 
+  #mutate(lane = ) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = lane), seed = 42) +
@@ -472,14 +475,25 @@ p_data %>%
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~batch) +
   ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
+  scale_color_manual(values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7", 
+"#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD", 
+"#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D", 
+"#8A7C64", "#599861")) +
   xlab("")
 ```
 
+
 Duplication rate against the lane and batch, grouped by lane:
 
-```{r}
+```{r fig.width=5}
+lanes_with_more_than_2_samples <- all_data %>%
+  group_by(lane) %>%
+  tally %>% 
+  filter(n > 2) %>% pull(lane) %>% unique()
+
 p_data %>%
-  filter(metric == 'duplicates') %>% 
+  filter(metric == 'duplicates') %>%
+  filter(lane %in% lanes_with_more_than_2_samples) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = batch), seed = 42) +
@@ -492,6 +506,40 @@ p_data %>%
   ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
 ```
+
+Number of samples per lane ID:
+
+```{r}
+all_data %>% 
+  count(lane) %>% 
+  ggplot(aes(x = reorder(lane, -n), y = n)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = n), hjust=-0.25) +
+  coord_flip()
+```
+
+
+```{r}
+my_data = p_data %>% 
+  filter(metric == 'duplicates') %>% 
+  filter(lane == "H2W7VDSX2.1-2-3-4") %>% 
+  select(metric, value)
+my_data
+```
+```{r}
+my_data %>% 
+  ggplot(aes(x = "", y = value)) +
+  geom_violin() +
+  geom_sina()
+```
+
+```{r}
+my_data %>% 
+  ggplot(aes(x = "", y = value, group=metric)) +
+  geom_violin() +
+  geom_sina()
+```
+
 
 ```{r}
 all_data %>% filter(batch == "1", duplicates > 0.12) %>% dplyr::pull(sample)
