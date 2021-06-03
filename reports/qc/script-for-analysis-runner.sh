@@ -43,15 +43,16 @@ function run() {
 	test -f ${dir}/age.csv    || gsutil cp "gs://cpg-tob-wgs-main-metadata/age.csv" ${dir}/age.csv
 	test -f ${dir}/qc.csv     || gsutil cp "gs://cpg-tob-wgs-main-metadata/${batch}/*.csv" ${dir}/qc.csv
 	test -f ${dir}/meta.tsv   || gsutil cp "gs://cpg-tob-wgs-main-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
-	cat qc.Rmd | sed 's/r fig.width=[1-9]+, fig.height=[1-9]+/r fig.width=plot_width, fig.height=plot_height/g' > ${dir}/qc-for-html.Rmd
+	cat qc.Rmd | sed 's/r fig.width=[1-9]*, fig.height=[1-9]*/r fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
-rmarkdown::render('${dir}/qc-for-html.Rmd', output_file='qc.html', params=list(\
+rmarkdown::render('qc-for-html.Rmd', output_file='qc.html', params=list(\
 gender_tsv='${dir}/gender.tsv', \
 age_csv='${dir}/age.csv', \
 qc_csv='${dir}/qc.csv', \
 meta_tsv='${dir}/meta.tsv'
 ))
 code
+	rm qc-for-html.Rmd
 	qc_fpath=qc/qc-${joint_calling_run_version}.html
 	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/${qc_fpath}
 

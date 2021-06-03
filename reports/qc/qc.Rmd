@@ -185,8 +185,39 @@ gvcf %>%
 
 ## QC metrics
 
-We have access to CSV files with summaries of sample QC metrics. Additional
+QC metrics were calculated by Picard Tools in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
 files have been provided containing the recorded age and sex of each sample.
+
+Number of samples per flowcell-lane ID.
+
+```{r}
+qc_kccg <- params$qc_csv %>%
+  read_csv() %>%
+  select(
+    sample = sample.sample_name,
+    contamination = raw_data.FREEMIX,
+    chimeras = raw_data.PCT_CHIMERAS,
+    duplicates = raw_data.PERCENT_DUPLICATION,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    flowcell_lane = sample.flowcell_lane,
+    `median coverage` = raw_data.MEDIAN_COVERAGE
+  ) %>% 
+  mutate(flowcell_lane_data = str_split(flowcell_lane, "\\.")) %>% 
+  mutate(
+    flowcell1 = map_chr(flowcell_lane_data, 1),
+    lanes1 = map_chr(flowcell_lane_data, 2),
+    flowcell2 = map_chr(flowcell_lane_data, 3, .default = NA_character_),
+    lanes2 = map_chr(flowcell_lane_data, 4, .default = NA_character_)
+  ) %>% 
+  select(-flowcell_lane_data)
+
+qc_kccg %>% 
+  count(flowcell_lane) %>% 
+  ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = n), hjust=-0.25) +
+  coord_flip()
+```
 
 ```{r qc_plot_prep}
 sample_qc_meta <- params$meta_tsv %>%
@@ -203,18 +234,6 @@ sample_qc_meta <- params$meta_tsv %>%
     `chr20 mean dp` = chr20_mean_dp,
     is_female,
     sex_karyotype
-  )
-
-qc_kccg <- params$qc_csv %>%
-  read_csv() %>%
-  select(
-    sample = sample.sample_name,
-    contamination = raw_data.FREEMIX,
-    chimeras = raw_data.PCT_CHIMERAS,
-    duplicates = raw_data.PERCENT_DUPLICATION,
-    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-    lane = sample.flowcell_lane,
-    `median coverage` = raw_data.MEDIAN_COVERAGE
   )
 
 gender <- params$gender_tsv %>%
@@ -277,7 +296,7 @@ Here we plot distributions of several metrics:
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
@@ -305,14 +324,12 @@ plot_width <- n_batches * 3
 plot_height <- n_metrics * 3
 ```
 
-```{r fig.width=5, fig.height=6}
+```{r fig.width=5, fig.height=8}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, group = metric), seed = 42) +
-  ggrepel::geom_text_repel(
-    color = "black", na.rm = TRUE, size = 2.3
-  ) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
+  ggrepel::geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(metric~batch, scales = "free") +
@@ -328,8 +345,8 @@ p_data %>%
 ```
 
 ```{r}
-# Render a bar chart in the background of the cell
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
+  # Render a bar chart in the background of the cell
   align <- match.arg(align)
   if (align == "left") {
     position <- paste0(width * 100, "%")
@@ -365,7 +382,8 @@ data = all_data %>%
     singleton = singleton,
     `insert size median` = `insert size median`,
     duplicates = duplicates,
-    chimeras = chimeras
+    chimeras = chimeras,
+    flowcell_lane
   )
 
 data %>%
@@ -440,7 +458,8 @@ data %>%
           bar_style(width = value / max(data$chimeras), fill = "hsl(208, 70%, 90%)")
         },
         format = colFormat(digits = 2, percent = TRUE)
-      )
+      ),
+      flowcell_lane = colDef()
     )
   ) %>%
   htmlwidgets::prependContent(
@@ -451,15 +470,15 @@ data %>%
   )
 ```
 
-Exploring the bimodal duplication rate distribution across batches.
 
-```{r}
-all_data %>% 
-  count(batch, duplicates > 0.15, duplicates < 0.15,  duplicates > 0.12, duplicates > 0.12) %>%
-  datatable()
-```
+Removing lane labels with <2 samples.
+
 
 Duplication rate against the lane and batch, grouped by batch:
+
+```{r}
+plot_width <- 5
+```
 
 ```{r fig.width=5}
 p_data %>%
@@ -467,7 +486,7 @@ p_data %>%
   #mutate(lane = ) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = lane), seed = 42) +
+  geom_sina(aes(colour = flowcell1), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
@@ -485,15 +504,19 @@ p_data %>%
 
 Duplication rate against the lane and batch, grouped by lane:
 
+```{r}
+plot_width <- 5
+```
+
 ```{r fig.width=5}
 lanes_with_more_than_2_samples <- all_data %>%
-  group_by(lane) %>%
+  group_by(flowcell1) %>%
   tally %>% 
-  filter(n > 2) %>% pull(lane) %>% unique()
+  filter(n > 2) %>% pull(flowcell1) %>% unique()
 
 p_data %>%
   filter(metric == 'duplicates') %>%
-  filter(lane %in% lanes_with_more_than_2_samples) %>% 
+  filter(flowcell1 %in% lanes_with_more_than_2_samples) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = batch), seed = 42) +
@@ -502,42 +525,9 @@ p_data %>%
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
-  facet_wrap(~lane) +
+  facet_wrap(~flowcell1) +
   ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
-```
-
-Number of samples per lane ID:
-
-```{r}
-all_data %>% 
-  count(lane) %>% 
-  ggplot(aes(x = reorder(lane, -n), y = n)) + 
-  geom_bar(stat = "identity") + 
-  geom_text(aes(label = n), hjust=-0.25) +
-  coord_flip()
-```
-
-
-```{r}
-my_data = p_data %>% 
-  filter(metric == 'duplicates') %>% 
-  filter(lane == "H2W7VDSX2.1-2-3-4") %>% 
-  select(metric, value)
-my_data
-```
-```{r}
-my_data %>% 
-  ggplot(aes(x = "", y = value)) +
-  geom_violin() +
-  geom_sina()
-```
-
-```{r}
-my_data %>% 
-  ggplot(aes(x = "", y = value, group=metric)) +
-  geom_violin() +
-  geom_sina()
 ```
 
 
