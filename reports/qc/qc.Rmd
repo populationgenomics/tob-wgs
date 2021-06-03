@@ -25,8 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ## Introduction
 
-Here we're exploring QC metrics, metadata, and contents of Google Cloud Storage
-buckets associated with the TOB-WGS project.
+Exploring QC metrics and metadata of the samples from the TOB-WGS project.
 
 ```{r load_pkgs}
 library(tidyverse)
@@ -91,7 +90,7 @@ gcs_list_objects2 <- function(b, prefix) {
 # (see https://statsandr.com/blog/outliers-detection-in-r/).
 # Using the m parameter for cases where there are simply too many outliers; the
 # larger the value of m, the fewer values are considered outliers.
-is_outlier <- function(x, m = 2) {
+is_outlier <- function(x, m = 3) {
   assert_that(is.numeric(x), is.numeric(m))
   (x < quantile(x, 0.25, na.rm = T) - m * IQR(x, na.rm = T)) |
   (x > quantile(x, 0.75, na.rm = T) + m * IQR(x, na.rm = T))
@@ -103,9 +102,9 @@ bucket <- glue("cpg-tob-wgs-main")
 gcs_prefix <- "gvcf"
 ```
 
-## WGS GVCF files
+## Bucket contents
 
-- Let's first explore the contents of `r glue("'{bucket}/{gcs_prefix}'")`:
+Summarising the contents of the Google Cloud Storage GVCF bucket: `r glue("'{bucket}/{gcs_prefix}'")`.
 
 ```{r list_contents1}
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
@@ -125,8 +124,7 @@ gvcf <-
   select(tobid, fullname = name, batch, size, basename)
 ```
 
-- Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`**
-  GVCF files:
+Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`** GVCF files.
 
 ```{r gvcf_list}
 gvcf %>%
@@ -183,12 +181,9 @@ gvcf %>%
   ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 ```
 
-## QC metrics
+## Lanes and flowcells
 
-QC metrics were calculated by Picard Tools in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
-files have been provided containing the recorded age and sex of each sample.
-
-Number of samples per flowcell-lane ID.
+Summarising the sample counts per the flowcell-lane ID.
 
 ```{r}
 qc_kccg <- params$qc_csv %>%
@@ -218,6 +213,11 @@ qc_kccg %>%
   geom_text(aes(label = n), hjust=-0.25) +
   coord_flip()
 ```
+
+## QC metrics
+
+QC metrics were calculated by Picard Tools in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
+files have been provided containing the recorded age and reported sex of each sample.
 
 ```{r qc_plot_prep}
 sample_qc_meta <- params$meta_tsv %>%
@@ -279,8 +279,8 @@ p_data <- all_data %>%
 
 cutoffs <- tibble(
   metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
-  upper_lim = c(100000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
-  lower_lim = c(NA,           2400000,  NA,        NA,         15,              NA,           NA,              250)
+  upper_lim = c(400000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
+  lower_lim = c(NA,           2400000,  NA,        NA,         18,              NA,           NA,              250)
 )
 
 cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
@@ -292,7 +292,7 @@ plot_width <- n_metrics * 1.2
 plot_height <- n_metrics * 1
 ```
 
-Here we plot distributions of several metrics:
+Distributions of several QC metrics. Bad-quality samples according to the [joint-calling workflow cutoffs](https://github.com/populationgenomics/joint-calling/blob/main/joint_calling/filter_cutoffs.yaml) are highlighted with red dots. Additionally, outlier samples are detected and labelled with the sample IDs on the plot.
 
 ```{r fig.width=6, fig.height=5}
 p_data %>%
@@ -311,7 +311,7 @@ p_data %>%
   xlab("")
 ```
 
-Same, grouped by batch:
+Same data, but additionally grouped by batch.
 
 ```{r}
 if (params$test && length(unique(p_data$batch)) == 1) {
@@ -345,6 +345,8 @@ p_data %>%
   ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
 ```
+
+Table listing all samples {nrow(all_data)} samples in {n_batches} batches.
 
 ```{r}
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
@@ -481,29 +483,16 @@ data %>%
         format = colFormat(digits = 2, percent = TRUE)
       )
     )
-  ) %>%
-  htmlwidgets::prependContent(
-    htmltools::h2(
-      class = "title",
-      glue("{nrow(all_data)} samples in {n_batches} batches")
-    )
   )
 ```
 
+## Duplication rate
 
-Removing lane labels with <2 samples.
-
-
-Duplication rate against the lane and batch, grouped by batch:
-
-```{r}
-plot_width <- 5
-```
+Duplication rate against the flowcell and batch, grouped by batch. Lane numbers are dropped, and for samples with multiple flowcell IDs, only the first one is used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
 
 ```{r fig.width=5}
 p_data %>%
   filter(metric == 'duplicates') %>% 
-  #mutate(lane = ) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = flowcell1), seed = 42) +
@@ -522,11 +511,7 @@ p_data %>%
 ```
 
 
-Duplication rate against the lane and batch, grouped by lane:
-
-```{r}
-plot_width <- 5
-```
+Duplication rate against the flowcell and batch, grouped by flowcell. Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
 
 ```{r fig.width=5}
 lanes_with_more_than_2_samples <- all_data %>%
@@ -567,7 +552,7 @@ all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
 all_data %>% filter(batch == "3", duplicates <= 0.15) %>% dplyr::pull(sample)
 ```
 
-Sex ploidies
+## Sex ploidies
 
 ```{r}
 sex_data = all_data %>% 
