@@ -491,11 +491,11 @@ data %>%
 Duplication rate against the flowcell and batch, grouped by batch. Lane numbers are dropped, and for samples with multiple flowcell IDs, only the first one is used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
 
 ```{r}
-plot_width <- 5
-plot_height <- 5
+plot_width <- 7
+plot_height <- 7
 ```
 
-```{r fig.width=5, fig.height=5}
+```{r fig.width=5, fig.height=4}
 p_data %>%
   filter(metric == 'duplicates') %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
@@ -519,11 +519,11 @@ p_data %>%
 Duplication rate against the flowcell and batch, grouped by flowcell. Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
 
 ```{r}
-plot_width <- 5
-plot_height <- 5
+plot_width <- 8
+plot_height <- 8
 ```
 
-```{r fig.width=5, fig.height=5}
+```{r fig.width=5, fig.height=4}
 lanes_with_more_than_2_samples <- all_data %>%
   group_by(flowcell1) %>%
   tally %>% 
