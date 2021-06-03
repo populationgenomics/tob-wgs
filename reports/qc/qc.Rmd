@@ -11,11 +11,10 @@ output:
     highlight: kate
 params:
   title: ""
-  gvcf_bucket_suffix: "test"
-  gender_tsv: "work/test/gender.tsv"
-  age_csv: "work/test/age.csv"
-  meta_tsv: "work/test/meta.tsv"
-  qc_csv: "work/test/qc.csv"
+  gender_tsv: "work/gender.tsv"
+  age_csv: "work/age.csv"
+  meta_tsv: "work/meta.tsv"
+  qc_csv: "work/qc.csv"
   test: TRUE
 title: "QC report for TOB-WGS"
 ---
@@ -100,7 +99,7 @@ is_outlier <- function(x, m = 1.5) {
 ```
 
 ```{r vars}
-bucket <- glue("cpg-tob-wgs-", params$gvcf_bucket_suffix)
+bucket <- glue("cpg-tob-wgs-main")
 gcs_prefix <- "gvcf"
 ```
 
