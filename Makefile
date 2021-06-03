@@ -2,6 +2,7 @@ VERSION := v2
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
+REUSE_ARG := "--reuse"
 
 .PHONY: joint_calling_update_submodule
 joint_calling_update_submodule:
@@ -32,7 +33,7 @@ joint_calling_test_to_tmp:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_test_to_tmp_extend
 joint_calling_test_to_tmp_extend:
@@ -50,7 +51,7 @@ joint_calling_test_to_tmp_extend:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_test_to_test
 joint_calling_test_to_test:
@@ -66,7 +67,7 @@ joint_calling_test_to_test:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_main_to_main
 joint_calling_main_to_main:
@@ -82,4 +83,4 @@ joint_calling_main_to_main:
 	--to main \
 	--callset $(CALLSET) \
 	--version $(VERSION) \
-	--reuse
+	$(REUSE_ARG)
