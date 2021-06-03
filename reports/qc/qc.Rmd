@@ -233,7 +233,9 @@ sample_qc_meta <- params$meta_tsv %>%
     high_quality = high_quality,
     `chr20 mean dp` = chr20_mean_dp,
     is_female,
-    sex_karyotype
+    sex_karyotype,
+    chrY_ploidy,
+    chrX_ploidy
   )
 
 gender <- params$gender_tsv %>%
@@ -370,6 +372,8 @@ data = all_data %>%
     sample, 
     batch,
     `sex inferred/reported` = str_c(sex_karyotype, "/", gender),
+    chrY_ploidy = chrY_ploidy,
+    chrX_ploidy = chrX_ploidy,
     `chr20 mean DP` = `chr20 mean dp`, 
     contamination = contamination,
     `filters` = str_replace(sample_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
@@ -394,7 +398,24 @@ data %>%
       n = colDef(),
       batch = colDef(),
       sample = colDef(),
-      `sex inferred/reported` = colDef(style = function(value) { list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white')) }),
+      `sex inferred/reported` = colDef(
+        style = function(value) { 
+          list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white')) 
+        }
+      ),
+      flowcell_lane = colDef(),
+      chrY_ploidy = colDef(
+        style = function(value) {
+          bar_style(width = value / max(data$chrY_ploidy), fill = "hsl(208, 70%, 90%)")
+        },        
+        format = colFormat(digits = 2)
+      ),
+      chrX_ploidy = colDef(
+        style = function(value) {
+          bar_style(width = value / max(data$chrX_ploidy), fill = "hsl(208, 70%, 90%)")
+        },    
+        format = colFormat(digits = 2)
+      ),
       `chr20 mean DP` = colDef(
         style = function(value) {
           bar_style(width = value / max(data$`chr20 mean DP`), fill = "hsl(208, 70%, 90%)")
@@ -458,8 +479,7 @@ data %>%
           bar_style(width = value / max(data$chimeras), fill = "hsl(208, 70%, 90%)")
         },
         format = colFormat(digits = 2, percent = TRUE)
-      ),
-      flowcell_lane = colDef()
+      )
     )
   ) %>%
   htmlwidgets::prependContent(
@@ -547,6 +567,31 @@ all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
 all_data %>% filter(batch == "3", duplicates <= 0.15) %>% dplyr::pull(sample)
 ```
 
+Sex ploidies
+
+```{r}
+sex_data = all_data %>% 
+  select(sample, chrX_ploidy, chrY_ploidy, sex_karyotype, gender, age) %>% 
+  mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & gender != 'F' | sex_karyotype == "XY" & gender != "M", T, F)) %>%
+  mutate(label = ifelse(sex_mismatched, glue("{sample}, {sex_karyotype}, age: {age}"), NA_character_)) %>%
+  arrange(sex_mismatched)
+```
+
+X ploidy vs Y ploidy. Samples with matched reported and inferred sex is labelled.
+
+```{r}
+sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = gender)) + 
+  geom_point(size = 0.6) +
+  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
+```
+
+Y ploidy vs age. Samples with matched reported and inferred sex is labelled. chY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
+
+```{r}
+sex_data %>% ggplot(aes(y = chrY_ploidy, x = age, color = gender)) + 
+  geom_point(size = 0.6) +
+  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
+```
 
 ## Session Info
 
