@@ -490,7 +490,12 @@ data %>%
 
 Duplication rate against the flowcell and batch, grouped by batch. Lane numbers are dropped, and for samples with multiple flowcell IDs, only the first one is used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
 
-```{r fig.width=5}
+```{r}
+plot_width <- 5
+plot_height <- 5
+```
+
+```{r fig.width=5, fig.height=5}
 p_data %>%
   filter(metric == 'duplicates') %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
@@ -502,18 +507,23 @@ p_data %>%
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~batch) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
   scale_color_manual(values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7", 
 "#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD", 
 "#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D", 
 "#8A7C64", "#599861")) +
-  xlab("")
+  ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) +
+  xlab("") + ylab('Duplication rate')
 ```
 
 
 Duplication rate against the flowcell and batch, grouped by flowcell. Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
 
-```{r fig.width=5}
+```{r}
+plot_width <- 5
+plot_height <- 5
+```
+
+```{r fig.width=5, fig.height=5}
 lanes_with_more_than_2_samples <- all_data %>%
   group_by(flowcell1) %>%
   tally %>% 
@@ -531,41 +541,32 @@ p_data %>%
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~flowcell1) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
-  xlab("")
-```
-
-
-```{r}
-all_data %>% filter(batch == "1", duplicates > 0.12) %>% dplyr::pull(sample)
-```
-
-```{r}
-all_data %>% filter(batch == "1", duplicates <= 0.12) %>% dplyr::pull(sample)
-```
-
-```{r}
-all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
-```
-
-```{r}
-all_data %>% filter(batch == "3", duplicates <= 0.15) %>% dplyr::pull(sample)
+  ggtitle(glue("Duplication rate groupped by flowcell, colored by batch")) +
+  xlab("") + ylab('Duplication rate')
 ```
 
 ## Sex ploidies
 
 ```{r}
 sex_data = all_data %>% 
-  select(sample, chrX_ploidy, chrY_ploidy, sex_karyotype, reported_sex, age) %>% 
   mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & reported_sex != 'F' | sex_karyotype == "XY" & reported_sex != "M", T, F)) %>%
-  mutate(label = ifelse(sex_mismatched, glue("{sample}, {sex_karyotype}, age: {age}"), NA_character_)) %>%
+  select(
+    sex_mismatched, 
+    sample, 
+    `X ploidy` = chrX_ploidy, 
+    `Y ploidy` = chrY_ploidy, 
+    karyotype = sex_karyotype, 
+    `reported sex` = reported_sex, 
+    age
+  ) %>% 
+  mutate(label = ifelse(sex_mismatched, glue("{sample}, {karyotype}, age: {age}"), NA_character_)) %>%
   arrange(sex_mismatched)
 ```
 
-X ploidy vs Y ploidy. Samples with matched reported and inferred sex is labelled.
+X ploidy vs Y ploidy. Highlighted samples with mismatched reported and inferred sex, or basically anything but XX/F or XY/M.
 
 ```{r}
-sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = reported_sex)) + 
+sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) + 
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
@@ -573,7 +574,7 @@ sex_data %>% ggplot(aes(x = chrX_ploidy, y = chrY_ploidy, color = reported_sex))
 Y ploidy vs age. Samples with matched reported and inferred sex is labelled. chY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
-sex_data %>% ggplot(aes(y = chrY_ploidy, x = age, color = reported_sex)) + 
+sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) + 
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
