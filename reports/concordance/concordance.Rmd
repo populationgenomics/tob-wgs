@@ -68,7 +68,7 @@ library(reticulate, include.only = c("use_condaenv", "py"))
 library(rlang, include.only = c("is_integer", "is_double"))
 library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
-use_condaenv("concordance", required = TRUE)
+use_condaenv("hailr", required = TRUE)
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
