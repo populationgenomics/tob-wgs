@@ -571,7 +571,7 @@ sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`))
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
 
-Y ploidy vs age. Samples with matched reported and inferred sex is labelled. chY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
+Y ploidy vs age. Samples with mismatched reported and inferred sex are labelled. chrY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
 sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) + 
