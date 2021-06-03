@@ -9,8 +9,9 @@ analysis-runner \
    --output-dir "gs://cpg-tob-wgs-test-tmp/qc-report" \
    --description "QC report test" \
 script-for-analysis-runner.sh \
-   --batch batch1 \
-   --version v1
+   --batch batch4 \
+   --version v2 \
+   --analysis-runner
 ```
 
 A prod run that would put the report into the `main-web` bucket, to be available under [main-web.populationgenomics.org.au/tob-wgs/qc/qc-v1.html](https://main-web.populationgenomics.org.au/tob-wgs/qc/qc-v1.html):
@@ -23,7 +24,8 @@ analysis-runner \
    --description "QC report" \
 script-for-analysis-runner.sh \
    --batch batch4 \
-   --version v1 \
+   --version v2 \
+   --analysis-runner \
    --prod
 ```
 

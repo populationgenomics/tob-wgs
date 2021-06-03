@@ -11,11 +11,10 @@ output:
     highlight: kate
 params:
   title: ""
-  gvcf_bucket_suffix: "test"
-  gender_tsv: "work/test/gender.tsv"
-  age_csv: "work/test/age.csv"
-  meta_tsv: "work/test/meta.tsv"
-  qc_csv: "work/test/qc.csv"
+  reported_sex_tsv: "work/reported_sex.tsv"
+  age_csv: "work/age.csv"
+  meta_tsv: "work/meta.tsv"
+  qc_csv: "work/qc.csv"
   test: TRUE
 title: "QC report for TOB-WGS"
 ---
@@ -26,8 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ## Introduction
 
-Here we're exploring QC metrics, metadata, and contents of Google Cloud Storage
-buckets associated with the TOB-WGS project.
+Exploring QC metrics and metadata of the samples from the TOB-WGS project.
 
 ```{r load_pkgs}
 library(tidyverse)
@@ -92,21 +90,21 @@ gcs_list_objects2 <- function(b, prefix) {
 # (see https://statsandr.com/blog/outliers-detection-in-r/).
 # Using the m parameter for cases where there are simply too many outliers; the
 # larger the value of m, the fewer values are considered outliers.
-is_outlier <- function(x, m = 1.5) {
+is_outlier <- function(x, m = 3) {
   assert_that(is.numeric(x), is.numeric(m))
-  (x < quantile(x, 0.25) - m * IQR(x)) |
-    (x > quantile(x, 0.75) + m * IQR(x))
+  (x < quantile(x, 0.25, na.rm = T) - m * IQR(x, na.rm = T)) |
+  (x > quantile(x, 0.75, na.rm = T) + m * IQR(x, na.rm = T))
 }
 ```
 
 ```{r vars}
-bucket <- glue("cpg-tob-wgs-", params$gvcf_bucket_suffix)
+bucket <- glue("cpg-tob-wgs-main")
 gcs_prefix <- "gvcf"
 ```
 
-## WGS GVCF files
+## Bucket contents
 
-- Let's first explore the contents of `r glue("'{bucket}/{gcs_prefix}'")`:
+Summarising the contents of the Google Cloud Storage GVCF bucket: `r glue("'{bucket}/{gcs_prefix}'")`.
 
 ```{r list_contents1}
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
@@ -126,8 +124,7 @@ gvcf <-
   select(tobid, fullname = name, batch, size, basename)
 ```
 
-- Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`**
-  GVCF files:
+Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`** GVCF files.
 
 ```{r gvcf_list}
 gvcf %>%
@@ -184,10 +181,43 @@ gvcf %>%
   ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 ```
 
+## Lanes and flowcells
+
+Summarising the sample counts per the flowcell-lane ID.
+
+```{r}
+qc_kccg <- params$qc_csv %>%
+  read_csv() %>%
+  select(
+    sample = sample.sample_name,
+    contamination = raw_data.FREEMIX,
+    chimeras = raw_data.PCT_CHIMERAS,
+    duplicates = raw_data.PERCENT_DUPLICATION,
+    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
+    flowcell_lane = sample.flowcell_lane,
+    `median coverage` = raw_data.MEDIAN_COVERAGE
+  ) %>% 
+  mutate(flowcell_lane_data = str_split(flowcell_lane, "\\.")) %>% 
+  mutate(
+    flowcell1 = map_chr(flowcell_lane_data, 1),
+    lanes1 = map_chr(flowcell_lane_data, 2),
+    flowcell2 = map_chr(flowcell_lane_data, 3, .default = NA_character_),
+    lanes2 = map_chr(flowcell_lane_data, 4, .default = NA_character_)
+  ) %>% 
+  select(-flowcell_lane_data)
+
+qc_kccg %>% 
+  count(flowcell_lane) %>% 
+  ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = n), hjust=-0.25) +
+  coord_flip()
+```
+
 ## QC metrics
 
-We have access to CSV files with summaries of sample QC metrics. Additional
-files have been provided containing the recorded age and sex of each sample.
+QC metrics were calculated by Picard Tools in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
+files have been provided containing the recorded age and reported sex of each sample.
 
 ```{r qc_plot_prep}
 sample_qc_meta <- params$meta_tsv %>%
@@ -203,21 +233,12 @@ sample_qc_meta <- params$meta_tsv %>%
     high_quality = high_quality,
     `chr20 mean dp` = chr20_mean_dp,
     is_female,
-    sex_karyotype
+    sex_karyotype,
+    chrY_ploidy,
+    chrX_ploidy
   )
 
-qc_kccg <- params$qc_csv %>%
-  read_csv() %>%
-  select(
-    sample = sample.sample_name,
-    contamination = raw_data.FREEMIX,
-    chimeras = raw_data.PCT_CHIMERAS,
-    duplicates = raw_data.PERCENT_DUPLICATION,
-    `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
-    lane = sample.flowcell_lane
-  )
-
-gender <- params$gender_tsv %>%
+reported_sex <- params$reported_sex_tsv %>%
   read_tsv(
     skip = 2,
     col_names = c(
@@ -231,7 +252,7 @@ gender <- params$gender_tsv %>%
     )
   ) %>%
   filter(!is.na(sample_id)) %>%
-  select(sample = sample.sample_name, gender)
+  select(sample = sample.sample_name, reported_sex = gender)
 
 age <- params$age_csv %>%
   read_csv(col_types = cols(.default = "c", age = "d")) %>%
@@ -239,7 +260,7 @@ age <- params$age_csv %>%
 
 all_data <- qc_kccg %>%
   left_join(sample_qc_meta, by = "sample") %>%
-  left_join(gender, by = "sample") %>%
+  left_join(reported_sex, by = "sample") %>%
   left_join(age, by = "sample") %>%
   left_join(gvcf %>% select(sample = tobid, batch), by = "sample")
 
@@ -258,8 +279,8 @@ p_data <- all_data %>%
 
 cutoffs <- tibble(
   metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
-  upper_lim = c(100000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
-  lower_lim = c(NA,           2400000,  NA,        NA,         15,              NA,           NA,              250)
+  upper_lim = c(400000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
+  lower_lim = c(NA,           2400000,  NA,        NA,         18,              NA,           NA,              250)
 )
 
 cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
@@ -271,13 +292,13 @@ plot_width <- n_metrics * 1.2
 plot_height <- n_metrics * 1
 ```
 
-Here we plot distributions of several metrics:
+Distributions of several QC metrics. Bad-quality samples according to the [joint-calling workflow cutoffs](https://github.com/populationgenomics/joint-calling/blob/main/joint_calling/filter_cutoffs.yaml) are highlighted with red dots. Additionally, outlier samples are detected and labelled with the sample IDs on the plot.
 
-```{r fig.width=plot_width, fig.height=plot_height}
+```{r fig.width=6, fig.height=5}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
@@ -290,7 +311,7 @@ p_data %>%
   xlab("")
 ```
 
-Same, grouped by batch:
+Same data, but additionally grouped by batch.
 
 ```{r}
 if (params$test && length(unique(p_data$batch)) == 1) {
@@ -300,18 +321,17 @@ if (params$test && length(unique(p_data$batch)) == 1) {
 
 n_batches <- length(unique(p_data$batch))
 n_metrics <- length(unique(p_data$metric))
+
 plot_width <- n_batches * 3
 plot_height <- n_metrics * 3
 ```
 
-```{r fig.width=plot_width, fig.height=plot_height}
+```{r fig.width=5, fig.height=8}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, shape = lane, group = metric), seed = 42) +
-  ggrepel::geom_text_repel(
-    color = "black", na.rm = TRUE, size = 2.3
-  ) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
+  ggrepel::geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(metric~batch, scales = "free") +
@@ -326,9 +346,11 @@ p_data %>%
   xlab("")
 ```
 
+Table listing all {nrow(all_data)} samples in {n_batches} batches.
+
 ```{r}
-# Render a bar chart in the background of the cell
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
+  # Render a bar chart in the background of the cell
   align <- match.arg(align)
   if (align == "left") {
     position <- paste0(width * 100, "%")
@@ -351,7 +373,9 @@ data = all_data %>%
     n = dplyr::row_number(),
     sample, 
     batch,
-    `sex inferred/reported` = str_c(sex_karyotype, "/", gender),
+    `sex inferred/reported` = str_c(sex_karyotype, "/", reported_sex),
+    chrY_ploidy = chrY_ploidy,
+    chrX_ploidy = chrX_ploidy,
     `chr20 mean DP` = `chr20 mean dp`, 
     contamination = contamination,
     `filters` = str_replace(sample_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
@@ -364,7 +388,8 @@ data = all_data %>%
     singleton = singleton,
     `insert size median` = `insert size median`,
     duplicates = duplicates,
-    chimeras = chimeras
+    chimeras = chimeras,
+    flowcell_lane
   )
 
 data %>%
@@ -375,7 +400,24 @@ data %>%
       n = colDef(),
       batch = colDef(),
       sample = colDef(),
-      `sex inferred/reported` = colDef(style = function(value) { list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white')) }),
+      `sex inferred/reported` = colDef(
+        style = function(value) { 
+          list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white')) 
+        }
+      ),
+      flowcell_lane = colDef(),
+      chrY_ploidy = colDef(
+        style = function(value) {
+          bar_style(width = value / max(data$chrY_ploidy), fill = "hsl(208, 70%, 90%)")
+        },        
+        format = colFormat(digits = 2)
+      ),
+      chrX_ploidy = colDef(
+        style = function(value) {
+          bar_style(width = value / max(data$chrX_ploidy), fill = "hsl(208, 70%, 90%)")
+        },    
+        format = colFormat(digits = 2)
+      ),
       `chr20 mean DP` = colDef(
         style = function(value) {
           bar_style(width = value / max(data$`chr20 mean DP`), fill = "hsl(208, 70%, 90%)")
@@ -441,46 +483,55 @@ data %>%
         format = colFormat(digits = 2, percent = TRUE)
       )
     )
-  ) %>%
-  htmlwidgets::prependContent(
-    htmltools::h2(
-      class = "title",
-      glue("{nrow(all_data)} samples in {n_batches} batches")
-    )
   )
 ```
 
-Exploring the bimodal duplication rate distribution across batches.
+## Duplication rate
+
+Duplication rate against the flowcell and batch, grouped by batch. Lane numbers are dropped, and for samples with multiple flowcell IDs, only the first one is used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
 
 ```{r}
-all_data %>% 
-  count(batch, duplicates > 0.15, duplicates < 0.15,  duplicates > 0.12, duplicates > 0.12) %>%
-  datatable()
+plot_width <- 7
+plot_height <- 7
 ```
 
-Duplication rate against the lane and batch, grouped by batch:
-
-```{r}
+```{r fig.width=5, fig.height=4}
 p_data %>%
   filter(metric == 'duplicates') %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = lane), seed = 42) +
+  geom_sina(aes(colour = flowcell1), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   scale_y_continuous(breaks = scales::breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~batch) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
-  xlab("")
+  scale_color_manual(values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7", 
+"#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD", 
+"#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D", 
+"#8A7C64", "#599861")) +
+  ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) +
+  xlab("") + ylab('Duplication rate')
 ```
 
-Duplication rate against the lane and batch, grouped by lane:
+
+Duplication rate against the flowcell and batch, grouped by flowcell. Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
 
 ```{r}
+plot_width <- 8
+plot_height <- 8
+```
+
+```{r fig.width=5, fig.height=4}
+lanes_with_more_than_2_samples <- all_data %>%
+  group_by(flowcell1) %>%
+  tally %>% 
+  filter(n > 2) %>% pull(flowcell1) %>% unique()
+
 p_data %>%
-  filter(metric == 'duplicates') %>% 
+  filter(metric == 'duplicates') %>%
+  filter(flowcell1 %in% lanes_with_more_than_2_samples) %>% 
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = batch), seed = 42) +
@@ -489,27 +540,44 @@ p_data %>%
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
-  facet_wrap(~lane) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
-  xlab("")
+  facet_wrap(~flowcell1) +
+  ggtitle(glue("Duplication rate grouped by flowcell, colored by batch")) +
+  xlab("") + ylab('Duplication rate')
 ```
+
+## Sex ploidies
 
 ```{r}
-all_data %>% filter(batch == "1", duplicates > 0.12) %>% dplyr::pull(sample)
+sex_data = all_data %>% 
+  mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & reported_sex != 'F' | sex_karyotype == "XY" & reported_sex != "M", T, F)) %>%
+  select(
+    sex_mismatched, 
+    sample, 
+    `X ploidy` = chrX_ploidy, 
+    `Y ploidy` = chrY_ploidy, 
+    karyotype = sex_karyotype, 
+    `reported sex` = reported_sex, 
+    age
+  ) %>% 
+  mutate(label = ifelse(sex_mismatched, glue("{sample}, {karyotype}, age: {age}"), NA_character_)) %>%
+  arrange(sex_mismatched)
 ```
+
+X ploidy vs Y ploidy. Highlighted samples with mismatched reported and inferred sex, or basically anything but XX/F or XY/M.
 
 ```{r}
-all_data %>% filter(batch == "1", duplicates <= 0.12) %>% dplyr::pull(sample)
+sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) + 
+  geom_point(size = 0.6) +
+  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
+
+Y ploidy vs age. Samples with mismatched reported and inferred sex are labelled. chrY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
-all_data %>% filter(batch == "3", duplicates > 0.15) %>% dplyr::pull(sample)
+sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) + 
+  geom_point(size = 0.6) +
+  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
-
-```{r}
-all_data %>% filter(batch == "3", duplicates <= 0.15) %>% dplyr::pull(sample)
-```
-
 
 ## Session Info
 
