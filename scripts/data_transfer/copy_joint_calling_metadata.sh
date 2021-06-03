@@ -3,7 +3,7 @@
 VERSION=$1
 
 if [[ -z "$VERSION" ]]; then
-    echo "Provide joint-calling run version as a first argument" 1>&2
+    echo "Provide a version tag of a joint-calling run as a first argument" 1>&2
     exit 1
 fi
 
