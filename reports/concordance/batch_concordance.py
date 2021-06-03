@@ -32,8 +32,8 @@ if __name__ == '__main__':
     b = hb.Batch(backend=service_backend, name='concordance')
 
     BUCKET = 'gs://cpg-tob-wgs-test'
-    snp = b.read_input(f'{BUCKET}/snpchip/v1/snpchip_grch38.mt')
-    wgs = b.read_input(f'{BUCKET}/mt/test-v1-raw.mt')
+    snp = b.read_input(f'{BUCKET}/snpchip/v1/snpchip_grch38.mt/')
+    wgs = b.read_input(f'{BUCKET}/mt/test-v1-raw.mt/')
     HTML = 'concordance_snpchip_with_wgs.html'
     concordance = concordance(b, snp, wgs)
     b.write_output(concordance.ofile, f'{BUCKET}-web/concordance/v1/{HTML}')
