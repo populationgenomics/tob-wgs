@@ -2,7 +2,7 @@ VERSION := v2
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
-REUSE_ARG := "--reuse"
+REUSE_ARG := --reuse
 
 .PHONY: joint_calling_update_submodule
 joint_calling_update_submodule:
