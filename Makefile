@@ -31,7 +31,7 @@ joint_calling_test_to_tmp:
 	--to test-tmp \
 	--batch batch1 \
 	--callset $(CALLSET) \
-	--version $(VERSION) \
+	--version v2 \
 	--keep-scratch \
 	$(REUSE_ARG)
 
@@ -49,7 +49,7 @@ joint_calling_test_to_tmp_extend:
 	--to test-tmp \
 	--batch batch2 \
 	--callset $(CALLSET) \
-	--version $(VERSION) \
+	--version v3 \
 	--keep-scratch \
 	$(REUSE_ARG)
 
