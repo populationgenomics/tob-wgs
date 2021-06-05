@@ -28,7 +28,7 @@ joint_calling_test_to_tmp:
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_TEST) \
 	--from test \
-	--to test-tmp \
+	--to tmp \
 	--batch batch1 \
 	--callset $(CALLSET) \
 	--version v2 \
@@ -46,7 +46,7 @@ joint_calling_test_to_tmp_extend:
 	--scatter-count $(SCATTER_COUNT_TEST) \
 	--existing-mt "gs://cpg-tob-wgs-test/mt/v2-raw.mt" \
 	--from test \
-	--to test-tmp \
+	--to tmp \
 	--batch batch2 \
 	--callset $(CALLSET) \
 	--version v3 \
