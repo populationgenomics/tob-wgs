@@ -18,7 +18,8 @@ def concordance(batch, snpmt, wgsmt):
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
-          --html {conc.ofile}
+          --res {conc.res} \
+          --html {conc.html}
         """
     )
     return conc
@@ -32,9 +33,11 @@ if __name__ == '__main__':
     b = hb.Batch(backend=service_backend, name='concordance')
 
     BUCKET = 'gs://cpg-tob-wgs-test'
-    snp = b.read_input(f'{BUCKET}/snpchip/v1/snpchip_grch38.mt/')
-    wgs = b.read_input(f'{BUCKET}/mt/test-v1-raw.mt/')
-    HTML = 'concordance_snpchip_with_wgs.html'
+    snp = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
+    wgs = f'{BUCKET}/mt/test-v1-raw.mt'
+    HTML = 'concordance_snpchip_with_wgs_chr22.html'
+    RES = 'concordance_snpchip_with_wgs_chr22.tsv'
     concordance = concordance(b, snp, wgs)
-    b.write_output(concordance.ofile, f'{BUCKET}-web/concordance/v1/{HTML}')
-    b.run(dry_run=False)
+    b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
+    b.write_output(concordance.res, f'{BUCKET}-web/concordance/v1/{RES}')
+    b.run(dry_run=True)
