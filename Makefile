@@ -1,4 +1,6 @@
 VERSION := v2
+TEST_VERSION := v2
+TEST_VERSION_EXTEND := v3
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
@@ -31,7 +33,7 @@ joint_calling_test_to_tmp:
 	--to tmp \
 	--batch batch1 \
 	--callset $(CALLSET) \
-	--version v2 \
+	--version ${TEST_VERSION} \
 	--keep-scratch \
 	$(REUSE_ARG)
 
@@ -49,7 +51,7 @@ joint_calling_test_to_tmp_extend:
 	--to tmp \
 	--batch batch2 \
 	--callset $(CALLSET) \
-	--version v3 \
+	--version ${TEST_VERSION_EXTEND} \
 	--keep-scratch \
 	$(REUSE_ARG)
 
