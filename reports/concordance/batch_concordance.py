@@ -40,4 +40,4 @@ if __name__ == '__main__':
     concordance = concordance(b, snp, wgs)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(concordance.res, f'{BUCKET}-web/concordance/v1/{RES}')
-    b.run(dry_run=True)
+    b.run(dry_run=False)
