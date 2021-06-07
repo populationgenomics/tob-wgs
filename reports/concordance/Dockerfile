@@ -15,6 +15,12 @@ RUN wget --no-verbose https://repo.continuum.io/miniconda/Miniconda3-latest-Linu
     conda install --yes -c conda-forge mamba && \
     mamba env create --file environment.yml && mamba clean --yes --all --force-pkgs-dirs
 
+# gcs_connector
+RUN curl -fSLO https://raw.githubusercontent.com/broadinstitute/install-gcs-connector/master/install_gcs_connector.py && \
+    mkdir -p /gsa-key/ && touch /gsa-key/key.json && \
+    /home/miniconda/envs/hailr/bin/python install_gcs_connector.py --key-file /gsa-key/key.json && \
+    rm -rf /gsa-key
+
 # Concordance scripts + Rmd
 ENV SCRIPT_PATH "/home/scripts"
 ENV PATH "${SCRIPT_PATH}:${PATH}"
