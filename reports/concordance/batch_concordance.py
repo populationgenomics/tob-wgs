@@ -11,7 +11,7 @@ def concordance(batch, snpmt, wgsmt):
     Concordance between SNPchip and WGS samples
     """
     conc = batch.new_job(name='run-concordance')
-    conc.image('pdiakumis/concordance:0.1')
+    conc.image('pdiakumis/concordance:0.1.1')
     conc.command(
         f"""
         set -e
