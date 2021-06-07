@@ -10,13 +10,16 @@ p <- arg_parser(
   name = "concordance", hide.opts = TRUE)
 p <- add_argument(p,
                   arg = "--snp",
-                  help = "Path to SNPchip MatrixTable.")
+                  help = "Path to input SNPchip MatrixTable.")
 p <- add_argument(p,
                   arg = "--wgs",
-                  help = "Path to WGS MatrixTable.")
+                  help = "Path to input WGS MatrixTable.")
 p <- add_argument(p,
                   arg = "--html",
                   help = "Path to output HTML report.")
+p <- add_argument(p,
+                  arg = "--res",
+                  help = "Path to output concordance results.")
 a <- parse_args(p)
 
 stopifnot(grepl("html$", a$html))
@@ -25,7 +28,8 @@ cat(paste0("[", as.character(Sys.time()), "]"), "START concordance!\n")
 
 params_list <- list(
   WGS_MT = a$wgs,
-  SNP_MT = a$snp
+  SNP_MT = a$snp,
+  RES = a$res
 )
 
 cat("params_list:\n")
