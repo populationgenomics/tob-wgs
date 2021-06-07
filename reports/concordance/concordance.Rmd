@@ -12,7 +12,8 @@ output:
 params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
   SNP_MT: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed/1-snpchip_grch38.mt"
-  WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/raw/test-v1-raw.mt"
+  WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/test-v1-raw.mt"
+  RES: "/Users/peterd/projects/tob-wgs/nogit/data/concordance/RES/results_chr22.tsv"
 title: "`r paste(params$TITLE)`"
 ---
 
@@ -68,7 +69,7 @@ library(reticulate, include.only = c("use_condaenv", "py"))
 library(rlang, include.only = c("is_integer", "is_double"))
 library(tidyr, include.only = "unnest")
 library(tidyselect, include.only = "vars_select_helpers")
-use_condaenv("hailr", required = TRUE)
+use_condaenv("hail", required = TRUE)
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
@@ -135,6 +136,14 @@ snp = snp.filter_rows(snp.locus.contig == 'chr22')
 # split multiallelic and keep biallelic rows
 wgs = hl.experimental.sparse_split_multi(wgs)
 wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
+
+# unphase genotypes
+wgs = wgs.annotate_entries(
+    GT=hl.case()
+    .when(wgs.GT.is_diploid(), hl.call(wgs.GT[0], wgs.GT[1], phased=False))
+    .when(wgs.GT.is_haploid(), hl.call(wgs.GT[0], phased=False))
+    .default(hl.missing(hl.tcall))
+)
 ```
 
 ## Step 4: Concordance calculation (test on chr22)
@@ -142,56 +151,53 @@ wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 ```{python hail_concordance, class.source="py"}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
-# export concordance stats per sample
-conc_per_sample = cols_conc.to_pandas()
+# write concordance stats per sample
+cols_conc.export(r.params["RES"], delimiter='\t')
 ```
 
 ## Results
 
 ```{r concordance_results}
-get_conc_stats <- function(l) {
-  list_to_matrix <- function(l) {
+get_mat_stats <- function(m) {
+  mat_rename <- function(m) {
     conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
-    m <- l %>%
-      set_names(glue("{conc_names}_left")) %>%
-      bind_rows() %>%
-      as.matrix() %>%
-      t()
     colnames(m) <- glue("{conc_names}_right")
+    rownames(m) <- glue("{conc_names}_left")
     m
   }
-
   mat_conc_stats <- function(m) {
-    conc_tot <- sum(
+    conc_tot1 <- sum(
       m["homref_left", "homref_right"],
       m["het_left", "het_right"],
       m["homalt_left", "homalt_right"])
+    conc_tot2 <- m["homref_left", "missing_variant_right"] # these are mostly in homref WGS blocks
+    conc_tot <- conc_tot1 + conc_tot2
+    disc_tot1 <- sum(m[3:5, 3:5]) - conc_tot1
+    disc_tot2 <- m["het_left", "missing_variant_right"] + m["homalt_left", "missing_variant_right"]
+    disc_tot <- disc_tot1 + disc_tot2
 
-    disc_tot <- sum(m[3:5, 3:5]) - conc_tot
-
-    # hets, homalts, and missing
-    left_tot <- sum(m[c(2, 4, 5), ])
-    right_tot <- sum(m[, c(2, 4, 5)])
-
+    # missing, homrefs, hets and homalts
+    left_tot <- sum(m[c(2, 3, 4, 5), ])
+    right_tot <- sum(m[, c(2, 3, 4, 5)])
     conc_over_left <- conc_tot / left_tot
     conc_over_right <- conc_tot / right_tot
     disc_over_left <- disc_tot / left_tot
     disc_over_right <- disc_tot / right_tot
-
     tibble(disc_tot = disc_tot,
            conc_tot = conc_tot,
            right_tot = right_tot,
            left_tot = left_tot,
-           `conc / left` = conc_over_left,
            `conc / right` = conc_over_right,
+           `conc / left` = conc_over_left,
            `disc / left` = disc_over_left,
            `disc / right` = disc_over_right)
   }
-  l %>% list_to_matrix() %>% mat_conc_stats()
+  m %>% mat_rename() %>% mat_conc_stats()
 }
 
-res <- py$conc_per_sample %>%
-  mutate(conc2 = map(concordance, ~get_conc_stats(.x))) %>%
+res <- params$RES %>%
+  read_tsv(col_types = "ccd") %>%
+  mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
   unnest(conc2) %>%
   select(sample = s, `conc / left`, `conc / right`,
          conc_tot, disc_tot,
@@ -201,7 +207,8 @@ res <- py$conc_per_sample %>%
 cap <- tags$caption(
   div("Concordance statistics per sample."),
   div("conc: concordant; disc: discordant;"),
-  div("left/right: left and right datasets used in hail.concordance(left, right)."))
+  div("left/right: left and right datasets used in hail.concordance(left, right)."),
+  div("left: SNP dataset; right: WGS dataset."))
 res %>%
   mutate(across(where(is.numeric), ~round(.x, 4))) %>%
   datatable(rownames = FALSE,
