@@ -134,10 +134,6 @@ mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
-#---- Subset to chr22 for pre-processing and concordance ----#
-wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
-snp = snp.filter_rows(snp.locus.contig == 'chr22')
-
 #---- densify and lgt_to_gt ----#
 wgs = hl.experimental.densify(wgs)
 wgs = wgs.annotate_entries(GT=hl.experimental.lgt_to_gt(wgs.LGT, wgs.LA))
