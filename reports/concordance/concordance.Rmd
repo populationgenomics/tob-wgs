@@ -11,21 +11,15 @@ output:
     highlight: kate
 params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
-  SNP_MT: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed/1-snpchip_grch38.mt"
-  WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/test-v1-raw.mt"
-  RES: "/Users/peterd/projects/tob-wgs/nogit/data/concordance/RES/results_chr22.tsv"
-  CPU: 4
+  SNP_MT: "path_to_snp_mt"
+  WGS_MT: "path_to_wgs_mt"
+  RES: "path_to_write_concordance_results"
+  CPU: "number_of_cpus"
 title: "`r paste(params$TITLE)`"
 ---
 
 ```{r knitr_opts, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
-```
-
-```{css css_setup, echo=FALSE}
-.py {
-background-color: lightcyan;
-}
 ```
 
 ## Introduction
@@ -84,7 +78,7 @@ use_condaenv("hailr", required = TRUE)
 params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
 ```
 
-```{python hail_setup, class.source="py"}
+```{python hail_setup}
 import hail as hl
 hl.init(default_reference='GRCh38', master=f'local[{r.params["CPU"]}]')
 ```
@@ -115,7 +109,7 @@ system(glue("bcftools reheader ",
 
 (Pre-executed once)
 
-```{python hail_liftover, class.source="py", eval=FALSE}
+```{python hail_liftover, eval=FALSE}
 def liftover(x, chain):
     """
     Liftover matrix table x from GRCh37 to GRCh38
@@ -134,9 +128,9 @@ mt = liftover(mt, 'grch37_to_grch38.over.chain.gz')
 mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 ```
 
-## Step 3: WGS MatrixTable pre-processing (test on chr22)
+## Step 3: WGS MatrixTable pre-processing
 
-```{python hail_densify_split_multi, class.source="py"}
+```{python hail_densify_split_multi}
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
@@ -161,9 +155,9 @@ wgs = wgs.annotate_entries(
 )
 ```
 
-## Step 4: Concordance calculation (test on chr22)
+## Step 4: Concordance calculation
 
-```{python hail_concordance, class.source="py"}
+```{python hail_concordance}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
 # write concordance stats per sample
