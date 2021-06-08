@@ -11,7 +11,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
     Concordance between SNPchip and WGS samples
     """
     conc = batch.new_job(name='run-concordance')
-    conc.image('pdiakumis/concordance:0.1.5')
+    conc.image('pdiakumis/concordance:0.1.6')
     conc.cpu(cpu)
     conc.memory('60G')
     conc.storage('100G')
@@ -40,8 +40,8 @@ if __name__ == '__main__':
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/test-v1-raw.mt'
     CPU = 16
-    HTML = 'concordance_snpchip_with_wgs_densified_chr22.html'
-    RES = 'concordance_snpchip_with_wgs_densified_chr22.tsv'
+    HTML = 'concordance_snpchip_with_wgs_test1.html'
+    RES = 'concordance_snpchip_with_wgs_test1.tsv'
     concordance = concordance(b, SNP, WGS, CPU)
     b.write_output(concordance.ohtml, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(concordance.ores, f'{BUCKET}-web/concordance/v1/{RES}')
