@@ -37,7 +37,7 @@ print(params_list)
 
 rmarkdown::render(
   input = "concordance.Rmd",
-  output_file = a$html,
+  output_file = I(a$html),
   params = params_list
 )
 
