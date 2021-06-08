@@ -12,14 +12,17 @@ def concordance(batch, snpmt, wgsmt):
     """
     conc = batch.new_job(name='run-concordance')
     conc.image('pdiakumis/concordance:0.1.2')
+    conc.cpu(8)
+    conc.memory('16G')
+    conc.storage('100G')
     conc.command(
         f"""
         set -e
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
-          --res {conc.res} \
-          --html {conc.html}
+          --res {conc.ores} \
+          --html {conc.ohtml}
         """
     )
     return conc
@@ -38,6 +41,6 @@ if __name__ == '__main__':
     HTML = 'concordance_snpchip_with_wgs_chr22.html'
     RES = 'concordance_snpchip_with_wgs_chr22.tsv'
     concordance = concordance(b, snp, wgs)
-    b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
-    b.write_output(concordance.res, f'{BUCKET}-web/concordance/v1/{RES}')
+    b.write_output(concordance.ohtml, f'{BUCKET}-web/concordance/v1/{HTML}')
+    b.write_output(concordance.ores, f'{BUCKET}-web/concordance/v1/{RES}')
     b.run(dry_run=False)
