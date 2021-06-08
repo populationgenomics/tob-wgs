@@ -6,7 +6,7 @@ import os
 import hailtop.batch as hb
 
 
-def concordance(batch, snpmt, wgsmt):
+def concordance(batch, snpmt, wgsmt, cpu):
     """
     Concordance between SNPchip and WGS samples
     """
@@ -22,7 +22,8 @@ def concordance(batch, snpmt, wgsmt):
           --snp {snpmt} \
           --wgs {wgsmt} \
           --res {conc.ores} \
-          --html {conc.ohtml}
+          --html {conc.ohtml} \
+          --cpu {cpu}
         """
     )
     return conc
@@ -36,11 +37,13 @@ if __name__ == '__main__':
     b = hb.Batch(backend=service_backend, name='concordance')
 
     BUCKET = 'gs://cpg-tob-wgs-test'
-    snp = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    wgs = f'{BUCKET}/mt/test-v1-raw.mt'
+    SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
+    WGS = f'{BUCKET}/mt/test-v1-raw.mt'
+    CPU = 8
     HTML = 'concordance_snpchip_with_wgs_chr22.html'
     RES = 'concordance_snpchip_with_wgs_chr22.tsv'
-    concordance = concordance(b, snp, wgs)
+    concordance = concordance(b, SNP, WGS, CPU)
     b.write_output(concordance.ohtml, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(concordance.ores, f'{BUCKET}-web/concordance/v1/{RES}')
     b.run(dry_run=False)
+    service_backend.close()

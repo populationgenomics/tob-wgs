@@ -14,6 +14,7 @@ params:
   SNP_MT: "/Users/peterd/projects/tob-wgs/nogit/data/snpchip/processed/1-snpchip_grch38.mt"
   WGS_MT: "/Users/peterd/projects/tob-wgs/nogit/data/bucket/cpg-tob-wgs-test/test-v1-raw.mt"
   RES: "/Users/peterd/projects/tob-wgs/nogit/data/concordance/RES/results_chr22.tsv"
+  CPU: 4
 title: "`r paste(params$TITLE)`"
 ---
 
@@ -79,7 +80,7 @@ params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
 
 ```{python hail_setup, class.source="py"}
 import hail as hl
-hl.init(default_reference='GRCh38')
+hl.init(default_reference='GRCh38', master=f'local[{r.params["CPU"]}]')
 ```
 
 ## Step 1: Rename VCF samples
