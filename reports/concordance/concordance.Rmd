@@ -19,7 +19,7 @@ title: "`r paste(params$TITLE)`"
 ---
 
 ```{r knitr_opts, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
 ```
 
 ```{css css_setup, echo=FALSE}
@@ -34,7 +34,7 @@ Here we're exploring genotype concordance between SNPchip and WGS data for the
 TOB-WGS project. We have been provided with one multi-sample VCF file containing
 genotype calls from the SNPchip data (`onek1k_pre_imputation_genotypes.vcf.gz`),
 and several single-sample GVCF files containing genotype calls from the WGS data
-(merged into a Hail [MatrixTable](https://hail.is/docs/0.2/hail.MatrixTable.html)
+(merged into a Hail [MatrixTable](https://hail.is/docs/0.2/hail.MatrixTable.html) (MT)
 for processing).
 
 The main steps for calculating concordance between the SNPchip and WGS data
@@ -44,16 +44,22 @@ are:
    `OneK1K_sample_IDs_2021-Apr-15.xlsx` map of SNPchip IDs to TOB IDs
    (provided in 2021-Apr-15).
 2. Convert the SNPchip VCF from the GRCh37 human genome assembly to GRCh38
-   using `[Hail liftover]` so that it's the same assembly as the WGS
-   MatrixTable.
-3. Use `[Hail sparse_split_multi]` to keep biallelic and multiallelic variants
-   in the WGS MatrixTable (i.e. remove monoallelic variants).
-4. Use `[Hail concordance]` to calculate the concordance between the
+   using [Hail liftover] so that it's the same assembly as the WGS MT.
+3. Process the WGS sparse MT using:
+   - [Hail densify] which converts a sparse MT to a dense VCF-like
+     representation by expanding reference blocks. The `END` entry field of the MT
+     is dropped.
+   - [Hail lgt_to_gt] to transform LGT (local GT) into GT using local alleles array.
+   - [Hail split_multi_hts] to keep biallelic and multiallelic variants
+     (i.e. remove monoallelic variants);
+4. Use [Hail concordance] to calculate the concordance between the
    SNPchip and WGS calls.
 
-   [Hail liftover]: https://hail.is/docs/0.2/functions/genetics.html#hail.expr.functions.liftover
-   [Hail concordance]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.concordance
-   [Hail sparse_split_multi]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.sparse_split_multi
+[Hail liftover]: https://hail.is/docs/0.2/functions/genetics.html#hail.expr.functions.liftover
+[Hail split_multi_hts]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.split_multi_hts
+[Hail densify]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.densify
+[Hail lgt_to_gt]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.lgt_to_gt
+[Hail concordance]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.concordance
 
 - Load required R packages:
 
@@ -85,6 +91,8 @@ hl.init(default_reference='GRCh38', master=f'local[{r.params["CPU"]}]')
 
 ## Step 1: Rename VCF samples
 
+(Pre-executed once)
+
 ```{r generate_id_map, eval=FALSE}
 chipid2tobid_tsv <- "chipid2tobid.tsv"
 
@@ -105,6 +113,8 @@ system(glue("bcftools reheader ",
 
 ## Step 2: Liftover from GRCh37 to GRCh38
 
+(Pre-executed once)
+
 ```{python hail_liftover, class.source="py", eval=FALSE}
 def liftover(x, chain):
     """
@@ -124,21 +134,25 @@ mt = liftover(mt, 'grch37_to_grch38.over.chain.gz')
 mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 ```
 
-## Step 3: Split multiallelic variants (test on chr22)
+## Step 3: WGS MatrixTable pre-processing (test on chr22)
 
-```{python hail_split_multi, class.source="py"}
+```{python hail_densify_split_multi, class.source="py"}
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
-#---- Use chr22 subset for concordance test ----#
+#---- Subset to chr22 for pre-processing and concordance ----#
 wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
 snp = snp.filter_rows(snp.locus.contig == 'chr22')
 
-# split multiallelic and keep biallelic rows
-wgs = hl.experimental.sparse_split_multi(wgs)
+#---- densify and lgt_to_gt ----#
+wgs = hl.experimental.densify(wgs)
+wgs = wgs.annotate_entries(GT=hl.experimental.lgt_to_gt(wgs.LGT, wgs.LA))
+
+#---- split multiallelic and keep biallelic rows ----#
+wgs = hl.split_multi_hts(wgs)
 wgs = wgs.filter_rows(hl.len(wgs.alleles) == 2)
 
-# unphase genotypes
+#---- unphase genotypes ----#
 wgs = wgs.annotate_entries(
     GT=hl.case()
     .when(wgs.GT.is_diploid(), hl.call(wgs.GT[0], wgs.GT[1], phased=False))
