@@ -11,7 +11,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
     Concordance between SNPchip and WGS samples
     """
     conc = batch.new_job(name='run-concordance')
-    conc.image('pdiakumis/concordance:0.1.3')
+    conc.image('pdiakumis/concordance:0.1.4')
     conc.cpu(8)
     conc.memory('16G')
     conc.storage('100G')
