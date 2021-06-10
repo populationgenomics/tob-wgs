@@ -21,8 +21,8 @@ def concordance(batch, snpmt, wgsmt, cpu):
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
-          --res_samples {conc.res_samples} \
-          --res_sites {conc.res_sites} \
+          --res_samples {conc.res_samples_tsv} \
+          --res_sites {conc.res_sites_tsv} \
           --html {conc.html} \
           --cpu {cpu}
         """
@@ -46,8 +46,10 @@ if __name__ == '__main__':
     concordance = concordance(b, SNP, WGS, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(
-        concordance.res_samples, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
+        concordance.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
     )
-    b.write_output(concordance.res_sites, f'{BUCKET}/concordance/v1/{PREFIX}_sites.tsv')
+    b.write_output(
+        concordance.res_sites_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_sites.tsv'
+    )
     b.run(dry_run=False)
     service_backend.close()
