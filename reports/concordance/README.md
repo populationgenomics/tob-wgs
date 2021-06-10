@@ -35,8 +35,9 @@ setup would be a solution.
 
 In order to run this pipeline using the
 [analysis runner](https://github.com/populationgenomics/analysis-runner),
-you can use the following BASH command (make sure you've activate a conda
-environment containing the [analysis-runner](https://anaconda.org/cpg/analysis-runner) package):
+you can use the following BASH command (make sure you've activated a conda
+environment containing the
+[analysis-runner](https://anaconda.org/cpg/analysis-runner) conda package):
 
 ```bash
 analysis-runner \

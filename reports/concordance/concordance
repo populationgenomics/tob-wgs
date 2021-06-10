@@ -19,19 +19,25 @@ p <- add_argument(p,
                   arg = "--html",
                   help = "Path to output HTML report.")
 p <- add_argument(p,
-                  arg = "--res",
-                  help = "Path to output TSV file with raw concordance results.")
+                  arg = "--res_samples",
+                  help = "Path to output TSV file with per sample concordance results.")
+p <- add_argument(p,
+                  arg = "--res_sites",
+                  help = "Path to output TSV file with per site concordance results (big file).")
 p <- add_argument(p,
                   arg = "--cpu",
                   help = "Number of CPU cores to use with Hail.")
 a <- parse_args(p)
 
-stopifnot(grepl("html$", a$html), grepl("tsv$", a$res)
+stopifnot(grepl("html$", a$html),
+          grepl("tsv$", a$res_samples),
+          grepl("tsv$", a$res_sites))
 
 params_list <- list(
   WGS_MT = a$wgs,
   SNP_MT = a$snp,
-  RES = a$res,
+  RES_SAMPLES = a$res_samples,
+  RES_SITES = a$res_sites,
   CPU = a$cpu
 )
 

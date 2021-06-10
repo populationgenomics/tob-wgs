@@ -13,7 +13,8 @@ params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
   SNP_MT: "path_to_snp_mt"
   WGS_MT: "path_to_wgs_mt"
-  RES: "path_to_write_concordance_results"
+  RES_SAMPLES: "path_to_write_concordance_results_per_sample"
+  RES_SITES: "path_to_write_concordance_results_per_site"
   CPU: "number_of_cpus"
 title: "`r paste(params$TITLE)`"
 ---
@@ -134,6 +135,10 @@ mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
+#---- select TOB1524 + chr22 ----#
+wgs = wgs.filter_cols((wgs.s == 'TOB1524'))
+wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
+
 #---- densify and lgt_to_gt ----#
 wgs = hl.experimental.densify(wgs)
 wgs = wgs.annotate_entries(GT=hl.experimental.lgt_to_gt(wgs.LGT, wgs.LA))
@@ -157,7 +162,10 @@ wgs = wgs.annotate_entries(
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
 # write concordance stats per sample
-cols_conc.export(r.params["RES"], delimiter='\t')
+cols_conc.export(r.params["RES_SAMPLES"], delimiter='\t')
+
+# write concordance stats per site
+rows_conc.export(r.params["RES_SITES"], delimiter='\t')
 ```
 
 ## Results
@@ -200,7 +208,7 @@ get_mat_stats <- function(m) {
   m %>% mat_rename() %>% mat_conc_stats()
 }
 
-res <- params$RES %>%
+res <- params$RES_SAMPLES %>%
   read_tsv(col_types = "ccd") %>%
   mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
   unnest(conc2) %>%

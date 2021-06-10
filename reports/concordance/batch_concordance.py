@@ -21,8 +21,9 @@ def concordance(batch, snpmt, wgsmt, cpu):
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
-          --res {conc.ores} \
-          --html {conc.ohtml} \
+          --res_samples {conc.res_samples} \
+          --res_sites {conc.res_sites} \
+          --html {conc.html} \
           --cpu {cpu}
         """
     )
@@ -40,10 +41,13 @@ if __name__ == '__main__':
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/test-v1-raw.mt'
     CPU = 16
-    HTML = 'concordance_snpchip_with_wgs_test1.html'
-    RES = 'concordance_snpchip_with_wgs_test1.tsv'
+    PREFIX = 'concordance_TOB1524_chr22'
+    HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, CPU)
-    b.write_output(concordance.ohtml, f'{BUCKET}-web/concordance/v1/{HTML}')
-    b.write_output(concordance.ores, f'{BUCKET}-web/concordance/v1/{RES}')
+    b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
+    b.write_output(
+        concordance.res_samples, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
+    )
+    b.write_output(concordance.res_sites, f'{BUCKET}/concordance/v1/{PREFIX}_sites.tsv')
     b.run(dry_run=False)
     service_backend.close()
