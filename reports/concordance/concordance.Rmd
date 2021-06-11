@@ -11,11 +11,11 @@ output:
     highlight: kate
 params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
-  SNP_MT: "path_to_snp_mt"
-  WGS_MT: "path_to_wgs_mt"
-  RES_SAMPLES: "path_to_write_concordance_results_per_sample"
-  RES_SITES: "path_to_write_concordance_results_per_site"
-  CPU: "number_of_cpus"
+  SNP_MT: ""
+  WGS_MT: ""
+  RES_SAMPLES: ""
+  RES_SITES: ""
+  CPU: ""
 title: "`r paste(params$TITLE)`"
 ---
 
@@ -136,8 +136,10 @@ wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
 #---- select TOB1524 + chr22 ----#
-wgs = wgs.filter_cols((wgs.s == 'TOB1524'))
+wgs = wgs.filter_cols(wgs.s == 'TOB1524')
+snp = snp.filter_cols(snp.s == 'TOB1524')
 wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
+snp = snp.filter_rows(snp.locus.contig == 'chr22')
 
 #---- densify and lgt_to_gt ----#
 wgs = hl.experimental.densify(wgs)
@@ -154,6 +156,10 @@ wgs = wgs.annotate_entries(
     .when(wgs.GT.is_haploid(), hl.call(wgs.GT[0], phased=False))
     .default(hl.missing(hl.tcall))
 )
+
+bout = 'gs://cpg-tob-wgs-test/concordance/v1/outputs/densified'
+wgs.write(f'{bout}/wgs_tob1524_chr22.mt')
+snp.write(f'{bout}/snp_tob1524_chr22.mt')
 ```
 
 ## Step 4: Concordance calculation
