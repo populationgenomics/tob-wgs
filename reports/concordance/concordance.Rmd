@@ -158,8 +158,8 @@ wgs = wgs.annotate_entries(
 )
 
 bout = 'gs://cpg-tob-wgs-test/concordance/v1/outputs/densified'
-wgs.write(f'{bout}/wgs_tob1524_chr22.mt', overwrite=True)
 snp.write(f'{bout}/snp_tob1524_chr22.mt', overwrite=True)
+wgs.write(f'{bout}/wgs_tob1524_chr22.mt', overwrite=True)
 ```
 
 ## Step 4: Concordance calculation
