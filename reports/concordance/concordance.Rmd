@@ -135,9 +135,7 @@ mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
-#---- select TOB1524 + chr22 ----#
-wgs = wgs.filter_cols(wgs.s == 'TOB1524')
-snp = snp.filter_cols(snp.s == 'TOB1524')
+#---- select chr22 ----#
 wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
 snp = snp.filter_rows(snp.locus.contig == 'chr22')
 
@@ -156,10 +154,6 @@ wgs = wgs.annotate_entries(
     .when(wgs.GT.is_haploid(), hl.call(wgs.GT[0], phased=False))
     .default(hl.missing(hl.tcall))
 )
-
-bout = 'gs://cpg-tob-wgs-test/concordance/v1/outputs/densified'
-snp.write(f'{bout}/snp_tob1524_chr22.mt', overwrite=True)
-wgs.write(f'{bout}/wgs_tob1524_chr22.mt', overwrite=True)
 ```
 
 ## Step 4: Concordance calculation
@@ -169,9 +163,6 @@ global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
 
 # write concordance stats per sample
 cols_conc.export(r.params["RES_SAMPLES"], delimiter='\t')
-
-# write concordance stats per site
-rows_conc.export(r.params["RES_SITES"], delimiter='\t')
 ```
 
 ## Results
