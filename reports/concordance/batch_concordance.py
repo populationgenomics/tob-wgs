@@ -14,7 +14,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
     conc.image('pdiakumis/concordance:0.1.13')
     conc.cpu(cpu)
     conc.memory('highmem')
-    conc.storage('300G')
+    conc.storage('100G')
     conc.command(
         f"""
         set -e
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     BUCKET = 'gs://cpg-tob-wgs-test'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/test-v1-raw.mt'
-    CPU = 32
+    CPU = 16
     PREFIX = 'concordance_19samples_chr22'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, CPU)
