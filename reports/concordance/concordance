@@ -29,10 +29,6 @@ p <- add_argument(p,
                   help = "Number of CPU cores to use with Hail.")
 a <- parse_args(p)
 
-stopifnot(grepl("html$", a$html),
-          grepl("tsv$", a$res_samples),
-          grepl("tsv$", a$res_sites))
-
 params_list <- list(
   WGS_MT = a$wgs,
   SNP_MT = a$snp,
