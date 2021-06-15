@@ -171,36 +171,36 @@ cols_conc.export(r.params["RES_SAMPLES"], delimiter='\t')
 get_mat_stats <- function(m) {
   mat_rename <- function(m) {
     conc_names <- c("missing_variant", "missing_gt", "homref", "het", "homalt")
-    colnames(m) <- glue("{conc_names}_right")
-    rownames(m) <- glue("{conc_names}_left")
+    colnames(m) <- glue("{conc_names}_wgs")
+    rownames(m) <- glue("{conc_names}_snp")
     m
   }
   mat_conc_stats <- function(m) {
     conc_tot1 <- sum(
-      m["homref_left", "homref_right"],
-      m["het_left", "het_right"],
-      m["homalt_left", "homalt_right"])
-    conc_tot2 <- m["homref_left", "missing_variant_right"] # these are mostly in homref WGS blocks
+      m["homref_snp", "homref_wgs"],
+      m["het_snp", "het_wgs"],
+      m["homalt_snp", "homalt_wgs"])
+    conc_tot2 <- m["homref_snp", "missing_variant_wgs"] # these are mostly in homref WGS blocks
     conc_tot <- conc_tot1 + conc_tot2
     disc_tot1 <- sum(m[3:5, 3:5]) - conc_tot1
-    disc_tot2 <- m["het_left", "missing_variant_right"] + m["homalt_left", "missing_variant_right"]
+    disc_tot2 <- m["het_snp", "missing_variant_wgs"] + m["homalt_snp", "missing_variant_wgs"]
     disc_tot <- disc_tot1 + disc_tot2
 
     # missing, homrefs, hets and homalts
-    left_tot <- sum(m[c(2, 3, 4, 5), ])
-    right_tot <- sum(m[, c(2, 3, 4, 5)])
-    conc_over_left <- conc_tot / left_tot
-    conc_over_right <- conc_tot / right_tot
-    disc_over_left <- disc_tot / left_tot
-    disc_over_right <- disc_tot / right_tot
+    snp_tot <- sum(m[c(2, 3, 4, 5), ])
+    wgs_tot <- sum(m[, c(2, 3, 4, 5)])
+    conc_over_snp <- conc_tot / snp_tot
+    conc_over_wgs <- conc_tot / wgs_tot
+    disc_over_snp <- disc_tot / snp_tot
+    disc_over_wgs <- disc_tot / wgs_tot
     tibble(disc_tot = disc_tot,
            conc_tot = conc_tot,
-           right_tot = right_tot,
-           left_tot = left_tot,
-           `conc / right` = conc_over_right,
-           `conc / left` = conc_over_left,
-           `disc / left` = disc_over_left,
-           `disc / right` = disc_over_right)
+           wgs_tot = wgs_tot,
+           snp_tot = snp_tot,
+           `conc / wgs` = conc_over_wgs,
+           `conc / snp` = conc_over_snp,
+           `disc / snp` = disc_over_snp,
+           `disc / wgs` = disc_over_wgs)
   }
   m %>% mat_rename() %>% mat_conc_stats()
 }
@@ -209,16 +209,16 @@ res <- params$RES_SAMPLES %>%
   read_tsv(col_types = "ccd") %>%
   mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
   unnest(conc2) %>%
-  select(sample = s, `conc / left`, `conc / right`,
+  select(sample = s, `conc / snp`, `conc / wgs`,
          conc_tot, disc_tot,
-         left_tot, right_tot,
-         `disc / left`, `disc / right`)
+         snp_tot, wgs_tot,
+         `disc / snp`, `disc / wgs`)
 
 cap <- tags$caption(
   div("Concordance statistics per sample."),
   div("conc: concordant; disc: discordant;"),
-  div("left/right: left and right datasets used in hail.concordance(left, right)."),
-  div("left: SNP dataset; right: WGS dataset."))
+  div("snp/wgs: snp and wgs datasets used in hail.concordance(snp, wgs)."),
+  div("snp: SNP dataset; wgs: WGS dataset."))
 res %>%
   mutate(across(where(is.numeric), ~round(.x, 4))) %>%
   datatable(rownames = FALSE,
