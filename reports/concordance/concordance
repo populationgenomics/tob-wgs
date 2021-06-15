@@ -1,0 +1,51 @@
+#!/usr/bin/env Rscript
+
+# CLI for concordance.Rmd
+spsm <- suppressPackageStartupMessages
+spsm(require(argparser, include.only = c("parse_args", "arg_parser", "add_argument")))
+spsm(require(glue, include.only = "glue"))
+spsm(require(rmarkdown, include.only = "render"))
+
+p <- arg_parser(
+  description = "Concordance between SNPchip and WGS MatrixTables",
+  name = "concordance", hide.opts = TRUE)
+p <- add_argument(p,
+                  arg = "--snp",
+                  help = "Path to input SNPchip MatrixTable.")
+p <- add_argument(p,
+                  arg = "--wgs",
+                  help = "Path to input WGS MatrixTable.")
+p <- add_argument(p,
+                  arg = "--html",
+                  help = "Path to output HTML report.")
+p <- add_argument(p,
+                  arg = "--res_samples",
+                  help = "Path to output TSV file with per sample concordance results.")
+p <- add_argument(p,
+                  arg = "--res_sites",
+                  help = "Path to output TSV file with per site concordance results (big file).")
+p <- add_argument(p,
+                  arg = "--cpu",
+                  help = "Number of CPU cores to use with Hail.")
+a <- parse_args(p)
+
+params_list <- list(
+  WGS_MT = a$wgs,
+  SNP_MT = a$snp,
+  RES_SAMPLES = a$res_samples,
+  RES_SITES = a$res_sites,
+  CPU = a$cpu
+)
+
+cat("params_list:\n")
+print(params_list)
+
+cat(glue("[{as.character(Sys.time())}] START concordance!"))
+
+render(
+  input = "concordance.Rmd",
+  output_file = I(a$html),
+  params = params_list
+)
+
+cat(glue("[{as.character(Sys.time())}] END concordance!"))

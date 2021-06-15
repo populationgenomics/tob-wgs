@@ -1,0 +1,17 @@
+name: hailr
+channels:
+    - cpg
+    - bioconda
+    - conda-forge
+dependencies:
+    - cpg::hail=0.2.67.devbafea6b18247
+    - bcftools
+    - r-base=4.0.3
+    - r-tidyverse
+    - r-argparser
+    - r-dt
+    - r-glue
+    - r-htmltools
+    - r-reticulate
+    - r-scales
+    - r-tidyselect
