@@ -36,11 +36,11 @@ if __name__ == '__main__':
     )
     b = hb.Batch(backend=service_backend, name='concordance')
 
-    BUCKET = 'gs://cpg-tob-wgs-test'
+    BUCKET = 'gs://cpg-tob-wgs-main'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/test-v1-raw.mt'
+    WGS = f'{BUCKET}/mt/v1-raw.mt'
     CPU = 16
-    PREFIX = 'concordance_19samples_chr22'
+    PREFIX = 'v1-raw_chr22'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
