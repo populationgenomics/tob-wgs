@@ -98,7 +98,11 @@ is_outlier <- function(x, m = 3) {
 ```
 
 ```{r vars}
-bucket <- glue("cpg-tob-wgs-main")
+if (params$test == TRUE) {
+  bucket <- glue("cpg-tob-wgs-test")
+} else {
+  bucket <- glue("cpg-tob-wgs-main")
+}
 gcs_prefix <- "gvcf"
 ```
 
