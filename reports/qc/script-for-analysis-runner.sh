@@ -43,14 +43,14 @@ function run() {
 	local joint_calling_run_version=$3
 	local dir=work
 
-	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-main-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
-	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-main-metadata/age.csv" ${dir}/age.csv
-	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-main-metadata/${batch}/*.csv" ${dir}/qc.csv
+	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
+	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/age.csv" ${dir}/age.csv
+	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/${batch}/*.csv" ${dir}/qc.csv
 	if [[ $TMP = "YES" ]]
 	then
 		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-test-tmp/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	else
-		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-main-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
+		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	fi
 	cat qc.Rmd | sed 's/r fig.width=[1-9]*, fig.height=[1-9]*/r fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
