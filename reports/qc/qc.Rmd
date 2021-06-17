@@ -233,7 +233,8 @@ sample_qc_meta <- params$meta_tsv %>%
     ti_tv = sample_qc.r_ti_tv,
     het_hom = sample_qc.r_het_hom_var,
     indel_ratio = sample_qc.r_insertion_deletion,
-    sample_filters = sample_filters,
+    hard_filters = hard_filters,
+    qc_metrics_filters = qc_metrics_filters,
     high_quality = high_quality,
     `chr20 mean dp` = chr20_mean_dp,
     is_female,
@@ -382,7 +383,8 @@ data = all_data %>%
     chrX_ploidy = chrX_ploidy,
     `chr20 mean DP` = `chr20 mean dp`, 
     contamination = contamination,
-    `filters` = str_replace(sample_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
+    `hard filters` = str_replace(hard_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
+    `qc metrics filters` = str_replace(qc_metrics_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
     `high quality` = high_quality,
     age,
     `indel ratio` = indel_ratio, 
@@ -434,7 +436,8 @@ data %>%
         },
         format = colFormat(digits = 2, percent = TRUE)
       ),
-      filters = colDef(),
+      `hard filters` = colDef(),
+      `qc metrics filters` = colDef(),
       `high quality` = colDef(style = function(value) { list(background = ifelse(value, 'white', 'red')) }),
       age = colDef(
         style = function(value) {
