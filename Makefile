@@ -1,7 +1,10 @@
-VERSION := v2
+VERSION := v3
+TEST_VERSION := v2.1
+TEST_VERSION_EXTEND := v3
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
+REUSE_ARG := --reuse
 
 .PHONY: joint_calling_update_submodule
 joint_calling_update_submodule:
@@ -27,12 +30,12 @@ joint_calling_test_to_tmp:
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_TEST) \
 	--from test \
-	--to test-tmp \
+	--to tmp \
 	--batch batch1 \
 	--callset $(CALLSET) \
-	--version $(VERSION) \
+	--version ${TEST_VERSION} \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_test_to_tmp_extend
 joint_calling_test_to_tmp_extend:
@@ -45,12 +48,12 @@ joint_calling_test_to_tmp_extend:
 	--scatter-count $(SCATTER_COUNT_TEST) \
 	--existing-mt "gs://cpg-tob-wgs-test/mt/v2-raw.mt" \
 	--from test \
-	--to test-tmp \
+	--to tmp \
 	--batch batch2 \
 	--callset $(CALLSET) \
-	--version $(VERSION) \
+	--version ${TEST_VERSION_EXTEND} \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_test_to_test
 joint_calling_test_to_test:
@@ -66,7 +69,7 @@ joint_calling_test_to_test:
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
-	--reuse
+	$(REUSE_ARG)
 
 .PHONY: joint_calling_main_to_main
 joint_calling_main_to_main:
@@ -77,9 +80,9 @@ joint_calling_main_to_main:
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_PROD) \
-	--batch batch1 --batch batch2 --batch batch3 --batch batch4 \
+	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 \
 	--from main \
 	--to main \
 	--callset $(CALLSET) \
 	--version $(VERSION) \
-	--reuse
+	$(REUSE_ARG)
