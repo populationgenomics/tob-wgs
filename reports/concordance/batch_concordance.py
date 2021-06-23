@@ -39,7 +39,7 @@ if __name__ == '__main__':
     BUCKET = 'gs://cpg-tob-wgs-test'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/v2-raw.mt'
-    CPU = 32
+    CPU = 16
     PREFIX = 'v2-raw_all'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, CPU)
