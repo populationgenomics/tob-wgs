@@ -13,7 +13,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
     conc = batch.new_job(name='run-concordance')
     conc.image('pdiakumis/concordance:0.1.14')
     conc.cpu(cpu)
-    conc.memory('lowmem')
+    conc.memory('highmem')
     conc.storage('100G')
     conc.command(
         f"""
