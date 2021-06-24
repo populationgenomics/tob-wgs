@@ -13,7 +13,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
     conc = batch.new_job(name='run-concordance')
     conc.image('pdiakumis/concordance:0.1.14')
     conc.cpu(cpu)
-    conc.memory('highmem')
+    conc.memory('lowmem')
     conc.storage('100G')
     conc.command(
         f"""
@@ -36,11 +36,11 @@ if __name__ == '__main__':
     )
     b = hb.Batch(backend=service_backend, name='concordance')
 
-    BUCKET = 'gs://cpg-tob-wgs-test'
+    BUCKET = 'gs://cpg-tob-wgs-main'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/v2-raw.mt'
-    CPU = 16
-    PREFIX = 'v2-raw_all'
+    WGS = f'{BUCKET}/mt/v3-raw.mt'
+    CPU = 32
+    PREFIX = 'v3-raw_all'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
