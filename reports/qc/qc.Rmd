@@ -15,7 +15,7 @@ params:
   age_csv: "work/age.csv"
   meta_tsv: "work/meta.tsv"
   qc_csv: "work/qc.csv"
-  test: TRUE
+  namespace: "test"
 title: "QC report for TOB-WGS"
 ---
 
@@ -98,11 +98,7 @@ is_outlier <- function(x, m = 3) {
 ```
 
 ```{r vars}
-if (params$test == TRUE) {
-  bucket <- glue("cpg-tob-wgs-test")
-} else {
-  bucket <- glue("cpg-tob-wgs-main")
-}
+bucket <- glue("cpg-tob-wgs-", params$namespace)
 gcs_prefix <- "gvcf"
 ```
 
@@ -319,11 +315,6 @@ p_data %>%
 Same data, but additionally grouped by batch.
 
 ```{r}
-if (params$test && length(unique(p_data$batch)) == 1) {
-  # adding fake batches for debug purposes
-  p_data = p_data %>% bind_rows(p_data %>% mutate(batch = "2"), p_data %>% mutate(batch = "3"), p_data %>% mutate(batch = "4"))
-}
-
 n_batches <- length(unique(p_data$batch))
 n_metrics <- length(unique(p_data$metric))
 
