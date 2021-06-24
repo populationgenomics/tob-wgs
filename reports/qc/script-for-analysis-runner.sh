@@ -39,18 +39,18 @@ fi
 
 function run() {
 	local batch=$1
-	local main_suf=$2
+	local namespace=$2
 	local joint_calling_run_version=$3
 	local dir=work
 
-	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
-	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/age.csv" ${dir}/age.csv
-	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/${batch}/*.csv" ${dir}/qc.csv
+	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
+	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/age.csv" ${dir}/age.csv
+	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/${batch}/*.csv" ${dir}/qc.csv
 	if [[ $TMP = "YES" ]]
 	then
 		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-test-tmp/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	else
-		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-${main_suf}-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
+		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	fi
 	cat qc.Rmd | sed 's/r fig.width=[1-9]*, fig.height=[1-9]*/r fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
@@ -58,15 +58,16 @@ rmarkdown::render('qc-for-html.Rmd', output_file='qc.html', params=list(\
 reported_sex_tsv='${dir}/reported_sex.tsv', \
 age_csv='${dir}/age.csv', \
 qc_csv='${dir}/qc.csv', \
-meta_tsv='${dir}/meta.tsv'
+meta_tsv='${dir}/meta.tsv', \
+namespace='${namespace}'
 ))
 code
 	rm qc-for-html.Rmd
 	qc_fpath=qc/qc-${joint_calling_run_version}.html
-	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/${qc_fpath}
+	gsutil cp qc.html gs://cpg-tob-wgs-${namespace}-web/${qc_fpath}
 
 	echo ""
-	echo "Copied to the ${main_suf}-web bucket. The report will be available under https://${main_suf}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
+	echo "Copied to the ${namespace}-web bucket. The report will be available under https://${namespace}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
 }
 
 if [[ $PROD = "YES" ]]
