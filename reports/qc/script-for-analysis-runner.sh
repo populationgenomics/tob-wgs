@@ -64,7 +64,7 @@ namespace='${namespace}'
 code
 	rm qc-for-html.Rmd
 	qc_fpath=qc/qc-${joint_calling_run_version}.html
-	gsutil cp qc.html gs://cpg-tob-wgs-${main_suf}-web/${qc_fpath}
+	gsutil cp qc.html gs://cpg-tob-wgs-${namespace}-web/${qc_fpath}
 
 	echo ""
 	echo "Copied to the ${main_suf}-web bucket. The report will be available under https://${main_suf}-web.populationgenomics.org.au/tob-wgs/${qc_fpath}"
