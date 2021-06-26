@@ -10,37 +10,35 @@ output:
   rmdformats::material:
     highlight: kate
 params:
-  title: ""
+  title: "QC report for"
   reported_sex_tsv: "work/reported_sex.tsv"
   age_csv: "work/age.csv"
   meta_tsv: "work/meta.tsv"
   qc_csv: "work/qc.csv"
   namespace: "test"
-title: "QC report for TOB-WGS"
+  dataset: "TOB-WGS"
+title: "`r paste(params$title, params$dataset)`"
 ---
 
 ```{r knitr_opts, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
-
-## Introduction
-
-Exploring QC metrics and metadata of the samples from the TOB-WGS project.
 
 ```{r load_pkgs}
 library(tidyverse)
-library(fs)
-library(glue)
-library(assertthat)
+library(fs, include.only = "as_fs_bytes")
+library(glue, include.only = "glue")
 library(reactable)
-library(ggrepel)
-library(sessioninfo)
-library(DT)
-library(ggforce)
+library(htmlwidgets)
+library(htmltools)
+library(ggrepel, include.only = "geom_text_repel")
+library(ggforce, include.only = "geom_sina")
+library(scales)
+library(knitr)
 
 # for GCS authentication
-library(googleCloudStorageR)
-library(gargle)
+library(googleCloudStorageR, include.only = c("gcs_list_objects", "gcs_auth"))
+library(gargle, include.only = "token_fetch")
 ```
 
 ```{r read_params, eval=FALSE, echo=FALSE}
@@ -50,7 +48,7 @@ params <- rmarkdown::yaml_front_matter("qc.Rmd")$params
 
 ```{r funcs}
 guess_file_type <- function(x) {
-  dplyr::case_when(
+  case_when(
     grepl("\\.bam$", x, ignore.case = TRUE) ~ "BAM",
     grepl("\\.bai$", x, ignore.case = TRUE) ~ "BAMindex",
     grepl("\\.cram$", x, ignore.case = TRUE) ~ "CRAM",
@@ -81,7 +79,7 @@ gcs_list_objects2 <- function(b, prefix) {
   mutate(
     name = glue("gs://{b}/{name}"),
     size = sub(" bytes", "", size), # else returns NA
-    size = fs::as_fs_bytes(size),
+    size = as_fs_bytes(size),
     ftype = guess_file_type(name)
   )
 }
@@ -91,30 +89,20 @@ gcs_list_objects2 <- function(b, prefix) {
 # Using the m parameter for cases where there are simply too many outliers; the
 # larger the value of m, the fewer values are considered outliers.
 is_outlier <- function(x, m = 3) {
-  assert_that(is.numeric(x), is.numeric(m))
+  stopifnot(is.numeric(x), is.numeric(m))
   (x < quantile(x, 0.25, na.rm = T) - m * IQR(x, na.rm = T)) |
   (x > quantile(x, 0.75, na.rm = T) + m * IQR(x, na.rm = T))
 }
 ```
 
-```{r vars}
+```{r bucket_contents}
 bucket <- glue("cpg-tob-wgs-", params$namespace)
 gcs_prefix <- "gvcf"
-```
 
-## Bucket contents
-
-Summarising the contents of the Google Cloud Storage GVCF bucket: `r glue("'{bucket}/{gcs_prefix}'")`.
-
-```{r list_contents1}
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
-token <- gargle::token_fetch(scopes = scope)
-googleCloudStorageR::gcs_auth(token = token)
+token <- token_fetch(scopes = scope)
+gcs_auth(token = token)
 obj_list <- gcs_list_objects2(b = bucket, prefix = gcs_prefix)
-```
-
-```{r list_contents2}
-count(obj_list, ftype) %>% knitr::kable(caption = glue("Count of file types in '{bucket}/{gcs_prefix}'."))
 gvcf <-
   obj_list %>%
   filter(ftype == "GVCF") %>%
@@ -124,68 +112,7 @@ gvcf <-
   select(tobid, fullname = name, batch, size, basename)
 ```
 
-Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`** GVCF files.
-
-```{r gvcf_list}
-gvcf %>%
-  mutate(size = as.character(size),
-         n = dplyr::row_number()) %>%
-  select(n, fullname, batch, size) %>%
-  reactable::reactable(
-    pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
-    filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
-    columns = list(
-      n = colDef(minWidth = 60),
-      fullname = colDef(minWidth = 420),
-      batch = colDef(minWidth = 60),
-      size = colDef(minWidth = 80)
-    )
-  ) %>%
-  htmlwidgets::prependContent(
-    htmltools::h2(
-      class = "title",
-      glue("GVCF files in '{bucket}/{gcs_prefix}' (Total: {nrow(gvcf)})")))
-```
-
-```{r gvcf_file_sizes}
-theme_set(theme_bw())
-
-gvcf %>%
-  summarise(
-    min = as_fs_bytes(min(size)),
-    max = as_fs_bytes(max(size)),
-    q1 = as_fs_bytes(quantile(size, 0.25)),
-    median = as_fs_bytes(median(size)),
-    q3 = as_fs_bytes(quantile(size, 0.75)),
-    total = as_fs_bytes(sum(size)),
-    .groups = "drop") %>%
-  tidyr::pivot_longer(cols = dplyr::everything()) %>%
-  knitr::kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
-
-gvcf %>%
-  mutate(
-    size_clean = stringr::str_trim(size),
-    outlier = dplyr::if_else(
-      is_outlier(size, 3),
-      glue("{tobid} ({size_clean})"),
-      NA_character_
-    )
-  ) %>%
-  ggplot(aes(x = batch, y = size)) +
-  geom_violin(fill="lightblue") +
-  ggforce::geom_sina(shape = 21, color = "darkblue", fill = "red", seed = 42) +
-  ggrepel::geom_text_repel(aes(label = outlier),
-                           na.rm = TRUE, hjust = -0.6, seed = 42) +
-  scale_y_continuous(labels = scales::comma, breaks = scales::breaks_pretty(10)) +
-  theme(panel.grid.minor = element_blank()) +
-  ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
-```
-
-## Lanes and flowcells
-
-Summarising the sample counts per the flowcell-lane ID.
-
-```{r}
+```{r qc_from_kccg}
 qc_kccg <- params$qc_csv %>%
   read_csv() %>%
   select(
@@ -196,28 +123,16 @@ qc_kccg <- params$qc_csv %>%
     `insert size median` = raw_data.MEDIAN_INSERT_SIZE,
     flowcell_lane = sample.flowcell_lane,
     `median coverage` = raw_data.MEDIAN_COVERAGE
-  ) %>% 
-  mutate(flowcell_lane_data = str_split(flowcell_lane, "\\.")) %>% 
+  ) %>%
   mutate(
+    flowcell_lane_data = str_split(flowcell_lane, "\\."),
     flowcell1 = map_chr(flowcell_lane_data, 1),
     lanes1 = map_chr(flowcell_lane_data, 2),
     flowcell2 = map_chr(flowcell_lane_data, 3, .default = NA_character_),
     lanes2 = map_chr(flowcell_lane_data, 4, .default = NA_character_)
-  ) %>% 
+  ) %>%
   select(-flowcell_lane_data)
-
-qc_kccg %>% 
-  count(flowcell_lane) %>% 
-  ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) + 
-  geom_bar(stat = "identity") + 
-  geom_text(aes(label = n), hjust=-0.25) +
-  coord_flip()
 ```
-
-## QC metrics
-
-QC metrics were calculated by Picard Tools in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
-files have been provided containing the recorded age and reported sex of each sample.
 
 ```{r qc_plot_prep}
 sample_qc_meta <- params$meta_tsv %>%
@@ -236,22 +151,14 @@ sample_qc_meta <- params$meta_tsv %>%
     is_female,
     sex_karyotype,
     chrY_ploidy,
-    chrX_ploidy
-  )
+    chrX_ploidy)
 
 reported_sex <- params$reported_sex_tsv %>%
-  read_tsv(
-    skip = 2,
-    col_names = c(
-      "sample_id",
-      "sample.sample_name",
-      "gender",
-      paste0("nanodrop_", c("conc", "260/280", "230/280")),
-      paste0("qubit_", c("assay_conc", "stock_conc")),
-      "volume",
-      "location"
-    )
-  ) %>%
+  read_tsv(skip = 2,
+           col_names = c("sample_id", "sample.sample_name", "gender",
+                         paste0("nanodrop_", c("conc", "260/280", "230/280")),
+                         paste0("qubit_", c("assay_conc", "stock_conc")),
+                         "volume", "location")) %>%
   filter(!is.na(sample_id)) %>%
   select(sample = sample.sample_name, reported_sex = gender)
 
@@ -266,7 +173,7 @@ all_data <- qc_kccg %>%
   left_join(gvcf %>% select(sample = tobid, batch), by = "sample")
 
 p_data <- all_data %>%
-  tidyr::pivot_longer(
+  pivot_longer(
     cols = c("contamination", "chimeras", "duplicates", "insert size median",
              "singleton", "snp", "ti_tv", "het_hom", "indel_ratio",
              "chr20 mean dp"),
@@ -278,24 +185,31 @@ p_data <- all_data %>%
     label = if_else(is_outlier(value) | !high_quality, glue("{sample} ({value_round})"), NA_character_)
   )
 
-cutoffs <- tibble(
-  metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
-  upper_lim = c(400000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
-  lower_lim = c(NA,           2400000,  NA,        NA,         18,              NA,           NA,              250)
-)
-
-cutoffs <- cutoffs %>% filter(metric %in% unique(p_data$metric))
+cutoffs <-
+  tibble(
+    metric   =  c("singleton", "snp",    "het_hom", "chimeras", "chr20 mean dp", "duplicates", "contamination", "insert size median"),
+    upper_lim = c(400000,       8000000,  3.3,       0.05,       NA,              0.3,          0.05,            NA),
+    lower_lim = c(NA,           2400000,  NA,        NA,         18,              NA,           NA,              250)) %>%
+  filter(metric %in% unique(p_data$metric))
 ```
 
-```{r}
+## QC metrics
+
+QC metrics were calculated by [Picard Tools](https://broadinstitute.github.io/picard/)
+in a KCCG workflow and by a Hail-based joint-calling pipeline. Additional
+files have been provided containing the reported age and sex of each sample.
+
+```{r plot_size_setup1}
 n_metrics <- length(unique(p_data$metric))
 plot_width <- n_metrics * 1.2
 plot_height <- n_metrics * 1
 ```
 
-Distributions of several QC metrics. Bad-quality samples according to the [joint-calling workflow cutoffs](https://github.com/populationgenomics/joint-calling/blob/main/joint_calling/filter_cutoffs.yaml) are highlighted with red dots. Additionally, outlier samples are detected and labelled with the sample IDs on the plot.
+Distributions of several QC metrics. Bad-quality samples according to the
+[joint-calling workflow cutoffs](https://github.com/populationgenomics/joint-calling/blob/main/joint_calling/filter_cutoffs.yaml)
+are shown with red dots, while outlier samples are explicitly labelled:
 
-```{r fig.width=6, fig.height=5}
+```{r qc_plot_global, fig.width=6, fig.height=5}
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
@@ -304,7 +218,7 @@ p_data %>%
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
   facet_wrap(~metric, scales = "free", nrow = 2) +
-  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
@@ -312,37 +226,43 @@ p_data %>%
   xlab("")
 ```
 
-Same data, but additionally grouped by batch.
+Same data grouped by batch:
 
-```{r}
+```{r plot_size_setup2}
 n_batches <- length(unique(p_data$batch))
-n_metrics <- length(unique(p_data$metric))
 
 plot_width <- n_batches * 3
 plot_height <- n_metrics * 3
 ```
 
-```{r fig.width=5, fig.height=8}
+```{r qc_plot_per_batch, fig.width=5, fig.height=8}
+# add batch sample counts to facet labels
+batch_count_labels <- all_data %>%
+  count(batch) %>%
+  mutate(facet_label = as.character(glue("batch{batch} ({n})"))) %>%
+  select(batch, facet_label) %>%
+  deframe()
+
 p_data %>%
   ggplot(aes(x = "", y = value, label = label)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
-  ggrepel::geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
-  facet_grid(metric~batch, scales = "free") +
-  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  facet_grid(metric~batch, scales = "free",
+             labeller = labeller(batch = as_labeller(batch_count_labels))) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
   theme(
     axis.ticks.x = element_blank(),
     axis.text.x = element_blank(),
     panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank()
-  ) +
+    panel.grid.minor.x = element_blank()) +
   ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
 ```
 
-Table listing all {nrow(all_data)} samples in {n_batches} batches.
+Table listing all `r nrow(all_data)` samples in `r n_batches` batches:
 
 ```{r}
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
@@ -366,19 +286,19 @@ bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("le
 
 data = all_data %>%
   transmute(
-    n = dplyr::row_number(),
-    sample, 
+    n = row_number(),
+    sample,
     batch,
     `sex inferred/reported` = str_c(sex_karyotype, "/", reported_sex),
     chrY_ploidy = chrY_ploidy,
     chrX_ploidy = chrX_ploidy,
-    `chr20 mean DP` = `chr20 mean dp`, 
+    `chr20 mean DP` = `chr20 mean dp`,
     contamination = contamination,
     `hard filters` = str_replace(hard_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
     `qc metrics filters` = str_replace(qc_metrics_filters, "\\[\\]", "") %>% str_replace("\\[\"", "") %>% str_replace("\"\\]", ""),
     `high quality` = high_quality,
     age,
-    `indel ratio` = indel_ratio, 
+    `indel ratio` = indel_ratio,
     `het/hom` = het_hom,
     `ti/tv` = ti_tv,
     snp = snp,
@@ -390,7 +310,7 @@ data = all_data %>%
   )
 
 data %>%
-  reactable::reactable(
+  reactable(
     pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
     filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
     columns = list(
@@ -398,21 +318,21 @@ data %>%
       batch = colDef(),
       sample = colDef(),
       `sex inferred/reported` = colDef(
-        style = function(value) { 
-          list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white')) 
+        style = function(value) {
+          list(background = ifelse(value != "XX/F" & value != "XY/M", 'red', 'white'))
         }
       ),
       flowcell_lane = colDef(),
       chrY_ploidy = colDef(
         style = function(value) {
           bar_style(width = value / max(data$chrY_ploidy), fill = "hsl(208, 70%, 90%)")
-        },        
+        },
         format = colFormat(digits = 2)
       ),
       chrX_ploidy = colDef(
         style = function(value) {
           bar_style(width = value / max(data$chrX_ploidy), fill = "hsl(208, 70%, 90%)")
-        },    
+        },
         format = colFormat(digits = 2)
       ),
       `chr20 mean DP` = colDef(
@@ -484,39 +404,57 @@ data %>%
   )
 ```
 
+## Lanes and flowcells
+
+Sample counts per flowcell-lane ID:
+
+```{r flowcell_lane_count_plot}
+qc_kccg %>%
+  count(flowcell_lane) %>%
+  ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "grey70") +
+  geom_text(aes(label = n), hjust=-0.25) +
+  xlab("Flowcell lane") +
+  coord_flip()
+```
+
 ## Duplication rate
 
-Duplication rate against the flowcell and batch, grouped by batch. Lane numbers are dropped, and for samples with multiple flowcell IDs, only the first one is used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
+Duplication rate against the flowcell and batch, grouped by batch. Lane numbers
+are dropped, and for samples with multiple flowcell IDs, only the first one is
+used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
 
-```{r}
+```{r plot_size_setup3}
 plot_width <- 7
 plot_height <- 7
 ```
 
 ```{r fig.width=5, fig.height=4}
 p_data %>%
-  filter(metric == 'duplicates') %>% 
+  filter(metric == "duplicates") %>%
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = flowcell1), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
-  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
   facet_wrap(~batch) +
-  scale_color_manual(values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7", 
-"#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD", 
-"#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D", 
-"#8A7C64", "#599861")) +
+  scale_color_manual(
+    values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7",
+               "#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD",
+               "#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D",
+               "#8A7C64", "#599861")) +
   ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) +
-  xlab("") + ylab('Duplication rate')
+  xlab("") +
+  ylab('Duplication rate')
 ```
 
+Duplication rate against the flowcell and batch, grouped by flowcell.
+Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
 
-Duplication rate against the flowcell and batch, grouped by flowcell. Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
-
-```{r}
+```{r plot_size_setup4}
 plot_width <- 8
 plot_height <- 8
 ```
@@ -524,17 +462,17 @@ plot_height <- 8
 ```{r fig.width=5, fig.height=4}
 lanes_with_more_than_2_samples <- all_data %>%
   group_by(flowcell1) %>%
-  tally %>% 
+  tally %>%
   filter(n > 2) %>% pull(flowcell1) %>% unique()
 
 p_data %>%
   filter(metric == 'duplicates') %>%
-  filter(flowcell1 %in% lanes_with_more_than_2_samples) %>% 
+  filter(flowcell1 %in% lanes_with_more_than_2_samples) %>%
   ggplot(aes(x = "", y = value, label = label, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = batch), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
-  scale_y_continuous(breaks = scales::breaks_pretty(8)) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
@@ -546,17 +484,17 @@ p_data %>%
 ## Sex ploidies
 
 ```{r}
-sex_data = all_data %>% 
+sex_data = all_data %>%
   mutate(sex_mismatched = ifelse(sex_karyotype == "XX" & reported_sex != 'F' | sex_karyotype == "XY" & reported_sex != "M", T, F)) %>%
   select(
-    sex_mismatched, 
-    sample, 
-    `X ploidy` = chrX_ploidy, 
-    `Y ploidy` = chrY_ploidy, 
-    karyotype = sex_karyotype, 
-    `reported sex` = reported_sex, 
+    sex_mismatched,
+    sample,
+    `X ploidy` = chrX_ploidy,
+    `Y ploidy` = chrY_ploidy,
+    karyotype = sex_karyotype,
+    `reported sex` = reported_sex,
     age
-  ) %>% 
+  ) %>%
   mutate(label = ifelse(sex_mismatched, glue("{sample}, {karyotype}, age: {age}"), NA_character_)) %>%
   arrange(sex_mismatched)
 ```
@@ -564,7 +502,7 @@ sex_data = all_data %>%
 X ploidy vs Y ploidy. Highlighted samples with mismatched reported and inferred sex, or basically anything but XX/F or XY/M.
 
 ```{r}
-sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) + 
+sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) +
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
@@ -572,25 +510,77 @@ sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`))
 Y ploidy vs age. Samples with mismatched reported and inferred sex are labelled. chrY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
-sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) + 
+sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) +
   geom_point(size = 0.6) +
   geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
 ```
 
-## Session Info
+## Bucket contents
 
-```{r session_info, echo=FALSE}
-si <- sessioninfo::session_info(include_base = TRUE)
-si_pl <- unclass(si$platform) %>% as_tibble() %>% t()
-si_pkg <- unclass(si$packages) %>%
-  as_tibble() %>%
-  select(package, version = ondiskversion, datestamp = date)
-tibble(var = rownames(si_pl),
-              value = si_pl[, , drop = TRUE]) %>%
-  knitr::kable(caption = "Platform information.")
-si_pkg %>%
-  DT::datatable(filter = list(position = "top", clear = FALSE, plain = TRUE),
-                rownames = FALSE, extensions = c("Scroller"),
-                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 200,
-                               dom = 'Bfrtip'))
+Summary of objects in `r glue("'{bucket}/{gcs_prefix}'")`:
+
+```{r list_contents2}
+count(obj_list, ftype) %>%
+  reactable() %>%
+  htmlwidgets::prependContent(
+    htmltools::h2(
+      class = "title",
+      glue("Count of file types in '{bucket}/{gcs_prefix}'")))
+```
+
+Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`** GVCF files.
+
+```{r gvcf_list}
+gvcf %>%
+  mutate(size = as.character(size),
+         n = row_number()) %>%
+  select(n, fullname, batch, size) %>%
+  reactable(
+    pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
+    filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
+    columns = list(
+      n = colDef(minWidth = 60),
+      fullname = colDef(minWidth = 420),
+      batch = colDef(minWidth = 60),
+      size = colDef(minWidth = 80)
+    )
+  ) %>%
+  htmlwidgets::prependContent(
+    htmltools::h2(
+      class = "title",
+      glue("GVCF files in '{bucket}/{gcs_prefix}' (Total: {nrow(gvcf)})")))
+```
+
+```{r gvcf_file_sizes}
+theme_set(theme_bw())
+
+gvcf %>%
+  summarise(
+    min = as_fs_bytes(min(size)),
+    max = as_fs_bytes(max(size)),
+    q1 = as_fs_bytes(quantile(size, 0.25)),
+    median = as_fs_bytes(median(size)),
+    q3 = as_fs_bytes(quantile(size, 0.75)),
+    total = as_fs_bytes(sum(size)),
+    .groups = "drop") %>%
+  pivot_longer(cols = everything()) %>%
+  kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
+
+gvcf %>%
+  mutate(
+    size_clean = str_trim(size),
+    outlier = if_else(
+      is_outlier(size, 4),
+      glue("{tobid} ({size_clean})"),
+      NA_character_
+    )
+  ) %>%
+  ggplot(aes(x = batch, y = size)) +
+  geom_violin(fill="lightblue") +
+  geom_sina(shape = 21, color = "darkblue", fill = "red", seed = 42) +
+  geom_text_repel(aes(label = outlier),
+                           na.rm = TRUE, hjust = -0.6, seed = 42) +
+  scale_y_continuous(labels = comma, breaks = breaks_pretty(10)) +
+  theme(panel.grid.minor = element_blank()) +
+  ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 ```
