@@ -34,7 +34,7 @@ done
 
 if [[ $ANALYSIS_RUNNER = "YES" ]] ; then
 	micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c conda-forge \
-		r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager r-ggforce
+		r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager r-ggforce plotly
 fi
 
 function run() {
@@ -76,3 +76,5 @@ then
 else
 	run $BATCH test $VERSION
 fi
+
+set +x
