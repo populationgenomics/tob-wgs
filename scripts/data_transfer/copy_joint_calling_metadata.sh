@@ -7,12 +7,11 @@ if [[ -z "$VERSION" ]]; then
     exit 1
 fi
 
-target_bucket=gs://cpg-tob-wgs-main-metadata/joint-calling
-if [[ ${OUTPUT} != ${target_bucket}* ]]; then
-	echo "The analysis runner output directory must start with ${target_bucket}"
+if [[ ${OUTPUT} != joint-calling/$VERSION ]]; then
+	echo "The analysis runner output directory must start with joint-calling/$VERSION"
 	exit 1
 fi	
 
 gsutil cp \
 	gs://cpg-tob-wgs-main/joint-calling/${VERSION}/meta.tsv \
-	${target_bucket}/${VERSION}/meta.tsv
+	gs://cpg-tob-wgs-main-metadata/joint-calling/${VERSION}/meta.tsv

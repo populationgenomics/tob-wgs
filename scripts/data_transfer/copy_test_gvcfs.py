@@ -3,8 +3,6 @@
 import os
 import subprocess
 
-output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-test/')
 QC_METADATA_FILE_NAME = 'R_210315_BINKAN1_1K1KDNA_M001.csv'
 
 SAMPLES = [

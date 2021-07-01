@@ -5,7 +5,8 @@ import os
 import subprocess
 
 output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-main/gvcf/batch')
+assert output and output.startswith('gvcf/batch')
+output = f'gs://cpg-tob-wgs-main/{output}'
 
 # Make sure this isn't adding to a previous batch.
 assert (
