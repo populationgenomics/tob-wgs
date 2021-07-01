@@ -28,16 +28,16 @@ SAMPLES = [
     'TOB1640',
 ]
 
-# for sn in SAMPLES:
-#     subprocess.run(
-#         [
-#             'gsutil',
-#             'cp',
-#             f'gs://cpg-tob-wgs-main/gvcf/batch1/{sn}.g.vcf.gz*',
-#             'gs://cpg-tob-wgs-test/gvcf/batch1/',
-#         ],
-#         check=False,
-#     )
+for sn in SAMPLES:
+    subprocess.run(
+        [
+            'gsutil',
+            'cp',
+            f'gs://cpg-tob-wgs-main/gvcf/batch1/{sn}.g.vcf.gz*',
+            'gs://cpg-tob-wgs-test/gvcf/batch1/',
+        ],
+        check=False,
+    )
 
 # Copy metadata subset.
 subprocess.run(
