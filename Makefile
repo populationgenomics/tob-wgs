@@ -1,6 +1,6 @@
-VERSION := v3
-TEST_VERSION := v2.1
-TEST_VERSION_EXTEND := v3
+VERSION := v3.1
+TEST_VERSION := v3.1
+TEST_VERSION_EXTEND := v3.1
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
@@ -24,7 +24,7 @@ joint_calling_clean_test:
 joint_calling_test_to_tmp:
 	analysis-runner \
 	--dataset $(CALLSET) \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test-to-tmp" \
+	--output-dir "joint-calling/test-to-tmp" \
 	--description "Joint calling test-to-temporary" \
 	--access-level test \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
@@ -37,35 +37,18 @@ joint_calling_test_to_tmp:
 	--keep-scratch \
 	$(REUSE_ARG)
 
-.PHONY: joint_calling_test_to_tmp_extend
-joint_calling_test_to_tmp_extend:
-	analysis-runner \
-	--dataset $(CALLSET) \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test-to-tmp_extend" \
-	--description "Joint calling test-to-temporary" \
-	--access-level test \
-	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
-	--scatter-count $(SCATTER_COUNT_TEST) \
-	--existing-mt "gs://cpg-tob-wgs-test/mt/v2-raw.mt" \
-	--from test \
-	--to tmp \
-	--batch batch2 \
-	--callset $(CALLSET) \
-	--version ${TEST_VERSION_EXTEND} \
-	--keep-scratch \
-	$(REUSE_ARG)
-
 .PHONY: joint_calling_test_to_test
 joint_calling_test_to_test:
 	analysis-runner \
 	--dataset $(CALLSET) \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/test-to-test" \
+	--output-dir "joint-calling/test-to-test" \
 	--description "Joint calling test-to-test" \
 	--access-level test \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_TEST) \
 	--from test \
 	--to test \
+	--batch batch1 \
 	--callset $(CALLSET) \
 	--version $(VERSION) \
 	--keep-scratch \
@@ -75,7 +58,7 @@ joint_calling_test_to_test:
 joint_calling_main_to_main:
 	analysis-runner \
 	--dataset $(CALLSET) \
-	--output-dir "gs://cpg-tob-wgs-hail/joint-calling/main-to-main" \
+	--output-dir "joint-calling/main-to-main" \
 	--description "Joint calling main-to-main" \
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
