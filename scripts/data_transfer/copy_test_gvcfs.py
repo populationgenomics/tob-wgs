@@ -3,8 +3,6 @@
 import os
 import subprocess
 
-output = os.getenv('OUTPUT')
-assert output and output.startswith('gs://cpg-tob-wgs-test/')
 QC_METADATA_FILE_NAME = 'R_210315_BINKAN1_1K1KDNA_M001.csv'
 
 SAMPLES = [
@@ -30,16 +28,16 @@ SAMPLES = [
     'TOB1640',
 ]
 
-for sn in SAMPLES:
-    subprocess.run(
-        [
-            'gsutil',
-            'cp',
-            f'gs://cpg-tob-wgs-main/gvcf/batch1/{sn}.g.vcf.gz*',
-            'gs://cpg-tob-wgs-test/gvcf/batch1/',
-        ],
-        check=False,
-    )
+# for sn in SAMPLES:
+#     subprocess.run(
+#         [
+#             'gsutil',
+#             'cp',
+#             f'gs://cpg-tob-wgs-main/gvcf/batch1/{sn}.g.vcf.gz*',
+#             'gs://cpg-tob-wgs-test/gvcf/batch1/',
+#         ],
+#         check=False,
+#     )
 
 # Copy metadata subset.
 subprocess.run(
