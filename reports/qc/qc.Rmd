@@ -35,6 +35,7 @@ library(ggrepel, include.only = "geom_text_repel")
 library(ggforce, include.only = "geom_sina")
 library(scales)
 library(knitr)
+library(plotly, include.only = c("ggplotly", "toWebGL"))
 
 # for GCS authentication
 library(googleCloudStorageR, include.only = c("gcs_list_objects", "gcs_auth"))
@@ -107,9 +108,9 @@ gvcf <-
   obj_list %>%
   filter(ftype == "GVCF") %>%
   mutate(basename = basename(name),
-         tobid = sub(".g.vcf.gz", "", basename),
+         sample = sub(".g.vcf.gz", "", basename),
          batch = sub("batch(.)", "\\1", basename(dirname(name)))) %>%
-  select(tobid, fullname = name, batch, size, basename)
+  select(sample, fullname = name, batch, size, basename)
 ```
 
 ```{r qc_from_kccg}
@@ -170,7 +171,7 @@ all_data <- qc_kccg %>%
   left_join(sample_qc_meta, by = "sample") %>%
   left_join(reported_sex, by = "sample") %>%
   left_join(age, by = "sample") %>%
-  left_join(gvcf %>% select(sample = tobid, batch), by = "sample")
+  left_join(gvcf %>% select(sample, batch), by = "sample")
 
 p_data <- all_data %>%
   pivot_longer(
@@ -207,14 +208,14 @@ plot_height <- n_metrics * 1
 
 Distributions of several QC metrics. Bad-quality samples according to the
 [joint-calling workflow cutoffs](https://github.com/populationgenomics/joint-calling/blob/main/joint_calling/filter_cutoffs.yaml)
-are shown with red dots, while outlier samples are explicitly labelled:
+are shown in red points.
 
 ```{r qc_plot_global, fig.width=6, fig.height=5}
-p_data %>%
-  ggplot(aes(x = "", y = value, label = label)) +
-  geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
-  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+theme_set(theme_bw()) # set white background
+qc_plot_global <- p_data %>%
+  ggplot(aes(x = "", y = value, label = sample)) +
+  geom_violin(fill = "transparent", colour = "grey80", alpha = 0.4) +
+  geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 1) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
   facet_wrap(~metric, scales = "free", nrow = 2) +
@@ -222,8 +223,10 @@ p_data %>%
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()) +
-  ggtitle(glue("QC metrics (for {length(unique(p_data$sample))} samples).")) +
+  labs(title = glue("QC metrics (for {length(unique(p_data$sample))} samples)."),
+       subtitle = "Click on legend values to show/hide points.") +
   xlab("")
+toWebGL(ggplotly(qc_plot_global))
 ```
 
 Same data grouped by batch:
@@ -243,11 +246,10 @@ batch_count_labels <- all_data %>%
   select(batch, facet_label) %>%
   deframe()
 
-p_data %>%
-  ggplot(aes(x = "", y = value, label = label)) +
-  geom_violin(fill = "transparent") +
+qc_plot_per_batch <- p_data %>%
+  ggplot(aes(x = "", y = value, label = sample)) +
+  geom_violin(fill = "transparent", colour = "grey80", alpha = 0.4) +
   geom_sina(aes(colour = high_quality, group = metric), seed = 42, size = 0.8) +
-  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(metric~batch, scales = "free",
@@ -260,6 +262,7 @@ p_data %>%
     panel.grid.minor.x = element_blank()) +
   ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
   xlab("")
+toWebGL(ggplotly(qc_plot_per_batch))
 ```
 
 Table listing all `r nrow(all_data)` samples in `r n_batches` batches:
@@ -429,10 +432,10 @@ plot_width <- 7
 plot_height <- 7
 ```
 
-```{r fig.width=5, fig.height=4}
-p_data %>%
+```{r dup_rate_flowcell, fig.width=5, fig.height=4}
+plot_dup_rate_flowcell <- p_data %>%
   filter(metric == "duplicates") %>%
-  ggplot(aes(x = "", y = value, label = label, group = metric)) +
+  ggplot(aes(x = "", y = value, label = sample, group = metric)) +
   geom_violin(fill = "transparent") +
   geom_sina(aes(colour = flowcell1), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
@@ -449,6 +452,7 @@ p_data %>%
   ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) +
   xlab("") +
   ylab('Duplication rate')
+toWebGL(ggplotly(plot_dup_rate_flowcell))
 ```
 
 Duplication rate against the flowcell and batch, grouped by flowcell.
@@ -532,29 +536,6 @@ Total of **`r nrow(obj_list)`** files, consisting of **`r nrow(gvcf)`** GVCF fil
 
 ```{r gvcf_list}
 gvcf %>%
-  mutate(size = as.character(size),
-         n = row_number()) %>%
-  select(n, fullname, batch, size) %>%
-  reactable(
-    pagination = FALSE, highlight = TRUE, height = 500, searchable = TRUE,
-    filterable = TRUE, bordered = TRUE, fullWidth = FALSE,
-    columns = list(
-      n = colDef(minWidth = 60),
-      fullname = colDef(minWidth = 420),
-      batch = colDef(minWidth = 60),
-      size = colDef(minWidth = 80)
-    )
-  ) %>%
-  htmlwidgets::prependContent(
-    htmltools::h2(
-      class = "title",
-      glue("GVCF files in '{bucket}/{gcs_prefix}' (Total: {nrow(gvcf)})")))
-```
-
-```{r gvcf_file_sizes}
-theme_set(theme_bw())
-
-gvcf %>%
   summarise(
     min = as_fs_bytes(min(size)),
     max = as_fs_bytes(max(size)),
@@ -566,21 +547,24 @@ gvcf %>%
   pivot_longer(cols = everything()) %>%
   kable(caption = glue("Size metrics for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
 
-gvcf %>%
+size_cutoff <- 1200000000 # ~1.2G
+plot_gvcf_sizes <- gvcf %>%
   mutate(
     size_clean = str_trim(size),
     outlier = if_else(
-      is_outlier(size, 4),
-      glue("{tobid} ({size_clean})"),
+      size > size_cutoff,
+      glue("{sample} ({size_clean}, batch{batch})"),
       NA_character_
     )
   ) %>%
-  ggplot(aes(x = batch, y = size)) +
-  geom_violin(fill="lightblue") +
-  geom_sina(shape = 21, color = "darkblue", fill = "red", seed = 42) +
-  geom_text_repel(aes(label = outlier),
-                           na.rm = TRUE, hjust = -0.6, seed = 42) +
+  ggplot(aes(x = "", y = size, label = outlier, fill = batch, group = "")) +
+  geom_violin(fill = "transparent", colour = "grey80", alpha = 0.4) +
+  geom_sina(shape = 21, seed = 42, alpha = 0.7) +
+  geom_text_repel(na.rm = TRUE, hjust = -0.6, seed = 42) +
   scale_y_continuous(labels = comma, breaks = breaks_pretty(10)) +
   theme(panel.grid.minor = element_blank()) +
-  ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'."))
+  ggtitle(glue("Size (bytes) for {nrow(gvcf)} GVCF files in '{bucket}/{gcs_prefix}'.")) +
+  xlab("")
+
+plot_gvcf_sizes
 ```

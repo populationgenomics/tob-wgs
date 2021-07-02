@@ -34,7 +34,7 @@ done
 
 if [[ $ANALYSIS_RUNNER = "YES" ]] ; then
 	micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c conda-forge \
-		r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager r-ggforce
+		r-reactable r-ggrepel r-sessioninfo r-gargle r-here r-assertthat r-dt r-googlecloudstorager r-ggforce r-plotly
 fi
 
 function run() {
@@ -52,7 +52,7 @@ function run() {
 	else
 		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
 	fi
-	cat qc.Rmd | sed 's/r fig.width=[1-9]*, fig.height=[1-9]*/r fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
+	cat qc.Rmd | sed 's/ fig.width=[1-9]*, fig.height=[1-9]*/ fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
 rmarkdown::render('qc-for-html.Rmd', output_file='qc.html', params=list(\
 reported_sex_tsv='${dir}/reported_sex.tsv', \
@@ -76,3 +76,5 @@ then
 else
 	run $BATCH test $VERSION
 fi
+
+set +x
