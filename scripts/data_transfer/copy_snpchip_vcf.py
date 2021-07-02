@@ -10,12 +10,10 @@ import subprocess
 
 output = os.getenv('OUTPUT')
 assert output and output.startswith('snpchip/v1')
+output = f'gs://cpg-tob-wgs-main/{output}'
 
 INPUT_BUCKET = 'gs://cpg-tob-wgs-snpchipdata'
 INPUT_VCF = f'{INPUT_BUCKET}/data/onek1k_pre_imputation_genotypes.vcf.gz'
 INPUT_TARBALL = f'{INPUT_BUCKET}/data/OneK1K_scRNA_GenotypingData.tar.gz'
 
-subprocess.run(
-    ['gsutil', 'cp', INPUT_VCF, INPUT_TARBALL, "gs://cpg-tob-wgs-main/snpchip/v1/"],
-    check=False,
-)
+subprocess.run(['gsutil', 'cp', INPUT_VCF, INPUT_TARBALL, output], check=False)

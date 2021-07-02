@@ -9,6 +9,7 @@ import subprocess
 
 output = os.getenv('OUTPUT')
 assert output and output.startswith('snpchip/v1')
+output = f'gs://cpg-tob-wgs-main/{output}'
 
 INPUT_MT = 'gs://cpg-tob-wgs-test/snpchip/v1/snpchip_grch38.mt'
 
