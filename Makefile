@@ -1,6 +1,5 @@
-VERSION := v3.1
-TEST_VERSION := v3.1
-TEST_VERSION_EXTEND := v3.1
+VERSION := v4
+TEST_VERSION := v4
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
@@ -11,14 +10,6 @@ joint_calling_update_submodule:
 	-(cd ../joint-calling && git add --all && git commit -m 'WIP' --no-verify && git push)
 	(cd joint-calling && git pull --rebase)
 	(git add joint-calling && git commit -m 'Update joint-calling submodule' && git push)
-
-.PHONY: joint_calling_clean_tmp
-joint_calling_clean_tmp:
-	gsutil -q rm -rf gs://cpg-tob-wgs-test-tmp/joint-calling/$(VERSION)
-
-.PHONY: joint_calling_clean_test
-joint_calling_clean_test:
-	gsutil -q rm -rf gs://cpg-tob-wgs-test/joint-calling/$(VERSION)
 
 .PHONY: joint_calling_test_to_tmp
 joint_calling_test_to_tmp:
@@ -63,7 +54,7 @@ joint_calling_main_to_main:
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_PROD) \
-	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 \
+	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 --batch batch6 \
 	--from main \
 	--to main \
 	--callset $(CALLSET) \
