@@ -1,5 +1,5 @@
-VERSION := v3.2
-TEST_VERSION := v3.2
+VERSION := v4
+TEST_VERSION := v4
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 CALLSET := tob-wgs
@@ -54,7 +54,7 @@ joint_calling_main_to_main:
 	--access-level full \
 	joint-calling/driver_for_analysis_runner.sh workflows/batch_workflow.py \
 	--scatter-count $(SCATTER_COUNT_PROD) \
-	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 \
+	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 --batch batch6 \
 	--from main \
 	--to main \
 	--callset $(CALLSET) \
