@@ -10,7 +10,7 @@ system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcfto
 spsm <- suppressPackageStartupMessages
 spsm(require(rmarkdown, include.only = "render"))
 spsm(require(glue, include.only = "glue"))
-spsm(require(dplyr, include.only = "if_else"))
+spsm(require(dplyr))
 spsm(require(assertthat, include.only = "assert_that"))
 
 bucket_path <- function(path, bucket_category = NULL) {
@@ -19,7 +19,7 @@ bucket_path <- function(path, bucket_category = NULL) {
   access_level <- Sys.getenv("ACCESS_LEVEL")
   assert_that(nchar(dataset) > 0, nchar(access_level) > 0)
 
-  namespace <- if_else(access_level == "test", "test", "main")
+  namespace <- dplyr::if_else(access_level == "test", "test", "main")
   if (is.null(bucket_category)) {
     bucket_category <- namespace
   } else if (!bucket_category %in% c("archive", "upload")) {
