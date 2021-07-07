@@ -2,42 +2,54 @@
 
 # CLI for snpchip_ids.Rmd
 
-r_pkgs <- paste0("r-", c("argparser", "dt", "janitor", "glue", "sessioninfo"))
-#cat(paste0("[",  date(), "] ", "Installing conda pkgs for report.\n"))
-#system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcftools", r_pkgs))
+r_pkgs <- paste0("r-", c("argparser", "assertthat", "dt", "janitor", "glue", "sessioninfo"))
+cat(paste0("[",  date(), "] ", "Installing conda pkgs for report.\n"))
+system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcftools", r_pkgs))
 
 spsm <- suppressPackageStartupMessages
-spsm(require(argparser, include.only = c("parse_args", "arg_parser", "add_argument")))
+#spsm(require(argparser, include.only = c("parse_args", "arg_parser", "add_argument")))
 spsm(require(rmarkdown, include.only = "render"))
 spsm(require(glue, include.only = "glue"))
+spsm(require(dplyr, include.only = "if_else"))
+spsm(require(assertthat, include.only = "assert_that"))
 
-p <- arg_parser(
-  description = "Exploration of SNPchip and TOB IDs.",
-  name = "snpchip", hide.opts = TRUE)
-p <- add_argument(p,
-                  arg = "--namespace",
-                  help = "test or main namespace.")
-p <- add_argument(p,
-                  arg = "--rmd",
-                  help = "Path to input Rmd.")
-p <- add_argument(p,
-                  arg = "--html",
-                  help = "Path to output HTML.")
-a <- parse_args(p)
+bucket_path <- function(path, bucket_category = NULL) {
+
+  dataset <- Sys.getenv("DATASET")
+  access_level <- Sys.getenv("ACCESS_LEVEL")
+  assert_that(nchar(dataset) > 0, nchar(access_level) > 0)
+
+  namespace <- if_else(access_level == "test", "test", "main")
+  if (is.null(bucket_category)) {
+    bucket_category <- namespace
+  } else if (!bucket_category %in% c("archive", "upload")) {
+    bucket_category <- glue("{namespace}-{bucket_category}")
+  }
+
+  return(file.path("gs:/", glue("cpg-{dataset}-{bucket_category}"), path))
+}
+
+output_path <- function(path_suffix, bucket_category = NULL) {
+  output <- Sys.getenv("OUTPUT")
+  assert_that(nchar(output) > 0)
+  return(bucket_path(file.path(output, path_suffix), bucket_category))
+}
 
 params_list <- list(
-  namespace = a$namespace
+  input = bucket_path("snpchip/v1")
 )
+html <- output_path("snpchip_ids.html", "web")
 
 cat("params_list:\n")
 print(params_list)
+cat("html:\n")
+print(html)
 
 cat(glue("[{as.character(Sys.time())}] START analysis!"))
-
 render(
-  input = a$rmd,
-  output_file = I(a$html),
+  input = "snpchip_ids.Rmd",
+  output_file = html,
   params = params_list
 )
 
-cat(glue("[{as.character(Sys.time())}] END concordance!"))
+cat(glue("[{as.character(Sys.time())}] END analysis!"))
