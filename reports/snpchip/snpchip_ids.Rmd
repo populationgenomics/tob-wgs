@@ -122,7 +122,15 @@ chip_id2tob_raw %>%
 table(chip_id2tob_raw$person %in% chip_sample_nms$sample)
 # 51 samples in SNPchip VCF aren't in excel file
 table(chip_sample_nms$sample %in% chip_id2tob_raw$person)
-chip_sample_nms %>% filter(!sample %in% chip_id2tob_raw$person) %>% kable()
+chip_sample_nms %>%
+  filter(!sample %in% chip_id2tob_raw$person) %>%
+  datatable(rownames = TRUE,
+            caption = "Samples in SNPchip VCF but not in Excel metadata file.",
+            class = "cell-border display compact",
+            filter = list(position = "top", clear = FALSE, plain = TRUE),
+            extensions = c("Scroller", "KeyTable", "Buttons"),
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
+                           buttons = 'csv', keys = TRUE, dom = "Blfrtip"))
 ```
 
 ## Session Info
@@ -134,13 +142,13 @@ si_pkg <- unclass(si$packages) %>%
   as_tibble() %>%
   select(package, version = ondiskversion, datestamp = date)
 
-tibble(var = rownames(si_pl),
-       value = si_pl[, , drop = TRUE]) %>%
-  kable(caption = "Platform information.")
-
 si_pkg %>%
   datatable(filter = list(position = "top", clear = FALSE, plain = TRUE),
             rownames = FALSE, extensions = c("Scroller"),
-            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 200,
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 400,
                            dom = 'Bfrtip'))
+
+tibble(var = rownames(si_pl),
+       value = si_pl[, , drop = TRUE]) %>%
+  kable(caption = "Platform information.")
 ```
