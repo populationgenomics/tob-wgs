@@ -5,7 +5,7 @@ sort(unname(installed.packages()[,1]))
 
 r_pkgs <- paste0("r-", c("dt", "janitor", "sessioninfo"))
 cat(paste0("[",  date(), "] ", "Installing conda pkgs for report.\n"))
-system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcftools", r_pkgs))
+system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcftools", "r-base=4.0.3", r_pkgs))
 
 spsm <- suppressPackageStartupMessages
 spsm(require(rmarkdown, include.only = "render"))
