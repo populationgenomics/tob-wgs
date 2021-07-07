@@ -3,7 +3,7 @@
 sort(unname(installed.packages()[,1]))
 # CLI for snpchip_ids.Rmd
 
-r_pkgs <- paste0("r-", c("dt", "janitor", "sessioninfo"))
+r_pkgs <- paste("r-dt", "r-janitor", "r-sessioninfo", collapse=" ")
 cat(paste0("[",  date(), "] ", "Installing conda pkgs for report.\n"))
 system(paste("micromamba install --name base -c bioconda -c conda-forge", "bcftools", "r-base=4.0.3", r_pkgs))
 
