@@ -38,7 +38,8 @@ output_path <- function(path_suffix, bucket_category = NULL) {
 params_list <- list(
   input = bucket_path("snpchip/v1")
 )
-html <- output_path("snpchip_ids.html", "web")
+html_suffix <- "snpchip_ids.html"
+html <- output_path(html_suffix, "web")
 
 cat("params_list:\n")
 print(params_list)
@@ -48,8 +49,8 @@ print(html)
 cat(glue("[{as.character(Sys.time())}] START analysis!"))
 render(
   input = "snpchip_ids.Rmd",
-  output_file = html,
+  output_file = html_suffix,
   params = params_list
 )
-
+system(glue("gsutil cp {html_suffix} {html}"))
 cat(glue("[{as.character(Sys.time())}] END analysis!"))
