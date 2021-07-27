@@ -83,7 +83,8 @@ swaps <- sex %>%
   left_join(fam) %>%
   mutate(Sex = if_else(Sex == 1, "M", if_else(Sex == 2, "F", "Other"))) %>%
   mutate(x = Sex == Sex_cpg) %>%
-  filter(x %in% c(NA, FALSE))
+  filter(x %in% c(NA, FALSE)) %>%
+  select(IndID, TOBID, Sex_cpg, Sex)
 
 swaps %>%
   datatable(rownames = TRUE,
