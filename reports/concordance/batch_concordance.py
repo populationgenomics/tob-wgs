@@ -6,7 +6,7 @@ import os
 import hailtop.batch as hb
 
 
-def concordance(batch, snpmt, wgsmt, cpu):
+def concordance(batch, snpmt, wgsmt, samples, cpu):
     """
     Concordance between SNPchip and WGS samples
     """
@@ -21,6 +21,7 @@ def concordance(batch, snpmt, wgsmt, cpu):
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
+          --samples {samples} \
           --res_samples {conc.res_samples_tsv} \
           --html {conc.html} \
           --cpu {cpu}
@@ -36,13 +37,14 @@ if __name__ == '__main__':
     )
     b = hb.Batch(backend=service_backend, name='concordance')
 
-    BUCKET = 'gs://cpg-tob-wgs-main'
+    BUCKET = 'gs://cpg-tob-wgs-test'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/v3-raw.mt'
+    WGS = f'{BUCKET}/mt/v4-raw.mt'
+    SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
     CPU = 32
-    PREFIX = 'v3-raw_all'
+    PREFIX = 'v4-raw_subset_samples'
     HTML = f'{PREFIX}.html'
-    concordance = concordance(b, SNP, WGS, CPU)
+    concordance = concordance(b, SNP, WGS, SAMPLES, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(
         concordance.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
