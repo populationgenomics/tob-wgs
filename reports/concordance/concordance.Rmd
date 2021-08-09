@@ -13,8 +13,8 @@ params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
   SNP_MT: ""
   WGS_MT: ""
+  SAMPLES_TO_KEEP: ""
   RES_SAMPLES: ""
-  RES_SITES: ""
   CPU: ""
 title: "`r paste(params$TITLE)`"
 ---
@@ -59,7 +59,7 @@ are:
 - Load required R packages:
 
 ```{r load_pkgs}
-library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows"))
+library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows", "pull"))
 library(DT, include.only = c("datatable", "formatCurrency", "formatStyle", "styleColorBar"))
 library(glue, include.only = "glue")
 library(htmltools, include.only = c("tags", "div"))
@@ -76,7 +76,17 @@ use_condaenv("hailr", required = TRUE)
 
 ```{r read_params, eval=FALSE, echo=FALSE}
 # for interactive debugging
-params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
+# params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
+# d <- ""
+params_tmp <- list(
+  local = list(
+    SNP_MT = glue("{d}/snpchip/processed/snpchip_grch38.mt"),
+    WGS_MT = glue("{d}/bucket/test/test-v1-raw_chr22.mt"),
+    SAMPLES_TO_KEEP = "samples_to_keep.tsv",
+    RES_SAMPLES = ""
+  )
+)
+params <- params_tmp[["local"]]
 ```
 
 ```{python hail_setup}
@@ -131,13 +141,23 @@ mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 
 ## Step 3: WGS MatrixTable pre-processing
 
+```{r read_samples}
+samples_to_keep <-
+  params$SAMPLES_TO_KEEP %>%
+  read_tsv(col_names = "sample", col_types = "c") %>%
+  dplyr::pull(sample)
+```
+
 ```{python hail_densify_split_multi}
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
 
 ##---- select chr22 ----#
-#wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
-#snp = snp.filter_rows(snp.locus.contig == 'chr22')
+wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
+snp = snp.filter_rows(snp.locus.contig == 'chr22')
+
+##---- select samples ----#
+wgs = wgs.filter_cols(hl.literal(r.samples_to_keep).contains(wgs['s']))
 
 #---- densify and lgt_to_gt ----#
 wgs = hl.experimental.densify(wgs)
