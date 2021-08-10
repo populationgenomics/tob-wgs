@@ -44,10 +44,10 @@ if __name__ == '__main__':
 
     BUCKET = 'gs://cpg-tob-wgs-test'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/v4-raw.mt'
+    WGS = f'{BUCKET}/mt/v4.mt'
     SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
     CPU = 32
-    PREFIX = 'v4-raw_subset_samples'
+    PREFIX = 'v4_subset_samples'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, SAMPLES, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
