@@ -5,13 +5,17 @@
 import os
 import hailtop.batch as hb
 
+CONCORDANCE_IMG = (
+    'australia-southeast1-docker.pkg.dev/peter-dev-302805/test/concordance:0.1.15'
+)
+
 
 def concordance(batch, snpmt, wgsmt, samples, cpu):
     """
     Concordance between SNPchip and WGS samples
     """
     conc = batch.new_job(name='run-concordance')
-    conc.image('pdiakumis/concordance:0.1.15')
+    conc.image(CONCORDANCE_IMG)
     conc.cpu(cpu)
     conc.memory('lowmem')
     conc.storage('100G')
