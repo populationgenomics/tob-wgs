@@ -4,7 +4,7 @@ channels:
     - bioconda
     - conda-forge
 dependencies:
-    - cpg::hail=0.2.70.dev8f019a8842af
+    - cpg::hail=0.2.73
     - bcftools
     - r-base=4.1.0
     - r-tidyverse
