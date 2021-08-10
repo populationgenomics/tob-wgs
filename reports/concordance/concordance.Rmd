@@ -77,13 +77,13 @@ use_condaenv("hailr", required = TRUE)
 ```{r read_params, eval=FALSE, echo=FALSE}
 # for interactive debugging
 # params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
-# d <- ""
+d <- "data"
 params_tmp <- list(
   local = list(
     SNP_MT = glue("{d}/snpchip/processed/snpchip_grch38.mt"),
     WGS_MT = glue("{d}/bucket/test/test-v1-raw_chr22.mt"),
     SAMPLES_TO_KEEP = "samples_to_keep.tsv",
-    RES_SAMPLES = ""
+    RES_SAMPLES = "results1.tsv"
   )
 )
 params <- params_tmp[["local"]]
