@@ -19,13 +19,14 @@ def concordance(batch, snpmt, wgsmt, samples, cpu):
     conc.cpu(cpu)
     conc.memory('lowmem')
     conc.storage('100G')
+    input_samples = batch.read_input(samples)
     conc.command(
         f"""
         set -e
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
-          --samples {samples} \
+          --samples {input_samples} \
           --res_samples {conc.res_samples_tsv} \
           --html {conc.html} \
           --cpu {cpu}
