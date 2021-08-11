@@ -59,7 +59,7 @@ are:
 - Load required R packages:
 
 ```{r load_pkgs}
-library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows", "pull"))
+library(dplyr, include.only = c("select", "mutate", "tibble", "bind_rows", "pull"))
 library(DT, include.only = c("datatable", "formatCurrency", "formatStyle", "styleColorBar"))
 library(glue, include.only = "glue")
 library(htmltools, include.only = c("tags", "div"))
@@ -77,13 +77,15 @@ use_condaenv("hailr", required = TRUE)
 ```{r read_params, eval=FALSE, echo=FALSE}
 # for interactive debugging
 # params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
-d <- "data"
+# d <- "data"
+d <- "/Users/peterd/projects/tob-wgs/nogit"
 params_tmp <- list(
   local = list(
     SNP_MT = glue("{d}/snpchip/processed/snpchip_grch38.mt"),
     WGS_MT = glue("{d}/bucket/test/test-v1-raw_chr22.mt"),
     SAMPLES_TO_KEEP = "samples_to_keep.tsv",
-    RES_SAMPLES = "results1.tsv"
+    RES_SAMPLES = "results1.tsv",
+    CPU = 8
   )
 )
 params <- params_tmp[["local"]]
@@ -101,10 +103,10 @@ hl.init(default_reference='GRCh38', master=f'local[{r.params["CPU"]}]')
 ```{r generate_id_map, eval=FALSE}
 chipid2tobid_tsv <- "chipid2tobid.tsv"
 
-"OneK1K_sample_IDs_2021-Apr-15.xlsx" %>%
-  read_excel(skip = 1) %>%
-  mutate(tob_id = glue("TOB{TOB_ID}")) %>%
-  select(sample = PERSON, tob_id) %>%
+"OneK1K_sample_IDs_2021-Apr-15.xlsx" |>
+  read_excel(skip = 1) |>
+  mutate(tob_id = glue("TOB{TOB_ID}")) |>
+  select(sample = PERSON, tob_id) |>
   write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
 ```
 
@@ -143,8 +145,8 @@ mt.write('snpchip_rehead_grch38.mt', overwrite=True)
 
 ```{r read_samples}
 samples_to_keep <-
-  params$SAMPLES_TO_KEEP %>%
-  read_tsv(col_names = "sample", col_types = "c") %>%
+  params$SAMPLES_TO_KEEP |>
+  read_tsv(col_names = "sample", col_types = "c") |>
   dplyr::pull(sample)
 ```
 
@@ -157,6 +159,7 @@ wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
 snp = snp.filter_rows(snp.locus.contig == 'chr22')
 
 ##---- select samples ----#
+wgs_samples = wgs.s.collect() # for displaying
 wgs = wgs.filter_cols(hl.literal(r.samples_to_keep).contains(wgs['s']))
 
 #---- densify and lgt_to_gt ----#
@@ -222,13 +225,13 @@ get_mat_stats <- function(m) {
            `disc / snp` = disc_over_snp,
            `disc / wgs` = disc_over_wgs)
   }
-  m %>% mat_rename() %>% mat_conc_stats()
+  m |> mat_rename() |> mat_conc_stats()
 }
 
-res <- params$RES_SAMPLES %>%
-  read_tsv(col_types = "ccd") %>%
-  mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
-  unnest(conc2) %>%
+res <- params$RES_SAMPLES |>
+  read_tsv(col_types = "ccd") |>
+  mutate(conc2 = map(concordance, ~fromJSON(.) |> get_mat_stats)) |>
+  unnest(conc2) |>
   select(sample = s, `conc / snp`, `conc / wgs`,
          conc_tot, disc_tot,
          snp_tot, wgs_tot,
@@ -239,19 +242,40 @@ cap <- tags$caption(
   div("conc: concordant; disc: discordant;"),
   div("snp/wgs: snp and wgs datasets used in hail.concordance(snp, wgs)."),
   div("snp: SNP dataset; wgs: WGS dataset."))
-res %>%
-  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+
+```
+
+### Concordance table
+
+```{r concordance_table}
+res |>
+  mutate(across(where(is.numeric), ~round(.x, 4))) |>
   datatable(rownames = FALSE,
             caption = cap,
             class = "cell-border display compact",
             filter = list(position = "top", clear = FALSE, plain = TRUE),
             extensions = c("Scroller", "KeyTable", "Buttons"),
             options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
-                           buttons = 'csv', keys = TRUE, dom = "Blfrtip")) %>%
-  formatStyle(res %>% select(where(is_double)) %>% names(),
+                           buttons = 'csv', keys = TRUE, dom = "Blfrtip")) |>
+  formatStyle(res |> select(where(is_double)) |> names(),
               background = styleColorBar(c(0, 1), "lightgreen"),
               backgroundSize = "90% 90%",
-              backgroundRepeat = "no-repeat", backgroundPosition = "center") %>%
-  formatCurrency(res %>% select(where(is_integer)) %>% names(),
+              backgroundRepeat = "no-repeat", backgroundPosition = "center") |>
+  formatCurrency(res |> select(where(is_integer)) |> names(),
                  currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+### Sample table
+
+```{r sample_table}
+sample_tab <- function(x, caption = "Sample table", ncols = 10) {
+  ord <- sub("TOB", "", x) |> as.integer() |> order()
+  nrows <- ceiling(length(x) / ncols)
+  d1 <- replace(matrix(NA, nrows, ncols), seq_along(x), x[ord]) |>
+    as.data.frame() |>
+    set_names(paste0("Col", seq_len(ncols)))
+  d1 |> knitr::kable(caption = caption)
+}
+sample_tab(py$wgs_samples, "Samples in WGS MT.")
+sample_tab(samples_to_keep, "Samples selected for concordance check.")
 ```
