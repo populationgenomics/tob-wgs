@@ -6,7 +6,7 @@ import os
 import hailtop.batch as hb
 
 CONCORDANCE_IMG = (
-    'australia-southeast1-docker.pkg.dev/peter-dev-302805/test/concordance:0.1.15'
+    'australia-southeast1-docker.pkg.dev/peter-dev-302805/test/concordance:0.1.16'
 )
 
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     WGS = f'{BUCKET}/mt/v4.mt'
     SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
     CPU = 32
-    PREFIX = 'v4_subset_samples'
+    PREFIX = 'v4_subset_samples_with_tables'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, SAMPLES, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
