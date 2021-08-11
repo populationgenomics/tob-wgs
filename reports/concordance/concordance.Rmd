@@ -230,7 +230,7 @@ get_mat_stats <- function(m) {
 
 res <- params$RES_SAMPLES |>
   read_tsv(col_types = "ccd") |>
-  mutate(conc2 = map(concordance, ~fromJSON(.) |> get_mat_stats)) |>
+  mutate(conc2 = map(concordance, ~fromJSON(.) |> get_mat_stats())) |>
   unnest(conc2) |>
   select(sample = s, `conc / snp`, `conc / wgs`,
          conc_tot, disc_tot,
