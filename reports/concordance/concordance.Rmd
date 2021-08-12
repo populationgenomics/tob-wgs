@@ -198,9 +198,9 @@ res |>
 
 ```{r sample_table, warning=FALSE}
 cat("Samples in WGS MT:\n",
-    paste(py$wgs_samples, collapse = ", "))
+    paste(sort(py$wgs_samples), collapse = ", "))
 cat("Samples selected for concordance check:\n",
-    paste(samples_to_keep, collapse = ", "))
+    paste(sort(samples_to_keep), collapse = ", "))
 cat("Samples selected for concordance check but not found in WGS MT:\n",
-    paste(py$samples_not_found_in_wgs, collapse = ", "))
+    paste(sort(py$samples_not_found_in_wgs), collapse = ", "))
 ```
