@@ -73,6 +73,8 @@ samples_to_keep <-
   c("FAKE")
 ```
 
+### Data processing
+
 ```{python hail_densify_split_multi}
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
@@ -107,7 +109,7 @@ wgs = wgs.annotate_entries(
 )
 ```
 
-## Step 4: Concordance calculation
+### Concordance calculation
 
 ```{python hail_concordance}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
@@ -182,7 +184,7 @@ res |>
             class = "cell-border display compact",
             filter = list(position = "top", clear = FALSE, plain = TRUE),
             extensions = c("Scroller", "KeyTable", "Buttons"),
-            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 400,
                            buttons = 'csv', keys = TRUE, dom = "Blfrtip")) |>
   formatStyle(res |> select(where(is_double)) |> names(),
               background = styleColorBar(c(0, 1), "lightgreen"),
@@ -194,16 +196,11 @@ res |>
 
 ### Sample table
 
-```{r sample_table}
-sample_tab <- function(x, caption = "Sample table", ncols = 10) {
-  ord <- sub("TOB", "", x) |> as.integer() |> order()
-  nrows <- ceiling(length(x) / ncols)
-  d1 <- replace(matrix(NA, nrows, ncols), seq_along(x), x[ord]) |>
-    as.data.frame() |>
-    set_names(paste0("Col", seq_len(ncols)))
-  d1 |> knitr::kable(caption = caption)
-}
-sample_tab(py$wgs_samples, "Samples in WGS MT.")
-sample_tab(samples_to_keep, "Samples selected for concordance check.")
-cat("Samples selected for concordance but not found in WGS MT:\n", paste(py$samples_not_found_in_wgs, collapse = ", "))
+```{r sample_table, warning=FALSE}
+cat("Samples in WGS MT:\n",
+    paste(py$wgs_samples, collapse = ", "))
+cat("Samples selected for concordance check:\n",
+    paste(samples_to_keep, collapse = ", "))
+cat("Samples selected for concordance check but not found in WGS MT:\n",
+    paste(py$samples_not_found_in_wgs, collapse = ", "))
 ```
