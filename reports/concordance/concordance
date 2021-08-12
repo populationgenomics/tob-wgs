@@ -18,6 +18,10 @@ p <- add_argument(p,
 p <-  add_argument(p,
                   arg = "--samples",
                   help = "Path to single-column TSV file containing samples to check for concordance.")
+p <-  add_argument(p,
+                   arg = "--chrom",
+                   default = "chr22",
+                   help = "Chromosome subset to filter the WGS MatrixTable on (one of chr1-chr22, or anything else for no filtering).")
 p <- add_argument(p,
                   arg = "--html",
                   help = "Path to output HTML report.")
@@ -34,6 +38,7 @@ params_list <- list(
   SNP_MT = a$snp,
   RES_SAMPLES = a$res_samples,
   SAMPLES_TO_KEEP = a$samples,
+  CHROM_TO_KEEP = a$chrom,
   CPU = a$cpu
 )
 

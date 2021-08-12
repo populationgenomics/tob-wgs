@@ -10,7 +10,7 @@ CONCORDANCE_IMG = (
 )
 
 
-def concordance(batch, snpmt, wgsmt, samples, cpu):
+def concordance(batch, snpmt, wgsmt, samples, chrom, cpu):
     """
     Concordance between SNPchip and WGS samples
     """
@@ -27,6 +27,7 @@ def concordance(batch, snpmt, wgsmt, samples, cpu):
           --snp {snpmt} \
           --wgs {wgsmt} \
           --samples {input_samples} \
+          --chrom {chrom} \
           --res_samples {conc.res_samples_tsv} \
           --html {conc.html} \
           --cpu {cpu}
@@ -46,10 +47,11 @@ if __name__ == '__main__':
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/v4.mt'
     SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
+    CHROM = 'chr22'
     CPU = 32
-    PREFIX = 'v4_subset_samples_with_tables'
+    PREFIX = f'v4_subset_samples_{CHROM}'
     HTML = f'{PREFIX}.html'
-    concordance = concordance(b, SNP, WGS, SAMPLES, CPU)
+    concordance = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(
         concordance.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
