@@ -43,7 +43,7 @@ if __name__ == '__main__':
     )
     b = hb.Batch(backend=service_backend, name='concordance')
 
-    BUCKET = 'gs://cpg-tob-wgs-test'
+    BUCKET = 'gs://cpg-tob-wgs-main'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
     WGS = f'{BUCKET}/mt/v4.mt'
     SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
