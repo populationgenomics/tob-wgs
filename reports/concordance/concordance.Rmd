@@ -6,15 +6,16 @@ output:
     theme: simplex
     toc: true
     code_download: true
-    code_folding: show
+    code_folding: hide
   rmdformats::material:
     highlight: kate
 params:
   TITLE: "TOB-WGS concordance of SNPchip and WGS genotype calls"
   SNP_MT: ""
   WGS_MT: ""
+  SAMPLES_TO_KEEP: ""
+  CHROM_TO_KEEP: ""
   RES_SAMPLES: ""
-  RES_SITES: ""
   CPU: ""
 title: "`r paste(params$TITLE)`"
 ---
@@ -23,43 +24,8 @@ title: "`r paste(params$TITLE)`"
 knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
 ```
 
-## Introduction
-
-Here we're exploring genotype concordance between SNPchip and WGS data for the
-TOB-WGS project. We have been provided with one multi-sample VCF file containing
-genotype calls from the SNPchip data (`onek1k_pre_imputation_genotypes.vcf.gz`),
-and several single-sample GVCF files containing genotype calls from the WGS data
-(merged into a Hail [MatrixTable](https://hail.is/docs/0.2/hail.MatrixTable.html) (MT)
-for processing).
-
-The main steps for calculating concordance between the SNPchip and WGS data
-are:
-
-1. Rename the samples in the SNPchip VCF based on the
-   `OneK1K_sample_IDs_2021-Apr-15.xlsx` map of SNPchip IDs to TOB IDs
-   (provided in 2021-Apr-15).
-2. Convert the SNPchip VCF from the GRCh37 human genome assembly to GRCh38
-   using [Hail liftover] so that it's the same assembly as the WGS MT.
-3. Process the WGS sparse MT using:
-   - [Hail densify] which converts a sparse MT to a dense VCF-like
-     representation by expanding reference blocks. The `END` entry field of the MT
-     is dropped.
-   - [Hail lgt_to_gt] to transform LGT (local GT) into GT using local alleles array.
-   - [Hail split_multi_hts] to keep biallelic and multiallelic variants
-     (i.e. remove monoallelic variants);
-4. Use [Hail concordance] to calculate the concordance between the
-   SNPchip and WGS calls.
-
-[Hail liftover]: https://hail.is/docs/0.2/functions/genetics.html#hail.expr.functions.liftover
-[Hail split_multi_hts]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.split_multi_hts
-[Hail densify]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.densify
-[Hail lgt_to_gt]: https://hail.is/docs/0.2/experimental/vcf_combiner.html#hail.experimental.lgt_to_gt
-[Hail concordance]: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.concordance
-
-- Load required R packages:
-
 ```{r load_pkgs}
-library(dplyr, include.only = c("%>%", "select", "mutate", "tibble", "bind_rows"))
+library(dplyr, include.only = c("select", "mutate", "tibble", "bind_rows", "pull"))
 library(DT, include.only = c("datatable", "formatCurrency", "formatStyle", "styleColorBar"))
 library(glue, include.only = "glue")
 library(htmltools, include.only = c("tags", "div"))
@@ -76,7 +42,20 @@ use_condaenv("hailr", required = TRUE)
 
 ```{r read_params, eval=FALSE, echo=FALSE}
 # for interactive debugging
-params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
+# params <- rmarkdown::yaml_front_matter("concordance.Rmd")$params
+# d <- "data"
+d <- "/Users/peterd/projects/tob-wgs/nogit"
+params_tmp <- list(
+  local = list(
+    SNP_MT = glue("{d}/snpchip/processed/snpchip_grch38.mt"),
+    WGS_MT = glue("{d}/bucket/test/test-v1-raw.mt"),
+    SAMPLES_TO_KEEP = "samples_to_keep.tsv",
+    CHROM_TO_KEEP = "chr22",
+    RES_SAMPLES = "results1.tsv",
+    CPU = 8
+  )
+)
+params <- params_tmp[["local"]]
 ```
 
 ```{python hail_setup}
@@ -84,60 +63,34 @@ import hail as hl
 hl.init(default_reference='GRCh38', master=f'local[{r.params["CPU"]}]')
 ```
 
-## Step 1: Rename VCF samples
+## Analysis
 
-(Pre-executed once)
-
-```{r generate_id_map, eval=FALSE}
-chipid2tobid_tsv <- "chipid2tobid.tsv"
-
-"OneK1K_sample_IDs_2021-Apr-15.xlsx" %>%
-  read_excel(skip = 1) %>%
-  mutate(tob_id = glue("TOB{TOB_ID}")) %>%
-  select(sample = PERSON, tob_id) %>%
-  write_tsv(file = chipid2tobid_tsv, col_names = FALSE)
+```{r read_samples}
+samples_to_keep <-
+  params$SAMPLES_TO_KEEP |>
+  read_tsv(col_names = "sample", col_types = "c") |>
+  dplyr::pull(sample) |>
+  c("FAKE")
 ```
 
-```{r bcftools_reheader, eval=FALSE}
-vcf_reheader <- "snpchip_rehead_grch37.vcf.gz"
-system(glue("bcftools reheader ",
-            "-s {chipid2tobid_tsv} ",
-            "-o {vcf_reheader} ",
-            "onek1k_pre_imputation_genotypes.vcf.gz"))
-```
-
-## Step 2: Liftover from GRCh37 to GRCh38
-
-(Pre-executed once)
-
-```{python hail_liftover, eval=FALSE}
-def liftover(x, chain):
-    """
-    Liftover matrix table x from GRCh37 to GRCh38
-    """
-    rg37 = hl.get_reference('GRCh37')
-    rg38 = hl.get_reference('GRCh38')
-    rg37.add_liftover(chain, rg38)
-    x = x.annotate_rows(new_locus=hl.liftover(x.locus, 'GRCh38'))
-    x = x.filter_rows(hl.is_defined(x.new_locus))
-    x = x.key_rows_by(locus=x.new_locus)
-    return x
-
-# Liftover to GRCh38 and write
-mt = hl.import_vcf(r.vcf_reheader, reference_genome='GRCh37', force_bgz=True)
-mt = liftover(mt, 'grch37_to_grch38.over.chain.gz')
-mt.write('snpchip_rehead_grch38.mt', overwrite=True)
-```
-
-## Step 3: WGS MatrixTable pre-processing
+### Data processing
 
 ```{python hail_densify_split_multi}
 wgs = hl.read_matrix_table(r.params['WGS_MT'])
 snp = hl.read_matrix_table(r.params['SNP_MT']).key_rows_by('locus', 'alleles')
+wgs_samples = wgs.s.collect() # for table in the end
 
-##---- select chr22 ----#
-#wgs = wgs.filter_rows(wgs.locus.contig == 'chr22')
-#snp = snp.filter_rows(snp.locus.contig == 'chr22')
+##---- select chromosomes ----#
+valid_chrom = ['chr' + str(i) for i in range(1, 23)]
+chrom_to_keep = r.params['CHROM_TO_KEEP']
+if chrom_to_keep in valid_chrom:
+    print(f'Filtering by contig {chrom_to_keep}')
+    wgs = wgs.filter_rows(wgs.locus.contig == chrom_to_keep)
+    snp = snp.filter_rows(snp.locus.contig == chrom_to_keep)
+
+##---- select samples ----#
+wgs = wgs.filter_cols(hl.literal(r.samples_to_keep).contains(wgs['s']))
+samples_not_found_in_wgs = [x for x in r.samples_to_keep if x not in wgs_samples]
 
 #---- densify and lgt_to_gt ----#
 wgs = hl.experimental.densify(wgs)
@@ -156,7 +109,7 @@ wgs = wgs.annotate_entries(
 )
 ```
 
-## Step 4: Concordance calculation
+### Concordance calculation
 
 ```{python hail_concordance}
 global_conc, cols_conc, rows_conc = hl.concordance(snp, wgs)
@@ -202,13 +155,13 @@ get_mat_stats <- function(m) {
            `disc / snp` = disc_over_snp,
            `disc / wgs` = disc_over_wgs)
   }
-  m %>% mat_rename() %>% mat_conc_stats()
+  m |> mat_rename() |> mat_conc_stats()
 }
 
-res <- params$RES_SAMPLES %>%
-  read_tsv(col_types = "ccd") %>%
-  mutate(conc2 = map(concordance, ~fromJSON(.) %>% get_mat_stats)) %>%
-  unnest(conc2) %>%
+res <- params$RES_SAMPLES |>
+  read_tsv(col_types = "ccd") |>
+  mutate(conc2 = map(concordance, ~fromJSON(.) |> get_mat_stats())) |>
+  unnest(conc2) |>
   select(sample = s, `conc / snp`, `conc / wgs`,
          conc_tot, disc_tot,
          snp_tot, wgs_tot,
@@ -219,19 +172,35 @@ cap <- tags$caption(
   div("conc: concordant; disc: discordant;"),
   div("snp/wgs: snp and wgs datasets used in hail.concordance(snp, wgs)."),
   div("snp: SNP dataset; wgs: WGS dataset."))
-res %>%
-  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+```
+
+### Concordance table
+
+```{r concordance_table}
+res |>
+  mutate(across(where(is.numeric), ~round(.x, 4))) |>
   datatable(rownames = FALSE,
             caption = cap,
             class = "cell-border display compact",
             filter = list(position = "top", clear = FALSE, plain = TRUE),
             extensions = c("Scroller", "KeyTable", "Buttons"),
-            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 700,
-                           buttons = 'csv', keys = TRUE, dom = "Blfrtip")) %>%
-  formatStyle(res %>% select(where(is_double)) %>% names(),
+            options = list(scroller = TRUE, scrollX = TRUE, scrollY = 400,
+                           buttons = 'csv', keys = TRUE, dom = "Blfrtip")) |>
+  formatStyle(res |> select(where(is_double)) |> names(),
               background = styleColorBar(c(0, 1), "lightgreen"),
               backgroundSize = "90% 90%",
-              backgroundRepeat = "no-repeat", backgroundPosition = "center") %>%
-  formatCurrency(res %>% select(where(is_integer)) %>% names(),
+              backgroundRepeat = "no-repeat", backgroundPosition = "center") |>
+  formatCurrency(res |> select(where(is_integer)) |> names(),
                  currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+### Sample table
+
+```{r sample_table, warning=FALSE}
+cat("Samples in WGS MT:\n",
+    paste(sort(py$wgs_samples), collapse = ", "))
+cat("Samples selected for concordance check:\n",
+    paste(sort(samples_to_keep), collapse = ", "))
+cat("Samples selected for concordance check but not found in WGS MT:\n",
+    paste(sort(py$samples_not_found_in_wgs), collapse = ", "))
 ```

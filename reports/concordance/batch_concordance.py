@@ -5,22 +5,29 @@
 import os
 import hailtop.batch as hb
 
+CONCORDANCE_IMG = (
+    'australia-southeast1-docker.pkg.dev/peter-dev-302805/test/concordance:0.1.16'
+)
 
-def concordance(batch, snpmt, wgsmt, cpu):
+
+def concordance(batch, snpmt, wgsmt, samples, chrom, cpu):
     """
     Concordance between SNPchip and WGS samples
     """
     conc = batch.new_job(name='run-concordance')
-    conc.image('pdiakumis/concordance:0.1.14')
+    conc.image(CONCORDANCE_IMG)
     conc.cpu(cpu)
     conc.memory('lowmem')
     conc.storage('100G')
+    input_samples = batch.read_input(samples)
     conc.command(
         f"""
         set -e
         concordance \
           --snp {snpmt} \
           --wgs {wgsmt} \
+          --samples {input_samples} \
+          --chrom {chrom} \
           --res_samples {conc.res_samples_tsv} \
           --html {conc.html} \
           --cpu {cpu}
@@ -36,13 +43,15 @@ if __name__ == '__main__':
     )
     b = hb.Batch(backend=service_backend, name='concordance')
 
-    BUCKET = 'gs://cpg-tob-wgs-main'
+    BUCKET = 'gs://cpg-tob-wgs-test'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/v3-raw.mt'
+    WGS = f'{BUCKET}/mt/v4.mt'
+    SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
+    CHROM = 'chr22'
     CPU = 32
-    PREFIX = 'v3-raw_all'
+    PREFIX = f'v4_subset_samples_{CHROM}'
     HTML = f'{PREFIX}.html'
-    concordance = concordance(b, SNP, WGS, CPU)
+    concordance = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(
         concordance.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
