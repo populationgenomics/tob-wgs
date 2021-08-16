@@ -15,15 +15,19 @@ p <- add_argument(p,
 p <- add_argument(p,
                   arg = "--wgs",
                   help = "Path to input WGS MatrixTable.")
+p <-  add_argument(p,
+                  arg = "--samples",
+                  help = "Path to single-column TSV file containing samples to check for concordance.")
+p <-  add_argument(p,
+                   arg = "--chrom",
+                   default = "chr22",
+                   help = "Chromosome subset to filter the WGS MatrixTable on (one of chr1-chr22, or anything else for no filtering).")
 p <- add_argument(p,
                   arg = "--html",
                   help = "Path to output HTML report.")
 p <- add_argument(p,
                   arg = "--res_samples",
                   help = "Path to output TSV file with per sample concordance results.")
-p <- add_argument(p,
-                  arg = "--res_sites",
-                  help = "Path to output TSV file with per site concordance results (big file).")
 p <- add_argument(p,
                   arg = "--cpu",
                   help = "Number of CPU cores to use with Hail.")
@@ -33,7 +37,8 @@ params_list <- list(
   WGS_MT = a$wgs,
   SNP_MT = a$snp,
   RES_SAMPLES = a$res_samples,
-  RES_SITES = a$res_sites,
+  SAMPLES_TO_KEEP = a$samples,
+  CHROM_TO_KEEP = a$chrom,
   CPU = a$cpu
 )
 
