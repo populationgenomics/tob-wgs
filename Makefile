@@ -2,7 +2,7 @@ VERSION := v4
 TEST_VERSION := v6-2
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
-ANALYSIS_PROJEC := tob-wgs
+ANALYSIS_PROJECT := tob-wgs
 REUSE_ARG := --reuse
 
 .PHONY: joint_calling_update_submodule
@@ -23,8 +23,8 @@ joint_calling_test_to_tmp:
 	--from test \
 	--to tmp \
 	--batch batch1 \
-	--analysis-project $(CALLSET) \
-	--version ${TEST_VERSION} \
+	--analysis-project $(ANALYSIS_PROJECT) \
+	--dataset-version ${TEST_VERSION} \
 	--keep-scratch \
 	$(REUSE_ARG)
 
@@ -40,8 +40,8 @@ joint_calling_test_to_test:
 	--from test \
 	--to test \
 	--batch batch1 \
-	--callset $(ANALYSIS_PROJECT) \
-	--version $(VERSION) \
+	--analysis-project $(ANALYSIS_PROJECT) \
+	--dataset-version $(VERSION) \
 	--keep-scratch \
 	$(REUSE_ARG)
 
@@ -57,6 +57,6 @@ joint_calling_main_to_main:
 	--batch batch1 --batch batch2 --batch batch3 --batch batch4 --batch batch5 --batch batch6 --batch batch7 \
 	--from main \
 	--to main \
-	--callset $(ANALYSIS_PROJECT) \
-	--version $(VERSION) \
+	--analysis-project $(ANALYSIS_PROJECT) \
+	--dataset-version $(VERSION) \
 	$(REUSE_ARG)
