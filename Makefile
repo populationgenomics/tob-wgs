@@ -1,5 +1,5 @@
-VERSION := v4
-TEST_VERSION := v6-2
+VERSION := v5
+TEST_VERSION := v6-4
 SCATTER_COUNT_TEST := 10
 SCATTER_COUNT_PROD := 100
 ANALYSIS_PROJECT := tob-wgs
@@ -24,6 +24,7 @@ joint_calling_test_to_tmp:
 	--to tmp \
 	--batch batch1 \
 	--analysis-project $(ANALYSIS_PROJECT) \
+	--input-project tob-wgs \
 	--dataset-version ${TEST_VERSION} \
 	--keep-scratch \
 	$(REUSE_ARG)
