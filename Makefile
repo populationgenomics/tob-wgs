@@ -41,6 +41,7 @@ joint_calling_test_to_test:
 	--to test \
 	--batch batch1 \
 	--analysis-project $(ANALYSIS_PROJECT) \
+	--input-project tob-wgs \
 	--dataset-version $(VERSION) \
 	--keep-scratch \
 	$(REUSE_ARG)
@@ -58,5 +59,6 @@ joint_calling_main_to_main:
 	--from main \
 	--to main \
 	--analysis-project $(ANALYSIS_PROJECT) \
+	--input-project tob-wgs \
 	--dataset-version $(VERSION) \
 	$(REUSE_ARG)
