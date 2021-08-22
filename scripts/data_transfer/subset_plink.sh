@@ -34,7 +34,7 @@ PLINK_UPLOAD_DIR="gs://cpg-tob-wgs-main-upload/one1k1_genotyping_all_regions"
 SUBSET_DIR="subset_20samples"
 OUTPUT_BUCKET="gs://cpg-tob-wgs-main/snpchip/v1/plink"
 gsutil -m cp "${PLINK_UPLOAD_DIR}/*" .
-mkdir -p ${PLINK_SUBSET_DIR}
+mkdir -p ${SUBSET_DIR}
 
 plink \
     --bfile onek1k \
