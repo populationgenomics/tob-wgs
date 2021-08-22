@@ -50,10 +50,11 @@ plink \
 
 gsutil -m cp "${SUBSET_DIR}/*" ${OUTPUT_TEST}
 
+# Copy to 'test'
 README_TEST="OneK1K SNPchip data in Plink format, provided 2021-Jul-20 by GWCCG (subset to 20 samples for test bucket)."
 echo ${README_TEST} | gsutil cp - ${OUTPUT_TEST}/README.txt
 
-# Move to 'main'.
+# Move full dataset to 'main'.
 gsutil -m mv ${INPUT_PATH} ${OUTPUT_MAIN}
 README_MAIN="OneK1K SNPchip data in Plink format, provided 2021-Jul-20 by GWCCG."
 echo ${README_MAIN} | gsutil cp - ${OUTPUT_MAIN}/README.txt
