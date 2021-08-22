@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -ex
+
 # Copy Plink files from main-upload to main,
 # and transfer a subset to test.
 
@@ -31,7 +33,7 @@ EOF
 PLINK_UPLOAD_DIR="gs://cpg-tob-wgs-main-upload/one1k1_genotyping_all_regions"
 SUBSET_DIR="subset_20samples"
 OUTPUT_BUCKET="gs://cpg-tob-wgs-main/snpchip/v1/plink"
-gsutil -m cp "${PLINK_UPLOADED_DIR}/*" .
+gsutil -m cp "${PLINK_UPLOAD_DIR}/*" .
 mkdir -p ${PLINK_SUBSET_DIR}
 
 plink \
