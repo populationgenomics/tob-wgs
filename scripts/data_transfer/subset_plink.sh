@@ -2,6 +2,8 @@
 
 set -ex
 
+micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c bioconda -c conda-forge plink
+
 # Copy Plink files from main-upload to main,
 # and transfer a subset to test.
 
