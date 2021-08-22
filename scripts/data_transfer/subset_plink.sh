@@ -40,7 +40,7 @@ plink \
     --make-bed \
     --out  ${SUBSET_DIR}/onek1k
 
-gsutil -m cp "${SUBSET_DIR}/*" ${OUTPUT_BUCKET}
+gsutil -m cp "${SUBSET_DIR}/*" ${OUTPUT_BUCKET}/
 
 DESCRIPTION="OneK1K SNPchip data in Plink format, provided 2021-Jul-20 by GWCCG,\nsubset to 20 samples for test bucket."
 printf ${DESCRIPTION} | gsutil cp - ${OUTPUT_BUCKET}/README.txt
