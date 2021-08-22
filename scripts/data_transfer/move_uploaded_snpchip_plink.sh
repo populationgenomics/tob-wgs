@@ -30,7 +30,7 @@ cat > ${SAMPLES_FILE} << EOF
 55 55
 56 56
 57 57
-58 58
+25 25
 EOF
 
 INPUT_PATH="gs://cpg-tob-wgs-main-upload/one1k1_genotyping_all_regions"
