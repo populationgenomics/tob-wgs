@@ -10,6 +10,9 @@ micromamba install -y --prefix $MAMBA_ROOT_PREFIX -y -c bioconda -c conda-forge 
 
 SAMPLES_FILE="samples_to_keep.txt"
 
+# Following SNPchip Family + Individual IDs correspond
+# to TOB sample IDs in gs://cpg-tob-wgs-test/mt/v4.mt
+
 cat > ${SAMPLES_FILE} << EOF
 39 39
 40 40
