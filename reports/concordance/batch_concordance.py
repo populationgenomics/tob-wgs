@@ -45,11 +45,11 @@ if __name__ == '__main__':
 
     BUCKET = 'gs://cpg-tob-wgs-main'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
-    WGS = f'{BUCKET}/mt/v4.mt'
+    WGS = f'{BUCKET}/mt/v5.1-nonref.mt'
     SAMPLES = 'gs://cpg-tob-wgs-test/pdiakumis/concordance/samples_to_keep.tsv'
     CHROM = 'chr22'
     CPU = 32
-    PREFIX = f'v4_subset_samples_{CHROM}'
+    PREFIX = f'v5_subset_samples_{CHROM}'
     HTML = f'{PREFIX}.html'
     concordance = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
     b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
