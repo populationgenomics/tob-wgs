@@ -14,7 +14,7 @@ params:
   meta_tsv: "work/meta.tsv"
   namespace: "test"
   dataset: "TOB-WGS"
-  new_batches: "tob-wgs-1-PBMC,tob-wgs-2-PBMC,tob-wgs-1-bone-marrow,tob-wgs-2-bone-marrow"
+  new_batches: "PBMC,Pilot/bone marrow"
 title: "`r paste(params$title, params$dataset)`"
 editor_options: 
   chunk_output_type: console
@@ -91,31 +91,42 @@ meta <- params$meta_tsv %>%
   )
 
 meta = meta %>% mutate(
+  reported_sex = case_when(
+    as.character(reported_sex) == "1" ~ "M", 
+    as.character(reported_sex) == "2" ~ "F", 
+    TRUE ~ "unknown"
+  )
+)
+
+meta = meta %>% mutate(
   batch = ifelse(
     project == "giab" | project == "syndip",
     "validation",
-    str_c(project, '-', batch)
+    str_c("batch", batch %>% str_pad(2, pad="0"))
   ),
   batch = ifelse(
     resequencing_label != "-",
-    str_c(batch, "-", resequencing_label),
+    resequencing_label,
     batch
   ),
   batch = ifelse(
-    primary_study == "Pilot/bone marrow",
-    str_c(batch, "-bone-marrow"),
+    primary_study != "TOB",
+    primary_study,
     batch
   )
 )
 
 meta = meta %>% mutate(
-  sample = ifelse(resequencing_label != "-"),
-  str_c(sample, "-", resequencing_label),
-  sample
+  sample = ifelse(
+    resequencing_label != "-",
+    str_c(sample, "-", resequencing_label),
+    sample
+  )
 )
 
 meta = meta %>% mutate(
-  is_new_batch = batch %in% (str_split(params$new_batches, ",") %>% unlist)
+  is_new_batch = batch %in% (str_split(params$new_batches, ",") %>% unlist),
+  highlighted_batch = if_else(is_new_batch, batch, "Other samples")
 )
 
 p_data <- meta %>%
@@ -132,8 +143,7 @@ p_data <- meta %>%
     Quality = ifelse(high_quality, "High quality", "Low quality"),
     `New batches` = ifelse(is_new_batch, "New batches", "Other batches"),
     value_round = round(value, 3),
-    label = if_else(is_outlier(value) | !high_quality, glue("{sample} ({value_round})"), NA_character_),
-    highlighted_batch = if_else(is_new_batch, batch, "Other samples")
+    label = if_else(is_outlier(value) | !high_quality, glue("{sample} ({value_round})"), NA_character_)
   )
 
 cutoffs <-
@@ -169,7 +179,7 @@ qc_plot_global <- p_data %>%
     group = metric,
     colour = Quality, 
     shape = `New batches`,
-    alpha = `New batches`,
+    # alpha = `New batches`,
     size = `New batches`
   ), seed = 42) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
@@ -189,8 +199,8 @@ qc_plot_global <- p_data %>%
   scale_colour_manual(values = c("High quality" = "#00BFC4", "Low quality" = "#F8766D")) +
   # http://www.sthda.com/english/wiki/ggplot2-point-shapes
   scale_shape_manual(values = c("Other batches" = 20, "New batches" = 4)) +
-  scale_alpha_manual(values = c("Other batches" = 0.5, "New batches" = 1)) +
-  scale_size_manual(values = c("Other batches" = 0.3, "New batches" = 1))
+  # scale_alpha_manual(values = c("Other batches" = 0.5, "New batches" = 1)) +
+  scale_size_manual(values = c("Other batches" = 0.5, "New batches" = 1.5))
 
 toWebGL(ggplotly(qc_plot_global))
 ```
@@ -201,11 +211,12 @@ Samples with a high contamination rate:
 meta %>% 
   filter(!high_quality) %>% 
   filter(str_detect(hard_filters, "contamination")) %>%
-  arrange(batch, contamination) %>% 
+  arrange(batch, -contamination) %>% 
   mutate(contamination = str_c(
     format(contamination * 100, digits=2, nsmall=2), '%')
   ) %>% 
-  select(batch, sample, contamination)
+  select(batch, sample, contamination) %>% 
+  reactable()
 ```
 
 Other samples failed QC:
@@ -217,15 +228,15 @@ meta %>%
   arrange(batch) %>% 
   mutate(`Sex inferred / reported` = str_c(sex_karyotype, "/", reported_sex)) %>% 
   mutate(chimeras = str_c(format(chimeras * 100, digits=2, nsmall=2), '%')) %>% 
-  select(batch, sample, hard_filters, `Sex inferred / reported`, chimeras, age)
+  select(batch, sample, hard_filters, `Sex inferred / reported`, chimeras, age) %>% 
+  reactable()
 ```
 
 Same data grouped by batch:
 
 ```{r plot_size_setup2}
 n_batches <- length(unique(p_data$highlighted_batch))
-
-plot_width <- n_batches * 3
+plot_width <- n_batches * 2.7
 plot_height <- n_metrics * 3
 ```
 
@@ -240,7 +251,15 @@ batch_count_labels <- meta %>%
 qc_plot_per_batch <- p_data %>%
   ggplot(aes(x = "", y = value, label = sample)) +
   geom_violin(fill = "transparent", colour = "grey80", alpha = 0.4) +
-  geom_sina(aes(colour = Quality, group = metric), seed = 42, size = 0.8) +
+  geom_sina(
+    aes(
+      colour = Quality, 
+      group = metric, 
+      size = Quality, 
+      shape = Quality
+    ), 
+    seed = 42
+  ) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(
@@ -248,6 +267,9 @@ qc_plot_per_batch <- p_data %>%
     labeller = labeller(highlighted_batch = as_labeller(batch_count_labels))
   ) +
   scale_y_continuous(breaks = breaks_pretty(8)) +
+  scale_colour_manual(values = c("High quality" = "#00BFC4", "Low quality" = "#F8766D")) +
+  scale_size_manual(values = c("High quality" = 0.5, "Low quality" = 0.8)) +
+  scale_shape_manual(values = c("High quality" = 20, "Low quality" = 4)) +
   theme(
     axis.ticks.x = element_blank(),
     axis.text.x = element_blank(),
@@ -260,7 +282,7 @@ qc_plot_per_batch <- p_data %>%
 toWebGL(ggplotly(qc_plot_per_batch))
 ```
 
-Table listing all `r nrow(all_data)` samples in `r n_batches` batches:
+Table listing all `r nrow(meta)` samples in `r n_batches` batches:
 
 ```{r}
 bar_style <- function(width = 1, fill = "#e6e6e6", height = "75%", align = c("left", "right"), color = NULL) {
@@ -480,34 +502,97 @@ data %>%
 
 ## Sex ploidies
 
+Samples with mismatching sex, sex aneuploidy or not enough data to unambigously infer sex:
+
 ```{r}
 sex_data = meta %>%
-  mutate(sex_mismatched = ifelse(reported_sex == "F" & sex_karyotype != "XX" | reported_sex == "M"&& sex_karyotype != "XY", T, F)) %>%
+  mutate(
+    sex_mismatched = ifelse(
+      (reported_sex == "F" & sex_karyotype != "XX") | 
+      (reported_sex == "M" & sex_karyotype != "XY"), 
+      T, 
+      F
+    ),
+    sex_aneuploidy = !is.na(hard_filters) & str_detect(hard_filters, "sex_aneuploidy"),
+    ambiguous_sex = !is.na(hard_filters) & str_detect(hard_filters, "ambiguous_sex"),
+    bad_sex = (sex_mismatched | sex_aneuploidy | ambiguous_sex)
+  ) %>%
   select(
     sex_mismatched,
+    sex_aneuploidy,
+    ambiguous_sex,
+    bad_sex,
+    hard_filters,
     sample,
+    batch,
     `X ploidy` = chrX_ploidy,
     `Y ploidy` = chrY_ploidy,
     karyotype = sex_karyotype,
     `reported sex` = reported_sex,
     age
   ) %>%
-  mutate(label = ifelse(sex_mismatched, glue("{sample}, {karyotype}, age: {age}"), NA_character_)) %>%
-  arrange(sex_mismatched)
+  mutate(
+    label = ifelse(
+      bad_sex,
+      glue("{batch}/{sample}, {karyotype}"), 
+      NA_character_
+    ),
+    label = ifelse(
+      is.na(label) | is.nan(age),
+      label,
+      glue("{label}, age: {age}")
+    ),
+    label = ifelse(
+      !is.na(label) & (sex_aneuploidy | ambiguous_sex),
+      glue("{label}, hard_filters: {hard_filters}"),
+      label
+    )
+  ) %>%
+  arrange(bad_sex)
+
+sex_data %>% 
+  filter(bad_sex) %>% 
+  mutate(
+    `sex inferred/reported` = str_c(karyotype, "/", `reported sex`)
+  ) %>% 
+  select(
+     batch,
+    sample,
+    `sex inferred/reported`,
+    `X ploidy`,
+    `Y ploidy`,
+    hard_filters
+  ) %>% 
+  arrange(batch) %>% 
+  reactable()
 ```
 
 X ploidy vs Y ploidy. Highlighted samples with mismatched reported and inferred sex, or basically anything but XX/F or XY/M.
 
 ```{r}
-sex_data %>% ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) +
+sex_data %>% 
+  ggplot(aes(x = `X ploidy`, y = `Y ploidy`, color = `reported sex`)) +
   geom_point(size = 0.6) +
-  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
+  geom_text_repel(
+    aes(label = label), 
+    color = "black", 
+    na.rm = TRUE, 
+    max.overlaps = NA,
+    size = 2.3
+  )
 ```
 
 Y ploidy vs age. Samples with mismatched reported and inferred sex are labelled. chrY degrades with age, so low chrY ploidies for older males are expected (though not high chrX ploidies).
 
 ```{r}
-sex_data %>% ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) +
+sex_data %>% 
+  ggplot(aes(y = `Y ploidy`, x = age, color = `reported sex`)) +
   geom_point(size = 0.6) +
-  geom_text_repel(aes(label = label), color = "black", na.rm = TRUE, size = 2.3)
+  geom_text_repel(
+    aes(label = label), 
+    color = "black", 
+    na.rm = TRUE, 
+    max.overlaps = NA,
+    size = 2.3
+  )
 ```

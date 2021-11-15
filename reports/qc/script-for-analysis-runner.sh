@@ -23,7 +23,7 @@ case $key in
 	NEWBATCHES="$2"
     shift # past argument
     shift # past value
-	)
+    ;;
     -v|--version)
     VERSION="$2"
     shift # past argument
