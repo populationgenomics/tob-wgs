@@ -558,7 +558,7 @@ plot_height <- 7
 ```
 
 ```{r dup_rate_flowcell, fig.width=5, fig.height=4}
-p_data_flowcell = p_data
+p_data_flowcell = p_data %>% 
   filter(flowcell_lane != "-") %>% 
   mutate(
     flowcell_lane_data = str_split(flowcell_lane, "\\."),
