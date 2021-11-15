@@ -87,9 +87,10 @@ meta <- params$meta_tsv %>%
     duplicates = r_duplication,
     `insert size median` = median_insert_size,
     reported_sex = sex,
-    age = age
+    age = age,
+    flowcell_lane = flowcell_lane
   )
-
+  
 meta = meta %>% mutate(
   reported_sex = case_when(
     as.character(reported_sex) == "1" ~ "M", 
@@ -422,84 +423,6 @@ data %>%
   )
 ```
 
-<!-- ## Lanes and flowcells -->
-
-<!-- Sample counts per flowcell-lane ID: -->
-
-<!-- ```{r flowcell_lane_count_plot} -->
-<!-- qc_kccg %>% -->
-<!--   count(flowcell_lane) %>% -->
-<!--   ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) + -->
-<!--   geom_bar(stat = "identity", fill = "grey70") + -->
-<!--   geom_text(aes(label = n), hjust=-0.25) + -->
-<!--   xlab("Flowcell lane") + -->
-<!--   coord_flip() -->
-<!-- ``` -->
-
-<!-- ## Duplication rate -->
-
-<!-- Duplication rate against the flowcell and batch, grouped by batch. Lane numbers -->
-<!-- are dropped, and for samples with multiple flowcell IDs, only the first one is -->
-<!-- used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2). -->
-
-<!-- ```{r plot_size_setup3} -->
-<!-- plot_width <- 7 -->
-<!-- plot_height <- 7 -->
-<!-- ``` -->
-
-<!-- ```{r dup_rate_flowcell, fig.width=5, fig.height=4} -->
-<!-- plot_dup_rate_flowcell <- p_data %>% -->
-<!--   filter(metric == "duplicates") %>% -->
-<!--   ggplot(aes(x = "", y = value, label = sample, group = metric)) + -->
-<!--   geom_violin(fill = "transparent") + -->
-<!--   geom_sina(aes(colour = flowcell1), seed = 42) + -->
-<!--   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) + -->
-<!--   scale_y_continuous(breaks = breaks_pretty(8)) + -->
-<!--   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), -->
-<!--         panel.grid.major.x = element_blank(), -->
-<!--         panel.grid.minor.x = element_blank()) + -->
-<!--   facet_wrap(~batch) + -->
-<!--   scale_color_manual( -->
-<!--     values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7", -->
-<!--                "#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD", -->
-<!--                "#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D", -->
-<!--                "#8A7C64", "#599861")) + -->
-<!--   ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) + -->
-<!--   xlab("") + -->
-<!--   ylab('Duplication rate') -->
-<!-- toWebGL(ggplotly(plot_dup_rate_flowcell)) -->
-<!-- ``` -->
-
-<!-- Duplication rate against the flowcell and batch, grouped by flowcell. -->
-<!-- Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them. -->
-
-<!-- ```{r plot_size_setup4} -->
-<!-- plot_width <- 8 -->
-<!-- plot_height <- 8 -->
-<!-- ``` -->
-
-<!-- ```{r fig.width=5, fig.height=4} -->
-<!-- lanes_with_more_than_2_samples <- all_data %>% -->
-<!--   group_by(flowcell1) %>% -->
-<!--   tally %>% -->
-<!--   filter(n > 2) %>% pull(flowcell1) %>% unique() -->
-
-<!-- p_data %>% -->
-<!--   filter(metric == 'duplicates') %>% -->
-<!--   filter(flowcell1 %in% lanes_with_more_than_2_samples) %>% -->
-<!--   ggplot(aes(x = "", y = value, label = label, group = metric)) + -->
-<!--   geom_violin(fill = "transparent") + -->
-<!--   geom_sina(aes(colour = batch), seed = 42) + -->
-<!--   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) + -->
-<!--   scale_y_continuous(breaks = breaks_pretty(8)) + -->
-<!--   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), -->
-<!--         panel.grid.major.x = element_blank(), -->
-<!--         panel.grid.minor.x = element_blank()) + -->
-<!--   facet_wrap(~flowcell1) + -->
-<!--   ggtitle(glue("Duplication rate grouped by flowcell, colored by batch")) + -->
-<!--   xlab("") + ylab('Duplication rate') -->
-<!-- ``` -->
-
 ## Sex ploidies
 
 Samples with mismatching sex, sex aneuploidy or not enough data to unambigously infer sex:
@@ -595,4 +518,103 @@ sex_data %>%
     max.overlaps = NA,
     size = 2.3
   )
+```
+
+
+## Lanes and flowcells
+
+Sample counts per flowcell-lane ID:
+
+```{r flowcell_lane_count_plot}
+flowcell_meta = meta %>% 
+  filter(flowcell_lane != "-") %>% 
+  mutate(
+    flowcell_lane_data = str_split(flowcell_lane, "\\."),
+    flowcell1 = map_chr(flowcell_lane_data, 1),
+    lanes1 = map_chr(flowcell_lane_data, 2),
+    flowcell2 = map_chr(flowcell_lane_data, 3, .default = NA_character_),
+    lanes2 = map_chr(flowcell_lane_data, 4, .default = NA_character_)
+  ) %>% 
+  select(-flowcell_lane_data)
+
+flowcell_meta %>%
+  count(flowcell_lane) %>%
+  ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "grey70") +
+  geom_text(aes(label = n), hjust=-0.25) +
+  xlab("Flowcell lane") +
+  coord_flip()
+```
+
+## Duplication rate
+
+Duplication rate against the flowcell and batch, grouped by batch. Lane numbers
+are dropped, and for samples with multiple flowcell IDs, only the first one is
+used (e.g. H2WCNDSX2.1-2-3-4.H2WCTDSX2.1-2-3-4 becomes H2WCNDSX2).
+
+```{r plot_size_setup3}
+plot_width <- 7
+plot_height <- 7
+```
+
+```{r dup_rate_flowcell, fig.width=5, fig.height=4}
+p_data_flowcell = p_data
+  filter(flowcell_lane != "-") %>% 
+  mutate(
+    flowcell_lane_data = str_split(flowcell_lane, "\\."),
+    flowcell1 = map_chr(flowcell_lane_data, 1)
+  )
+  
+p_dup_rate_flowcell <- p_data_flowcell %>%
+  filter(metric == "duplicates") %>%
+  ggplot(aes(x = "", y = value, label = sample, group = metric)) +
+  geom_violin(fill = "transparent") +
+  geom_sina(aes(colour = flowcell), seed = 42) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
+  theme(
+    axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()) +
+  facet_wrap(~batch) +
+  scale_color_manual(
+    values = c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717C", "#CBD588", "#5F7FC7",
+               "#673770", "#D3D93E", "#38333E", "#508578", "#D7C1B1", "#689030", "#AD6F3B", "#CD9BCD",
+               "#D14285", "#6DDE88", "#652926", "#7FDCC0", "#C84248", "#8569D5", "#5E738F", "#D1A33D",
+               "#8A7C64", "#599861")) +
+  ggtitle(glue("Duplication rate groupped by batch, colored by flowcell")) +
+  xlab("") +
+  ylab('Duplication rate')
+
+toWebGL(ggplotly(p_dup_rate_flowcell))
+```
+
+Duplication rate against the flowcell and batch, grouped by flowcell.
+Flowcell IDs with <= 2 samples are removed, because the violin plots  don't work for them.
+
+```{r plot_size_setup4}
+plot_width <- 8
+plot_height <- 8
+```
+
+```{r fig.width=5, fig.height=4}
+lanes_with_more_than_2_samples <- flowcell_meta %>%
+  group_by(flowcell1) %>%
+  tally %>%
+  filter(n > 2) %>% pull(flowcell1) %>% unique()
+
+p_data_flowcell %>%
+  filter(metric == 'duplicates') %>%
+  filter(flowcell1 %in% lanes_with_more_than_2_samples) %>%
+  ggplot(aes(x = "", y = value, label = label, group = metric)) +
+  geom_violin(fill = "transparent") +
+  geom_sina(aes(colour = batch), seed = 42) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
+  scale_y_continuous(breaks = breaks_pretty(8)) +
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  facet_wrap(~flowcell1) +
+  ggtitle(glue("Duplication rate grouped by flowcell, colored by batch")) +
+  xlab("") + ylab('Duplication rate')
 ```
