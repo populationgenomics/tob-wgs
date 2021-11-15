@@ -569,7 +569,7 @@ p_dup_rate_flowcell <- p_data_flowcell %>%
   filter(metric == "duplicates") %>%
   ggplot(aes(x = "", y = value, label = sample, group = metric)) +
   geom_violin(fill = "transparent") +
-  geom_sina(aes(colour = flowcell), seed = 42) +
+  geom_sina(aes(colour = flowcell1), seed = 42) +
   geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   scale_y_continuous(breaks = breaks_pretty(8)) +
   theme(
