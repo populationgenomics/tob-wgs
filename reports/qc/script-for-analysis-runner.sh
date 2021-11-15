@@ -19,11 +19,11 @@ case $key in
     TMP=YES
     shift
     ;;
-    -b|--batch)
-    BATCH="$2"
+    --new-batches)
+	NEWBATCHES="$2"
     shift # past argument
     shift # past value
-    ;;
+	)
     -v|--version)
     VERSION="$2"
     shift # past argument
@@ -38,28 +38,25 @@ if [[ $ANALYSIS_RUNNER = "YES" ]] ; then
 fi
 
 function run() {
-	local batch=$1
-	local namespace=$2
-	local joint_calling_run_version=$3
+	local namespace=$1
+	local joint_calling_run_version=$2
+	local new_batches=$3
 	local dir=work
 
-	test -f ${dir}/reported_sex.tsv || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/reported_sex.tsv" ${dir}/reported_sex.tsv
-	test -f ${dir}/age.csv          || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/age.csv" ${dir}/age.csv
-	test -f ${dir}/qc.csv           || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/${batch}/*.csv" ${dir}/qc.csv
 	if [[ $TMP = "YES" ]]
 	then
-		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-test-tmp/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
+		META_TSV_PATH="gs://cpg-tob-wgs-${namespace}-tmp/analysis/joint-calling/${joint_calling_run_version}/meta.tsv"
 	else
-		test -f ${dir}/meta.tsv     || gsutil cp "gs://cpg-tob-wgs-${namespace}-metadata/joint-calling/${joint_calling_run_version}/meta.tsv" ${dir}/meta.tsv
+		META_TSV_PATH="gs://cpg-tob-wgs-${namespace}-analysis/joint-calling/${joint_calling_run_version}/meta.tsv"
 	fi
+	test -f ${dir}/meta.tsv || gsutil cp ${META_TSV_PATH} ${dir}/meta.tsv
+
 	cat qc.Rmd | sed 's/ fig.width=[1-9]*, fig.height=[1-9]*/ fig.width=plot_width, fig.height=plot_height/g' > qc-for-html.Rmd
 	R --vanilla <<code
 rmarkdown::render('qc-for-html.Rmd', output_file='qc.html', params=list(\
-reported_sex_tsv='${dir}/reported_sex.tsv', \
-age_csv='${dir}/age.csv', \
-qc_csv='${dir}/qc.csv', \
 meta_tsv='${dir}/meta.tsv', \
-namespace='${namespace}'
+namespace='${namespace}', \
+new_batches='${new_batches}'
 ))
 code
 	rm qc-for-html.Rmd
@@ -72,9 +69,9 @@ code
 
 if [[ $PROD = "YES" ]]
 then
-	run $BATCH main $VERSION
+	run main $VERSION $NEWBATCHES
 else
-	run $BATCH test $VERSION
+	run test $VERSION $NEWBATCHES
 fi
 
 set +x
