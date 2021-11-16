@@ -144,7 +144,11 @@ p_data <- meta %>%
     Quality = ifelse(high_quality, "High quality", "Low quality"),
     `New batches` = ifelse(is_new_batch, "New batches", "Other batches"),
     value_round = round(value, 3),
-    label = if_else(is_outlier(value) | !high_quality, glue("{sample} ({value_round})"), NA_character_)
+    label = if_else(
+      is_outlier(value) | !high_quality, 
+      glue("{sample} ({value_round})"), 
+      NA_character_
+    )
   )
 
 cutoffs <-
@@ -180,9 +184,9 @@ qc_plot_global <- p_data %>%
     group = metric,
     colour = Quality, 
     shape = `New batches`,
-    # alpha = `New batches`,
     size = `New batches`
   ), seed = 42) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color = "red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color = "blue") +
   facet_wrap(~metric, scales = "free", nrow = 2) +
@@ -193,17 +197,15 @@ qc_plot_global <- p_data %>%
     panel.grid.minor.x = element_blank()
   ) +
   labs(
-    title = glue("QC metrics (for {length(unique(p_data$sample))} samples)."),
-    subtitle = "Click on legend values to show/hide points."
+    title = glue("QC metrics (for {length(unique(p_data$sample))} samples).")
   ) +
   xlab("") +
   scale_colour_manual(values = c("High quality" = "#00BFC4", "Low quality" = "#F8766D")) +
   # http://www.sthda.com/english/wiki/ggplot2-point-shapes
   scale_shape_manual(values = c("Other batches" = 20, "New batches" = 4)) +
-  # scale_alpha_manual(values = c("Other batches" = 0.5, "New batches" = 1)) +
   scale_size_manual(values = c("Other batches" = 0.5, "New batches" = 1.5))
 
-toWebGL(ggplotly(qc_plot_global))
+qc_plot_global
 ```
 
 Samples with a high contamination rate:
@@ -220,7 +222,7 @@ meta %>%
   reactable()
 ```
 
-Other samples failed QC:
+Other samples failed QC (excluding sex mismatches, which is reported further below):
 
 ```{r}
 meta %>% 
@@ -249,6 +251,9 @@ batch_count_labels <- meta %>%
   select(highlighted_batch, facet_label) %>%
   deframe()
 
+highlighted_batches_n = length(unique(p_data$highlighted_batch)) - 1
+other_batches_n = length(unique(p_data$batch)) - highlighted_batches_n
+
 qc_plot_per_batch <- p_data %>%
   ggplot(aes(x = "", y = value, label = sample)) +
   geom_violin(fill = "transparent", colour = "grey80", alpha = 0.4) +
@@ -261,6 +266,7 @@ qc_plot_per_batch <- p_data %>%
     ), 
     seed = 42
   ) +
+  geom_text_repel(color = "black", na.rm = TRUE, size = 2.3) +
   geom_hline(data = cutoffs, aes(yintercept = upper_lim), color="red") +
   geom_hline(data = cutoffs, aes(yintercept = lower_lim), color="blue") +
   facet_grid(
@@ -277,10 +283,16 @@ qc_plot_per_batch <- p_data %>%
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
   ) +
-  ggtitle(glue("QC metrics by batch (for {length(unique(p_data$sample))} samples).")) +
+  labs(
+    title = "QC metrics by batch",
+    subtitle = glue(
+      "Showing {highlighted_batches_n} batches, and other {other_batches_n} batches ",
+      "groupped under 'Other samples'"
+    )
+  ) +
   xlab("")
 
-toWebGL(ggplotly(qc_plot_per_batch))
+qc_plot_per_batch
 ```
 
 Table listing all `r nrow(meta)` samples in `r n_batches` batches:
@@ -438,7 +450,7 @@ sex_data = meta %>%
     ),
     sex_aneuploidy = !is.na(hard_filters) & str_detect(hard_filters, "sex_aneuploidy"),
     ambiguous_sex = !is.na(hard_filters) & str_detect(hard_filters, "ambiguous_sex"),
-    bad_sex = (sex_mismatched | sex_aneuploidy | ambiguous_sex)
+    bad_sex = is_new_batch & (sex_mismatched | sex_aneuploidy | ambiguous_sex)
   ) %>%
   select(
     sex_mismatched,
@@ -539,6 +551,7 @@ flowcell_meta = meta %>%
 
 flowcell_meta %>%
   count(flowcell_lane) %>%
+  filter(n > 6) %>% 
   ggplot(aes(x = reorder(flowcell_lane, -n), y = n)) +
   geom_bar(stat = "identity", fill = "grey70") +
   geom_text(aes(label = n), hjust=-0.25) +
