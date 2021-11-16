@@ -6,7 +6,7 @@ Generate a test report and put it into the `test-web` bucket. The report will be
 analysis-runner \
    --dataset tob-wgs \
    --access-level test \
-   --output-dir "gs://cpg-tob-wgs-test-tmp/qc-report" \
+   --output-dir "qc-report" \
    --description "QC report test" \
 script-for-analysis-runner.sh \
    --batch batch4 \
@@ -20,7 +20,7 @@ A prod run that would put the report into the `main-web` bucket, to be available
 analysis-runner \
    --dataset tob-wgs \
    --access-level standard \
-   --output-dir "gs://cpg-tob-wgs-main-tmp/qc-report" \
+   --output-dir "qc-report" \
    --description "QC report" \
 script-for-analysis-runner.sh \
    --batch batch4 \
