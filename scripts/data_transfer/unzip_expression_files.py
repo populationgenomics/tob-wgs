@@ -25,7 +25,7 @@ def main(file: str):
     tarfile = b.read_input(file)
     file_folder = file.split('.')[0]
     j = b.new_job('untar-files')
-    j.command(f'tar -xvfz {tarfile}')
+    j.command(f'tar xvfz {tarfile}')
     # j.command(f"""gsutil mv -r {file_folder} gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/""")
     j.command(f"""gsutil mv -r {file_folder} gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_intermediate_expression.tsv""")
     j.command(f"""gsutil mv -r {file_folder} gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_memory_expression.tsv""")
