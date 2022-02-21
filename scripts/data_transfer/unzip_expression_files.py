@@ -32,8 +32,6 @@ def main(file: str):
     j.command(f"""gsutil mv -r expression_220218 gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv""")
     b.run(wait=False)
 
-gsutil mv -r gs://cpg-tob-wgs-main-upload/expression_220218 gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv
-
 if __name__ == '__main__':
     # pylint: disable=no-value-for-parameter
     main()
