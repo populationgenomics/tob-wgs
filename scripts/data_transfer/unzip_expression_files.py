@@ -12,7 +12,7 @@ import hailtop.batch as hb
     required=True,
     help='File to unzip and untar',
 )
-def main(file: str, output: str):
+def main(file: str):
     """
     Untar and unzip files
     """
