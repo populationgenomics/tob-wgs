@@ -6,7 +6,7 @@ import os
 import click
 import hailtop.batch as hb
 
-
+@click.command()
 @click.option(
     '--file',
     required=True,
