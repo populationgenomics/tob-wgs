@@ -17,7 +17,7 @@ def query():
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
 
     # VQSR does not filter out low quality genotypes. Filter these out
-    mt = mt.filter_entries(mt.GQ <= 20, keep = False)
+    mt = mt.filter_entries(mt.GQ <= 20, keep=False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
     n_samples = mt.count_cols()
     call_rate = 0.8
