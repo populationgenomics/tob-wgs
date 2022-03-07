@@ -25,7 +25,7 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     tob_wgs_path = output_path('tob_wgs_maf01.parquet')
-    mt.rows().to_spark().write.mode("append").parquet(tob_wgs_path)
+    mt.rows().to_spark().write.mode('append').parquet(tob_wgs_path)
 
 if __name__ == '__main__':
     query()
