@@ -14,7 +14,8 @@ def query():
 
     mt = hl.read_matrix_table(TOB_WGS)
     # filter out variants that didn't pass the VQSR filter
-    mt = mt.filter_rows(hl.is_missing(mt.filters))
+    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+
     # VQSR does not filter out low quality genotypes. Filter these out
     mt = mt.filter_entries(mt.GQ <= 20, keep = False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
@@ -24,8 +25,8 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # export as PLINK file
-    tob_wgs_path = output_path('tob_wgs_plink_maf01')
-    hl.export_plink(mt, tob_wgs_path, ind_id=mt.s)
+    tob_wgs_path = output_path('tob_wgs_maf01.parquet')
+    mt.rows().to_spark().write.mode("append").parquet(tob_wgs_path)
 
 if __name__ == '__main__':
     query()
