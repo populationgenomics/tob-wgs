@@ -24,7 +24,6 @@ def query():
     mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    # export as PLINK file
     tob_wgs_path = output_path('tob_wgs_maf01.parquet')
     mt.rows().to_spark().write.mode("append").parquet(tob_wgs_path)
 
