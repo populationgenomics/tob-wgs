@@ -24,8 +24,9 @@ def query():
     mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    tob_wgs_path = output_path('tob_wgs_maf01.parquet')
-    mt.rows().to_pandas()[['locus.contig','locus.position','alleles']].to_parquet(tob_wgs_path)
+    pd = mt.rows().to_pandas()[['locus.contig','locus.position','alleles']]
+    for chr in set(pd['locus.contig']): 
+        pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
