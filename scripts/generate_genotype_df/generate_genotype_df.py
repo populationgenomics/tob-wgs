@@ -25,6 +25,7 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     pd = mt.rows().to_pandas()[['locus.contig','locus.position','alleles']]
+    # save each chromosome to an individual file
     for chr in set(pd['locus.contig']): 
         pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
