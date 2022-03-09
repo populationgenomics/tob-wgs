@@ -27,9 +27,10 @@ def query():
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
     pd = mt.rows().select().to_pandas()
+    print(pd.head())
     # save each chromosome to an individual file
-    for chr in set(pd['locus.contig']): 
-        pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+    # for chr in set(pd['locus.contig']): 
+    #     pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
