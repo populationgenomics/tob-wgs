@@ -1,6 +1,5 @@
 """Copies a subset of gVCFs from the main bucket to the test bucket."""
 
-import os
 import subprocess
 
 QC_METADATA_FILE_NAME = 'R_210315_BINKAN1_1K1KDNA_M001.csv'
