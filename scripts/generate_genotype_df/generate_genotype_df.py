@@ -26,7 +26,7 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
-    pd = mt.rows().select().to_pandas()
+    pd = mt.rows().select().to_pandas(flatten=True)
     print(pd.head())
     # save each chromosome to an individual file
     # for chr in set(pd['locus.contig']): 
