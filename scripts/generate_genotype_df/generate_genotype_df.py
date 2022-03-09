@@ -13,6 +13,7 @@ def query():
     hl.init(default_reference='GRCh38')
 
     mt = hl.read_matrix_table(TOB_WGS)
+    mt = hl.experimental.densify(TOB_WGS)
     # filter out variants that didn't pass the VQSR filter
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
 
@@ -24,7 +25,8 @@ def query():
     mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    pd = mt.rows().to_pandas()[['locus.contig','locus.position','alleles']]
+    # select only locus and alleles, which are the keys, then convert to pandas
+    pd = mt.rows().select().to_pandas()
     # save each chromosome to an individual file
     for chr in set(pd['locus.contig']): 
         pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
