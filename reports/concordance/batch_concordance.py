@@ -51,10 +51,10 @@ if __name__ == '__main__':
     CPU = 32
     PREFIX = f'v5_subset_samples_{CHROM}'
     HTML = f'{PREFIX}.html'
-    concordance = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
-    b.write_output(concordance.html, f'{BUCKET}-web/concordance/v1/{HTML}')
+    job = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
+    b.write_output(job.html, f'{BUCKET}-web/concordance/v1/{HTML}')
     b.write_output(
-        concordance.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
+        job.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
     )
     b.run(dry_run=False)
     service_backend.close()

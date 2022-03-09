@@ -7,6 +7,7 @@ from analysis_runner import bucket_path, output_path
 
 TOB_WGS = bucket_path('mt/v7.mt/')
 
+
 def query():
     """Query script entry point."""
 
@@ -25,7 +26,8 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     tob_wgs_path = output_path('tob_wgs_maf01.parquet')
-    mt.rows().to_pandas()[['locus.contig','locus.position','alleles']].to_parquet(tob_wgs_path)
+    mt.rows().to_pandas()[['locus.contig', 'locus.position', 'alleles']].to_parquet(tob_wgs_path)
+
 
 if __name__ == '__main__':
     query()
