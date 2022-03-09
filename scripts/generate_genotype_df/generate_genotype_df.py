@@ -13,7 +13,7 @@ def query():
     hl.init(default_reference='GRCh38')
 
     mt = hl.read_matrix_table(TOB_WGS)
-    mt = hl.experimental.densify(TOB_WGS)
+    mt = hl.experimental.densify(mt)
     # filter out variants that didn't pass the VQSR filter
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
 
