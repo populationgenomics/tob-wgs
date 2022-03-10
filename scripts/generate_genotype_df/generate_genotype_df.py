@@ -17,7 +17,6 @@ def query():
     mt = hl.experimental.densify(mt)
     # filter out variants that didn't pass the VQSR filter
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-
     # VQSR does not filter out low quality genotypes. Filter these out
     mt = mt.filter_entries(mt.GQ <= 20, keep=False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
@@ -34,8 +33,7 @@ def query():
     locus_alleles.columns = ['locus.contig', 'locus.position', 'alleles']
     # save each chromosome to an individual file
     for chr in set(locus_alleles['locus.contig']): 
-        print(chr)
-        locus_alleles.loc[locus_alleles['locus.contig'] == chr].to_parquet(f'gs://cpg-tob-wgs-test/kat/v0/{chr}_test.parquet')
+        locus_alleles.loc[locus_alleles['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
