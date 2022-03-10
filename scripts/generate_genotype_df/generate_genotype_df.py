@@ -28,13 +28,13 @@ def query():
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
     locus_alleles = mt.rows().select().to_pandas(flatten=True)
-    print(locus_alleles.head())
+    locus_alleles.to_csv('gs://cpg-tob-wgs-test/kat/v0/pd_genotype_data.csv', index=False)
     # expand locus to two columns and rename 
-    locus_alleles = pd.concat([locus_alleles['locus'].str.split(':', expand=True), locus_alleles['alleles']], axis=1)
-    locus_alleles.columns = ['locus.contig', 'locus.position', 'alleles']
-    # save each chromosome to an individual file
-    for chr in set(locus_alleles['locus.contig']): 
-        locus_alleles.loc[locus_alleles['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+    # locus_alleles = pd.concat([locus_alleles['locus'].str.split(':', expand=True), locus_alleles['alleles']], axis=1)
+    # locus_alleles.columns = ['locus.contig', 'locus.position', 'alleles']
+    # # save each chromosome to an individual file
+    # for chr in set(locus_alleles['locus.contig']): 
+    #     locus_alleles.loc[locus_alleles['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
