@@ -3,6 +3,7 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
+import pandas as pd
 from analysis_runner import bucket_path, output_path
 
 TOB_WGS = bucket_path('mt/v7.mt/')
@@ -26,11 +27,14 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
-    pd = mt.rows().select().to_pandas(flatten=True)
-    print(pd.head())
+    locus_alleles = mt.rows().select().to_pandas(flatten=True)
+    print(locus_alleles.head())
+    # expand locus to two columns and rename 
+    locus_alleles = pd.concat([locus_alleles['locus'].str.split(':', expand=True), locus_alleles['alleles']], axis=1)
+    locus_alleles.columns = ['locus.contig', 'locus.position', 'alleles']
     # save each chromosome to an individual file
-    # for chr in set(pd['locus.contig']): 
-    #     pd.loc[pd['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+    for chr in set(locus_alleles['locus.contig']): 
+        locus_alleles.loc[locus_alleles['locus.contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
