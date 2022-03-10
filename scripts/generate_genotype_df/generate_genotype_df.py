@@ -28,6 +28,7 @@ def query():
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
     locus_alleles = mt.rows().select().to_pandas(flatten=True)
+    print(locus_alleles.head())
     # expand locus to two columns and rename 
     locus_alleles = pd.concat([locus_alleles['locus'].str.split(':', expand=True), locus_alleles['alleles']], axis=1)
     print(locus_alleles.head())
