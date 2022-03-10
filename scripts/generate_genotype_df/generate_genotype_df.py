@@ -30,6 +30,8 @@ def query():
     locus_alleles = mt.rows().select().to_pandas(flatten=True)
     print(locus_alleles.head())
     # expand locus to two columns and rename 
+    locus_alleles = locus_alleles.astype(str)
+    print(locus_alleles.head())
     x = locus_alleles['locus'].str.split(':', expand=True)
     print(x.head())
     print(pd.concat([x, locus_alleles['alleles']], axis=1).head())
