@@ -8,6 +8,7 @@ from analysis_runner import bucket_path, output_path
 
 TOB_WGS = bucket_path('mt/v7.mt/')
 
+
 def query():
     """Query script entry point."""
 

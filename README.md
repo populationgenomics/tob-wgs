@@ -24,6 +24,16 @@ The project is a collaboration with the following groups:
 - **age**: adults
 - **phenotype**: controls, no signs of ocular disease
 
+## Development
+
+To setup the environment and pre-commit hooks, run:
+
+```sh
+virtualenv venv
+source venv/bin/activate
+pre-commit install --install-hooks
+```
+
 ## SNPchip data
 
 TODO
