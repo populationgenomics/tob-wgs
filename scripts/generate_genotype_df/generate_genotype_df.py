@@ -36,6 +36,7 @@ def query():
     for chr in set(pd['contig']): 
         pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
+
 if __name__ == '__main__':
     query()
 
