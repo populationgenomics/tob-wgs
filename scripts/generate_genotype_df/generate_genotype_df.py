@@ -26,12 +26,14 @@ def query():
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select only locus and alleles, which are the keys, then convert to pandas
-    mt = mt.annotate_rows(contig = mt.locus.contig, position=mt.locus.position).key_rows_by('alleles')
-    locus_alleles = mt.rows().select('contig','position').to_pandas(flatten=True)
+    t = mt.rows()
+    t = t.key_by(contig = t.locus.contig, position = t.locus.position)
+    t = t.select(t.alleles)
+    pd = t.to_pandas(flatten=True)
     # expand locus to two columns and rename 
     # save each chromosome to an individual file
-    for chr in set(locus_alleles['contig']): 
-        locus_alleles.loc[locus_alleles['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+    for chr in set(pd['contig']): 
+        pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 if __name__ == '__main__':
     query()
