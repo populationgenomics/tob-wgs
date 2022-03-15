@@ -3,7 +3,6 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-import pandas as pd
 from analysis_runner import bucket_path, output_path
 
 TOB_WGS = bucket_path('mt/v7.mt/')
@@ -29,7 +28,7 @@ def query():
     # select alleles and locus (contig and position must be selected separately),
     # then convert to pandas
     t = mt.rows()
-    t = t.key_by(contig = t.locus.contig, position = t.locus.position)
+    t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles)
     pd = t.to_pandas(flatten=True)
     # expand locus to two columns and rename 
@@ -39,3 +38,4 @@ def query():
 
 if __name__ == '__main__':
     query()
+
