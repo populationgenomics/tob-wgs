@@ -25,7 +25,8 @@ def query():
     mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
     # filter out variants with MAF < 0.01
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    # select only locus and alleles, which are the keys, then convert to pandas
+    # select alleles and locus (contig and position must be selected separately),
+    # then convert to pandas
     t = mt.rows()
     t = t.key_by(contig = t.locus.contig, position = t.locus.position)
     t = t.select(t.alleles)
