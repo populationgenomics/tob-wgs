@@ -32,4 +32,3 @@ pd = t.to_pandas(flatten=True)
 # save each chromosome to an individual file
 for chr in set(pd['contig']): 
     pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
-
