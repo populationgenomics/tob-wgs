@@ -12,6 +12,7 @@ TOB_WGS = bucket_path('mt/v7.mt/')
 
 
 def generate_genotypes():
+    """Generate genotype dfs for each chromosome"""
     init_query_service()
 
     mt = hl.read_matrix_table(TOB_WGS)
@@ -40,7 +41,7 @@ def generate_genotypes():
         pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     b = hb.Batch()
     j = b.new_python_job('generate-genotypes')
     j.image(os.getenv('CPG_DRIVER_IMAGE'))
