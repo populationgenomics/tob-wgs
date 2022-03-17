@@ -4,7 +4,7 @@
 
 import hail as hl
 from analysis_runner import bucket_path, output_path
-from cpg_utils.hail import copy_common_env
+from cpg_utils.hail import init_query_service
 
 TOB_WGS = bucket_path('mt/v7.mt/')
 
