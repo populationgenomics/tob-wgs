@@ -44,7 +44,7 @@ if __name__ == '__main__':
     dataset = os.getenv('CPG_DATASET')
     access_level = os.getenv('CPG_ACCESS_LEVEL')
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=f'cpg-{dataset}-{access_level}')
-    b = hb.Batch()
+    b = hb.Batch(backend=backend)
     j = b.new_python_job('generate-genotypes')
     j.image(os.getenv('CPG_DRIVER_IMAGE'))
     j.memory('32Gi')
