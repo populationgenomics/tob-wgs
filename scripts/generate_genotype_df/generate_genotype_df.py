@@ -45,7 +45,7 @@ if __name__ == '__main__':
     b = hb.Batch()
     j = b.new_python_job('generate-genotypes')
     j.image(os.getenv('CPG_DRIVER_IMAGE'))
-    j.call('generate_genotypes')
+    j.call(generate_genotypes)
     j.memory('32Gi')
 
     b.run(wait=False)
