@@ -4,11 +4,12 @@
 
 import hail as hl
 from analysis_runner import bucket_path, output_path
+from cpg_utils.hail import copy_common_env
 
 TOB_WGS = bucket_path('mt/v7.mt/')
 
 
-hl.init(default_reference='GRCh38')
+init_query_service()
 
 mt = hl.read_matrix_table(TOB_WGS)
 mt = hl.experimental.densify(mt)
