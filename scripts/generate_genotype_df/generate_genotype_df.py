@@ -3,9 +3,9 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-from analysis_runner import bucket_path, output_path
+from cpg_utils.hail import dataset_path, output_path
 
-TOB_WGS = bucket_path('mt/v7.mt/')
+TOB_WGS = dataset_path('mt/v7.mt/')
 
 
 def query():

@@ -14,8 +14,8 @@ spsm(require(assertthat, include.only = "assert_that"))
 
 bucket_path <- function(path, bucket_category = NULL) {
 
-  dataset <- Sys.getenv("DATASET")
-  access_level <- Sys.getenv("ACCESS_LEVEL")
+  dataset <- Sys.getenv("CPG_DATASET")
+  access_level <- Sys.getenv("CPG_ACCESS_LEVEL")
   assert_that(nchar(dataset) > 0, nchar(access_level) > 0)
 
   namespace <- dplyr::if_else(access_level == "test", "test", "main")
@@ -29,7 +29,7 @@ bucket_path <- function(path, bucket_category = NULL) {
 }
 
 output_path <- function(path_suffix, bucket_category = NULL) {
-  output <- Sys.getenv("OUTPUT")
+  output <- Sys.getenv("CPG_OUTPUT_PREFIX")
   assert_that(nchar(output) > 0)
   return(bucket_path(file.path(output, path_suffix), bucket_category))
 }
