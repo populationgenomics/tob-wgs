@@ -5,10 +5,9 @@
 import hail as hl
 import os
 import hailtop.batch as hb
-from analysis_runner import bucket_path, output_path
-from cpg_utils.hail import copy_common_env, init_query_service
+from cpg_utils.hail import dataset_path, output_path, copy_common_env, init_query_service
 
-TOB_WGS = bucket_path('mt/v7.mt/')
+TOB_WGS = dataset_path('mt/v7.mt/')
 
 
 def generate_genotypes():
