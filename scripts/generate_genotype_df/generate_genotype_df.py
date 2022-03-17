@@ -6,7 +6,7 @@ import hail as hl
 import os
 import hailtop.batch as hb
 from analysis_runner import bucket_path, output_path
-from cpg_utils.hail import init_query_service
+from cpg_utils.hail import copy_common_env, init_query_service
 
 TOB_WGS = bucket_path('mt/v7.mt/')
 
@@ -42,10 +42,15 @@ def generate_genotypes():
 
 
 if __name__ == '__main__':
+    dataset = os.getenv('CPG_DATASET')
+    access_level = os.getenv('CPG_ACCESS_LEVEL')
+    backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=f'cpg-{dataset}-{access_level}'
+    )
     b = hb.Batch()
     j = b.new_python_job('generate-genotypes')
     j.image(os.getenv('CPG_DRIVER_IMAGE'))
-    j.call(generate_genotypes)
     j.memory('32Gi')
+    copy_common_env(j)
+    j.call(generate_genotypes)
 
     b.run(wait=False)
