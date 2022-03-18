@@ -3,14 +3,12 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-import os
-import hailtop.batch as hb
-from cpg_utils.hail import dataset_path, output_path, copy_common_env, init_query_service, remote_tmpdir
+from cpg_utils.hail import dataset_path, output_path, init_query_service
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 
 
-def generate_genotypes():
+def main():
     """Generate genotype dfs for each chromosome"""
     init_query_service()
 
@@ -31,8 +29,7 @@ def generate_genotypes():
     t = mt.rows()
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles)
-    n_rows = t.count()
-    print(f'n rows = {n_rows}')
+    print(f'{t.count()=}')
     pd = t.to_pandas(flatten=True)
     # expand locus to two columns and rename 
     # save each chromosome to an individual file
@@ -41,14 +38,4 @@ def generate_genotypes():
 
 
 if __name__ == '__main__':
-    dataset = os.getenv('CPG_DATASET')
-    access_level = os.getenv('CPG_ACCESS_LEVEL')
-    backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
-    b = hb.Batch(backend=backend)
-    j = b.new_python_job('generate-genotypes')
-    j.image(os.getenv('CPG_DRIVER_IMAGE'))
-    j.memory('32Gi')
-    copy_common_env(j)
-    j.call(generate_genotypes)
-
-    b.run(wait=False)
+    main()
