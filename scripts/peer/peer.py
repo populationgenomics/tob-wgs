@@ -20,10 +20,12 @@ import logging
 import click
 import hailtop.batch as hb
 import pandas as pd
+from typing import Tuple
 from cpg_utils.hail import remote_tmpdir, output_path
 from google.cloud import storage
 
 PEER_DOCKER = 'australia-southeast1-docker.pkg.dev/cpg-common/images/peer:1.3.2'
+
 
 def get_covariates(
     scores_path, covariates_path, expression_file, sample_id_keys_path
