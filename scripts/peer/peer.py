@@ -96,7 +96,7 @@ def get_covariates(
     covariates[['sex', 'age']] = covariates[['sex', 'age']].astype(int)
 
     # return expression data and covariates
-    return covariates.to_csv(index=False), expression.to_csv(index=False) # type: ignore
+    return covariates.to_csv(index=False), expression.to_csv(index=False)  # type: ignore
 
 
 def get_at_index(obj, idx):
