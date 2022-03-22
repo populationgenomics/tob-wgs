@@ -21,14 +21,10 @@ from cpg_utils.hail import remote_tmpdir, output_path
 from google.cloud import storage
 
 PEER_DOCKER = 'australia-southeast1-docker.pkg.dev/cpg-common/images/peer:1.3.2'
-SCORES_PATH = 'gs://cpg-tob-wgs-test/kat/pca/nfe_feb22/v0/scores.json'
-COVARIATES_PATH = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/covariates.tsv'
-SAMPLE_ID_KEYS_PATH = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata/keys_metadata_sheet.csv'
-
 
 def get_covariates(
     scores_path, covariates_path, expression_file, sample_id_keys_path
-) -> str:
+) -> Tuple[str, str]:
     """
     Get covariate data by merging PCA scores with age and sex info.
     Only needs to be run once. This returns a TSV (as a string)
@@ -82,8 +78,7 @@ def get_covariates(
         ['sampleid', 'PC1', 'PC2', 'PC3', 'PC4', 'sex', 'age']
     ]
     # make sure samples in covariates and expression data are equal
-    expression.sampleid.equals(covariates.sampleid)
-    # True
+    assert expression.sampleid.equals(covariates.sampleid)
     # remove sampleid from both covariates and expression dfs
     expression.drop('sampleid', axis=1, inplace=True)
     covariates.drop('sampleid', axis=1, inplace=True)
@@ -91,7 +86,7 @@ def get_covariates(
     covariates[['sex', 'age']] = covariates[['sex', 'age']].astype(int)
 
     # return expression data and covariates
-    return covariates.to_csv(index=False), expression.to_csv(index=False)  # type: ignore
+    return covariates.to_csv(index=False), expression.to_csv(index=False)
 
 
 def get_at_index(obj, idx):
@@ -112,9 +107,6 @@ def run_peer_job(job: hb.batch.job.Job, expression_file, covariates_file):
 
     job.image(PEER_DOCKER)
 
-    job.command(f'echo "expressions file:" && head {expression_file}')
-    job.command(f'echo "covariates file:" && head {covariates_file}')
-
     # write python script to container
     job.command(
         """
@@ -129,14 +121,9 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
     Get covariate data for each cell type
     \"""
 
-    print 'Loading data'
-
     # load in data
     expr = pd.read_csv(expression_file, header=None, skiprows=1)
     covs = pd.read_csv(covariates_file, header=None, skiprows=1)
-
-    print 'Loaded data'
-    print covs
 
     # Set PEER paramaters as per the PEER website
     model = peer.PEER()
@@ -175,7 +162,6 @@ EOT"""
             {job.precision_output_path} \
             {job.residuals_output_path}'
     )
-    job.command('ls -l')
 
     return job
 
@@ -229,7 +215,7 @@ def find_cell_types_from_path(path_to_cell_files):
 
     bucket_name = path_to_cell_files.lstrip('gs://').split('/')[0]
     bucket = cs_client.get_bucket(bucket_name)
-    bucket_path = path_to_cell_files.split(f'gs://{bucket_name}/')[-1]
+    bucket_path = path_to_cell_files[(5 + len(bucket_name) + 1):]
 
     logging.info(f'Going to fetch cell types from {bucket_path}')
     blobs = bucket.list_blobs(prefix=bucket_path, delimiter='/')
@@ -245,8 +231,11 @@ def find_cell_types_from_path(path_to_cell_files):
 
 
 @click.command()
+@click.option('--scores-path')
+@click.option('--covariates-path')
+@click.option('--sample-id-keys-path')
 @click.option('--path-to-cell-files')
-def main(path_to_cell_files):
+def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     """
     This function finds all the cell types, and runs the inner
     workflow for each cell_type, by constructing the path to the
@@ -263,7 +252,7 @@ def main(path_to_cell_files):
     cell_types: list = find_cell_types_from_path(path_to_cell_files)
 
     for cell_type in cell_types:
-        expression_file = f'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/{cell_type}_expression.tsv'
+        expression_file = f'{path_to_cell_files}/expression_files/{cell_type}_expression.tsv'
         process_cell_type_on_batch(batch, cell_type, expression_file=expression_file)
 
     batch.run(wait=False)
