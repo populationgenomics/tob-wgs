@@ -8,6 +8,9 @@ Test run this with:
         --output-dir 'peer/2022-03-21' \
         --dataset tob-wgs \
         python3 peer.py \
+        --scores-path 'gs://cpg-tob-wgs-test/kat/pca/nfe_feb22/v0/scores.json' \
+        --covariates-path 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/covariates.tsv' \
+        --sample-id-keys-path 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata/keys_metadata_sheet.csv' \
         --path-to-cell-files 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/'
 """
 
