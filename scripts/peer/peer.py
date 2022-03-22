@@ -53,7 +53,7 @@ def get_covariates(
     # 937
     # 69 samples are missing RNA-seq data
     # remove samples which don't have a OneK1K ID and only keep PCA scores
-    scores = scores[scores.OneK1K_ID.isna() == False][
+    scores = scores[~scores.OneK1K_ID.isna()][
         ['PC1', 'PC2', 'PC3', 'PC4', 'OneK1K_ID']
     ]
     # Merge PCA scores with Seyhan's covariate data and drop Seyhan's RNA-seq pca scores
@@ -66,7 +66,7 @@ def get_covariates(
     print(covariates[covariates.sampleid.isna()])
     # OneK1K ID 26_26 does not have any covariate data. Remove this sample and drop
     # the OneK1K_ID, since it's redundant with sampleid
-    covariates = covariates[covariates.sampleid.isna() == False].drop(
+    covariates = covariates[~covariates.sampleid.isna()].drop(
         ['OneK1K_ID'], axis=1
     )
     # Match expression data to covariate data, since PEER needs expr and covs
@@ -96,7 +96,7 @@ def get_covariates(
     covariates[['sex', 'age']] = covariates[['sex', 'age']].astype(int)
 
     # return expression data and covariates
-    return covariates.to_csv(index=False), expression.to_csv(index=False)
+    return covariates.to_csv(index=False), expression.to_csv(index=False) # type: ignore
 
 
 def get_at_index(obj, idx):
