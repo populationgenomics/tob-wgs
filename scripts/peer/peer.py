@@ -259,7 +259,6 @@ def main(path_to_cell_files):
         expression_file = f'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/{cell_type}_expression.tsv'
         process_cell_type_on_batch(batch, cell_type, expression_file=expression_file)
 
-        # batch.run(dry_run=True)
     batch.run(wait=False)
 
 
