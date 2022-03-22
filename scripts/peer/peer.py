@@ -96,7 +96,8 @@ def get_covariates(
 
 def get_at_index(obj, idx):
     """
-    get object index
+    Get the object at index, required to break up the result
+    from the get_covariates data within Hail Batch    
     """
 
     return obj[idx]
