@@ -232,7 +232,7 @@ def find_cell_types_from_path(path_to_cell_files):
     bucket_path = path_to_cell_files.split(f'gs://{bucket_name}/')[-1]
 
     logging.info(f'Going to fetch cell types from {bucket_path}')
-    blobs = bucket.list_blobs(prefix=bucket_path)
+    blobs = bucket.list_blobs(prefix=bucket_path, delimiter='/')
 
     cell_types = [
         os.path.basename(b.name)[:-15]
