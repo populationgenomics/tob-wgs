@@ -173,9 +173,9 @@ def process_cell_type_on_batch(
     batch: hb.Batch,
     cell_type_name: str,
     expression_file,
-    scores_path=SCORES_PATH,
-    covariates_path=COVARIATES_PATH,
-    sample_id_keys_path=SAMPLE_ID_KEYS_PATH,
+    scores_path,
+    covariates_path,
+    sample_id_keys_path,
 ):
     """
     Run PEER calculation in hail batch
