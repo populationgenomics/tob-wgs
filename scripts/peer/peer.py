@@ -231,10 +231,10 @@ def find_cell_types_from_path(path_to_cell_files):
 
 
 @click.command()
-@click.option('--scores-path')
-@click.option('--covariates-path')
-@click.option('--sample-id-keys-path')
-@click.option('--path-to-cell-files')
+@click.option('--scores-path', help='A path prefix of where PCA scores are located, eg: gs://MyBucket/output-folder/')
+@click.option('--covariates-path', help='Path prefix of where covariate files are located, eg: gs://MyBucket/output-folder/',)
+@click.option('--sample-id-keys-path', help='Path prefix to convert internal to external, eg: gs://MyBucket/output-folder/')
+@click.option('--path-to-cell-files', help='Path prefix of where cell type files are located, eg: gs://MyBucket/output-folder/')
 def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     """
     This function finds all the cell types, and runs the inner
@@ -253,7 +253,14 @@ def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
 
     for cell_type in cell_types:
         expression_file = f'{path_to_cell_files}/expression_files/{cell_type}_expression.tsv'
-        process_cell_type_on_batch(batch, cell_type, expression_file=expression_file)
+        process_cell_type_on_batch(
+            batch, 
+            cell_type, 
+            scores_path=scores_path, 
+            covariates_path=covariates_path, 
+            sample_id_keys_path=sample_id_keys_path, 
+            expression_file=expression_file
+        )
 
     batch.run(wait=False)
 
