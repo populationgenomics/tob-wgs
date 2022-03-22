@@ -159,13 +159,13 @@ EOT"""
     )
 
     job.command(
-        f'python run_peer.py \
+        f"""python run_peer.py \
             {expression_file} \
             {covariates_file} \
             {job.factors_output_path} \
             {job.weights_output_path} \
             {job.precision_output_path} \
-            {job.residuals_output_path}'
+            {job.residuals_output_path}"""
     )
 
     return job
