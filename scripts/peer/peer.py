@@ -1,7 +1,7 @@
 """
 Test run this with:
 
-    cd <dir where peer.py file is>
+    cd scripts/peer
     analysis-runner \
         --access-level test \
         --description 'Test run peer analysis' \
