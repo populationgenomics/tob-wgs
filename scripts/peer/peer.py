@@ -250,6 +250,7 @@ def main(path_to_cell_files):
 
     dataset = os.getenv('CPG_DATASET')
     driver_image = os.getenv('CPG_DRIVER_IMAGE')
+    assert driver_image
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='PEER', backend=backend, default_python_image=driver_image)
     cell_types: list = find_cell_types_from_path(path_to_cell_files)
