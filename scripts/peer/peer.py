@@ -200,7 +200,6 @@ def process_cell_type_on_batch(
     covariates_csv = load_data.call(get_at_index, intermediate_tuple, 0).as_str()
     expression_csv = load_data.call(get_at_index, intermediate_tuple, 1).as_str()
     peer_job = batch.new_job(job_prefix + 'peer')
-    peer_job.cpu(4)
     run_peer_job(peer_job, expression_csv, covariates_csv)
 
     batch.write_output(
