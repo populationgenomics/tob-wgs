@@ -218,7 +218,7 @@ def find_cell_types_from_path(path_to_cell_files):
     assert path_to_cell_files.startswith('gs://')
     cs_client = storage.Client()
 
-    bucket_name = path_to_cell_files.lstrip('gs://').split('/')[0]
+    bucket_name = path_to_cell_files.split(f'gs://{bucket_name}/')[-1]
     bucket = cs_client.get_bucket(bucket_name)
     bucket_path = path_to_cell_files[(5 + len(bucket_name) + 1):]
 
