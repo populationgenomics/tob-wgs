@@ -161,7 +161,7 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
 
 if __name__ == "__main__":
     import sys
-    run_peer(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])
+    run_peer(*sys.argv[1:])
 
 EOT"""
     )
