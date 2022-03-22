@@ -173,8 +173,6 @@ EOT"""
     return job
 
 
-# @click.command()
-# @click.option('--expression-file')
 def process_cell_type_on_batch(
     batch: hb.Batch,
     cell_type_name: str,
