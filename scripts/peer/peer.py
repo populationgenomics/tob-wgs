@@ -42,16 +42,11 @@ def get_covariates(
     scores.insert(loc=0, column='sampleid', value=sampleid)
     # filter to only CPG samples
     scores = scores[scores.sampleid.str.contains('CPG')]
-    print(len(scores.index))
-    # 1006
     # change CPG IDs to One1K1K IDs
     sampleid_keys = pd.read_csv(sample_id_keys_path, sep=',')
     scores = pd.merge(
         scores, sampleid_keys, how='left', left_on='sampleid', right_on='CPG_ID'
     )
-    print(len(scores.OneK1K_ID.dropna()))
-    # 937
-    # 69 samples are missing RNA-seq data
     # remove samples which don't have a OneK1K ID and only keep PCA scores
     scores = scores[~scores.OneK1K_ID.isna()][
         ['PC1', 'PC2', 'PC3', 'PC4', 'OneK1K_ID']
@@ -63,8 +58,9 @@ def get_covariates(
         scores, covariates, how='left', left_on='OneK1K_ID', right_on='sampleid'
     ).drop(['pc1', 'pc2', 'pc3', 'pc4'], axis=1)
     # check whether there's any missing data in the covariate data
-    print(covariates[covariates.sampleid.isna()])
-    # OneK1K ID 26_26 does not have any covariate data. Remove this sample and drop
+    missing_cov_data = list(covariates[covariates.sampleid.isna()].OneK1K_ID)
+    logging.info(f'{missing_cov_data} is missing covariate data')
+    # Remove samples with no covariate data and drop
     # the OneK1K_ID, since it's redundant with sampleid
     covariates = covariates[~covariates.sampleid.isna()].drop(
         ['OneK1K_ID'], axis=1
@@ -75,9 +71,8 @@ def get_covariates(
     merged_expr_covs = pd.merge(
         expression, covariates, how='right', left_on='sampleid', right_on='sampleid'
     )
-    print(merged_expr_covs.shape[0] - merged_expr_covs.dropna().shape[0])
-    # 15 samples with no expression data, but do have covariate and genotype data
-    # This differs per celltype
+    samples_missing_expression = merged_expr_covs.shape[0] - merged_expr_covs.dropna().shape[0]
+    logging.info(f'{samples_missing_expression} samples are missing expression data')
     # remove any rows with NA values
     merged_expr_covs = merged_expr_covs.dropna()
     expression = merged_expr_covs.drop(
