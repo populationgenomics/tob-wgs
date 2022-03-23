@@ -5,10 +5,10 @@ Test run this with:
     analysis-runner \
         --access-level test \
         --description 'Test run peer analysis' \
-        --output-dir 'peer/2022-03-21' \
+        --output-dir 'peer/2022-03-23' \
         --dataset tob-wgs \
         python3 peer.py \
-        --scores-path 'gs://cpg-tob-wgs-test/kat/pca/nfe_feb22/v0/scores.json' \
+        --scores-path 'gs://cpg-tob-wgs-test/tob_wgs_pca/nfe_no_outliers/v0/scores.json' \
         --covariates-path 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/covariates.tsv' \
         --sample-id-keys-path 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata/keys_metadata_sheet.csv' \
         --path-to-cell-files 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/'
@@ -257,7 +257,7 @@ def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     cell_types: list = find_cell_types_from_path(path_to_cell_files)
 
     for cell_type in cell_types:
-        expression_file = f'{path_to_cell_files}/expression_files/{cell_type}_expression.tsv'
+        expression_file = f'{path_to_cell_files}{cell_type}_expression.tsv'
         process_cell_type_on_batch(
             batch, 
             cell_type, 
