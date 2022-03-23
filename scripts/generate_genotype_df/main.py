@@ -13,7 +13,8 @@ batch = hb.Batch(name='export_genotype_data', backend=service_backend)
 dataproc.hail_dataproc_job(
     batch,
     'generate_genotype_df.py',
-    max_age='4h',
+    max_age='8h',
+    num_secondary_workers=20,
     init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
     job_name='export_genotype_data',
 )
