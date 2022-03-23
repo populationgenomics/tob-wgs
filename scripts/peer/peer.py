@@ -257,7 +257,7 @@ def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     cell_types: list = find_cell_types_from_path(path_to_cell_files)
 
     for cell_type in cell_types:
-        expression_file = f'{path_to_cell_files}/expression_files/{cell_type}_expression.tsv'
+        expression_file = f'{path_to_cell_files}/{cell_type}_expression.tsv'
         process_cell_type_on_batch(
             batch, 
             cell_type, 
