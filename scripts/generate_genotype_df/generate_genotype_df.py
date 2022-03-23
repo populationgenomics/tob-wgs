@@ -6,6 +6,7 @@ import hail as hl
 from cpg_utils.hail import dataset_path, output_path
 
 TOB_WGS = dataset_path('mt/v7.mt/')
+FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 
 
 def query():
@@ -24,6 +25,8 @@ def query():
     call_rate = 0.8
     mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
     # filter out variants with MAF < 0.01
+    ht = hl.read_table(FREQ_TABLE)
+    mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # select alleles and locus (contig and position must be selected separately),
     # then convert to pandas
