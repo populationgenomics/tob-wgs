@@ -130,7 +130,7 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
     covs = pd.read_csv(covariates_file)
     # save covariate info for downstream use
     covs_column_names = list(covs.columns)
-    sampleids = list(covs1.sampleid)
+    sampleids = list(covs.sampleid)
 
     # remove column names and sampleids, since peer can't use these
     covs.columns = range(covs.shape[1])
