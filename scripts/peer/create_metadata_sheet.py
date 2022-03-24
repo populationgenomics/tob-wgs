@@ -1,6 +1,13 @@
-"""Create metadata sheet for TOB samples"""
+"""Create metadata sheet for TOB samples
+Run using the command:
+analysis-runner --dataset tob-wgs \
+--access-level standard --output-dir "scrna-seq/grch38_association_files/metadata" \
+--description "TOB metadata" python3 create_metadata_sheet.py
+"""
 
 import pandas as pd
+import logging
+from cpg_utils.hail import output_path
 
 METADATA = (
     'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata/metadata.csv'
@@ -11,7 +18,6 @@ OUTLIERS = (
 SAMPLEID_KEYS = (
     'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
 )
-OUTPUT_DIR = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata'
 
 metadata = pd.read_csv(METADATA)
 outliers = pd.read_csv(OUTLIERS)
@@ -20,8 +26,8 @@ combined_metadata = pd.merge(
 )
 combined_metadata = combined_metadata.rename(columns={'samples': 'population'})
 # make sure all 51 outliers properly mapped to a CPG ID
-len(combined_metadata.population.dropna())
-# 51
+n_outliers = len(combined_metadata.population.dropna())
+logging.info(f'{n_outliers} samples are population outliers')
 combined_metadata.population = combined_metadata.population.fillna('NFE')
 combined_metadata.loc[
     combined_metadata['population'].str.contains('CPG'), 'population'
@@ -38,5 +44,4 @@ merged_cpg_onek1k = pd.merge(
     left_on='ExternalID',
 )
 # save
-output_path = f'{OUTPUT_DIR}/keys_metadata_sheet.csv'
-merged_cpg_onek1k.to_csv(output_path, index=False)
+merged_cpg_onek1k.to_csv(output_path('keys_metadata_sheet.csv'), index=False)
