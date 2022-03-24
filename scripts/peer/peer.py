@@ -127,13 +127,14 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
     expr = pd.read_csv(expression_file, header=None, skiprows=1)
     covs = pd.read_csv(covariates_file)
     # save covariate info for downstream use
-    covs_column_names = list(covs.columns)
     sampleids = list(covs.sampleid)
     # make sure age and sex in covariate df are int
     covs[['sex', 'age']] = covs[['sex', 'age']].astype(int)
 
     # remove column names and sampleids, since peer can't use these
     covs.drop('sampleid', axis=1, inplace=True)
+    # save column names for downstream assignment
+    covs_column_names = list(covs.columns)
     covs.columns = range(covs.shape[1])
 
     # Set PEER paramaters as per the PEER website
