@@ -84,11 +84,8 @@ def get_covariates(
     ]
     # make sure samples in covariates and expression data are equal
     assert expression.sampleid.equals(covariates.sampleid)
-    # remove sampleid from both covariates and expression dfs
+    # remove sampleid from expression df
     expression.drop('sampleid', axis=1, inplace=True)
-    covariates.drop('sampleid', axis=1, inplace=True)
-    # finally, make sure age and sex in covariate df are int
-    covariates[['sex', 'age']] = covariates[['sex', 'age']].astype(int)
 
     # return expression data and covariates
     return covariates.to_csv(index=False), expression.to_csv(index=False)
@@ -128,7 +125,16 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
 
     # load in data
     expr = pd.read_csv(expression_file, header=None, skiprows=1)
-    covs = pd.read_csv(covariates_file, header=None, skiprows=1)
+    covs = pd.read_csv(covariates_file)
+    # save covariate info for downstream use
+    covs_column_names = list(covs.columns)
+    sampleids = list(covs.sampleid)
+    # make sure age and sex in covariate df are int
+    covs[['sex', 'age']] = covs[['sex', 'age']].astype(int)
+
+    # remove column names and sampleids, since peer can't use these
+    covs.drop('sampleid', axis=1, inplace=True)
+    covs.columns = range(covs.shape[1])
 
     # Set PEER paramaters as per the PEER website
     model = peer.PEER()
@@ -139,7 +145,15 @@ def run_peer(expression_file, covariates_file, factors_output_path, weights_outp
 
     # Calculate and save the PEER factors
     factors = model.getX()
-    np.savetxt(factors_output_path, factors, delimiter=',')
+    # turn into pandas df and add in column names + sampleids
+    peer_factors = ['pf' + str(i) for i in range(1, 11)]
+    covs_column_names = covs_column_names + peer_factors
+    factors = pd.DataFrame(factors, columns = covs_column_names)
+    # add in sampleid
+    factors.insert(loc=0, column='sampleid', value=sampleids)
+    # make sex and age int type
+    factors[['sex', 'age']] = factors[['sex', 'age']].astype(int)
+    factors.to_csv(factors_output_path, index=False)
     # Calculate and save the weights for each factor
     weights = model.getW()
     np.savetxt(weights_output_path, weights, delimiter=',')
@@ -198,14 +212,14 @@ def process_cell_type_on_batch(
         output_path(f'{cell_type_name}_peer_factors_file.txt'),
     )
     batch.write_output(
-        peer_job.factors_output_path, output_path(f'{cell_type_name}_weights_file.txt')
+        peer_job.weights_output_path, output_path(f'{cell_type_name}_weights_file.txt')
     )
     batch.write_output(
-        peer_job.factors_output_path,
+        peer_job.precision_output_path,
         output_path(f'{cell_type_name}_precision_file.txt'),
     )
     batch.write_output(
-        peer_job.factors_output_path,
+        peer_job.residuals_output_path,
         output_path(f'{cell_type_name}_residuals_file.txt'),
     )
 
