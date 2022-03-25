@@ -32,13 +32,13 @@ def query():
     # select alleles and locus (contig and position must be selected separately),
     t = mt.entries()
     # get genotype codes (n_alt_alleles, as in PLINK files)
-    t = t.annotate(n_alt_alleles = t.GT.n_alt_alleles())
+    t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, t.s, t.n_alt_alleles)
     df = t.to_pandas(flatten=True)
     # create a new matrix with SNPs as columns and samples as rows
     # with genotype values as entries
-    df['snp'] = df['contig'].map(str) + ":" + df['position'].map(str) + ":" + df['alleles'].str[0] + ":" + df['alleles'].str[1]
+    df['snp'] = df['contig'].map(str) + ':' + df['position'].map(str) + ':' + df['alleles'].str[0] + ':' + df['alleles'].str[1]
     columns = (df.groupby(['s']).agg({'snp': lambda x: x.tolist()})).snp[0]
     snps = (df.groupby(['s']).agg({'n_alt_alleles': lambda x: x.tolist()}))
     df = pd.DataFrame(snps['n_alt_alleles'].to_list(), columns=columns, index=snps.index) 
