@@ -36,15 +36,16 @@ def query():
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, t.s, t.n_alt_alleles)
     df = t.to_pandas(flatten=True)
-    # create a new matrix with SNPs as columns and samples as rows
-    # with genotype values as entries
-    df['snp'] = df['contig'].map(str) + ':' + df['position'].map(str) + ':' + df['alleles'].str[0] + ':' + df['alleles'].str[1]
-    columns = (df.groupby(['s']).agg({'snp': lambda x: x.tolist()})).snp[0]
-    snps = (df.groupby(['s']).agg({'n_alt_alleles': lambda x: x.tolist()}))
-    df = pd.DataFrame(snps['n_alt_alleles'].to_list(), columns=columns, index=snps.index) 
     # save each chromosome to an individual file
     for chr in set(df['contig']):
-        df.loc[df['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+        df = df.loc[df['contig'] == chr]
+        # create a new matrix with SNPs as columns and samples as rows
+        # with genotype values as entries
+        df['snp_id'] = df['contig'].map(str) + ':' + df['position'].map(str) + ':' + df['alleles'].str[0] + ':' + df['alleles'].str[1]
+        columns = (df.groupby(['s']).agg({'snp_id': lambda x: x.tolist()})).snp_id[0]
+        genotypes = (df.groupby(['s']).agg({'n_alt_alleles': lambda x: x.tolist()}))
+        df = pd.DataFrame(genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index) 
+        df.to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
 
 if __name__ == '__main__':
