@@ -108,6 +108,7 @@ def run_peer_job(job: hb.batch.job.Job, expression_file, covariates_file):
     """
 
     job.image(PEER_DOCKER)
+    job._preemptible = False
 
     # write python script to container
     job.command(
