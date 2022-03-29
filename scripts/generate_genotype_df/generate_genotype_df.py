@@ -3,14 +3,14 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-from cpg_utils.hail import dataset_path, output_path, init_query_service
+from cpg_utils.hail import dataset_path, output_path, init_batch
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 
 
 def main():
     """Generate genotype dfs for each chromosome"""
-    init_query_service()
+    init_batch()
 
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
