@@ -9,22 +9,22 @@ from cpg_utils.hail import dataset_path, output_path, remote_tmpdir
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 
-
-def main():
-    """Generate genotype dfs for each chromosome"""
-
+def my_init_batch(**kwargs):
     billing_project = os.getenv('HAIL_BILLING_PROJECT')
     assert billing_project
-
-    asyncio.get_event_loop().run_until_complete(
+    return asyncio.get_event_loop().run_until_complete(
         hl.init_batch(
             default_reference='GRCh38',
             billing_project=billing_project,
             remote_tmpdir=remote_tmpdir(),
-            driver_cores=8,
-            driver_memory='highmem'
+            **kwargs
         )
     )
+
+def main():
+    """Generate genotype dfs for each chromosome"""
+
+    my_init_batch(driver_cores=8, driver_memory='highmem')
 
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
