@@ -13,6 +13,7 @@ import statsmodels.stats.multitest as multi
 from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail import copy_common_env, init_batch, remote_tmpdir
+from cloudpathlib import AnyPath
 import click
 
 DEFAULT_DRIVER_MEMORY = '4G'
@@ -278,27 +279,27 @@ def main(
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
     # load in files literally to do the get_number of scatters
-    expression_df_literal = pd.read_csv(expression, sep='\t')
-    geneloc_df_literal = pd.read_csv(geneloc, sep='\t')
+    expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
+    geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
 
     # load files into a python job to avoid memory issues during a submission
     load_expression = batch.new_python_job('load-expression')
     load_expression.cpu(2)
     load_expression.memory('8Gi')
     load_expression.storage('2Gi')
-    expression_df = load_expression.call(pd.read_csv, expression, sep='\t')
+    expression_df = load_expression.call(pd.read_csv, AnyPath(expression), sep='\t')
     load_genotype = batch.new_python_job('load-genotype')
     load_genotype.cpu(2)
     load_genotype.memory('8Gi')
     load_genotype.storage('2Gi')
-    genotype_df = load_genotype.call(pd.read_csv, genotype, sep='\t')
+    genotype_df = load_genotype.call(pd.read_csv, AnyPath(genotype), sep='\t')
     load_small_files = batch.new_python_job('load-small-files')
     load_small_files.memory('8Gi')
     load_small_files.storage('2Gi')
-    geneloc_df = load_small_files.call(pd.read_csv, geneloc, sep='\t')
-    snploc_df = load_small_files.call(pd.read_csv, snploc, sep='\t')
-    covariate_df = load_small_files.call(pd.read_csv, covariates, sep=',')
-    sampleid_keys = load_small_files.call(pd.read_csv, keys, sep='\t')
+    geneloc_df = load_small_files.call(pd.read_csv, AnyPath(geneloc), sep='\t')
+    snploc_df = load_small_files.call(pd.read_csv, AnyPath(snploc), sep='\t')
+    covariate_df = load_small_files.call(pd.read_csv, AnyPath(covariates), sep=',')
+    sampleid_keys = load_small_files.call(pd.read_csv, AnyPath(keys), sep='\t')
     calculate_residuals_job = batch.new_python_job('calculate-residuals')
     residuals_df = calculate_residuals_job.call(
         calculate_residuals,
