@@ -30,9 +30,10 @@ def main():
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles)
     print(f'{t.count()=}')
-#    pd = t.to_pandas(flatten=True)
+    pd = t.to_pandas(flatten=True)
 #    # expand locus to two columns and rename 
 #    # save each chromosome to an individual file
+    print(f'{pd.size}')
 #    for chr in set(pd['contig']): 
 #        pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
 
