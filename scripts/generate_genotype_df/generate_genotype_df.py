@@ -10,7 +10,8 @@ TOB_WGS = dataset_path('mt/v7.mt/')
 
 def main():
     """Generate genotype dfs for each chromosome"""
-    init_batch()
+    #init_batch()
+    hl.init(driver_cores=8, driver_memory='highmem')
 
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
