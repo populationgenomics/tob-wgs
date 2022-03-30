@@ -3,7 +3,8 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-from cpg_utils.hail import dataset_path, output_path, init_batch
+import os
+from cpg_utils.hail import dataset_path, output_path, remote_tmpdir
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 
@@ -11,8 +12,12 @@ TOB_WGS = dataset_path('mt/v7.mt/')
 def main():
     """Generate genotype dfs for each chromosome"""
     #init_batch()
-    hl.init(driver_cores=8, driver_memory='highmem')
-
+    BILLING_PROJECT = os.getenv('HAIL_BILLING_PROJECT')
+    assert BILLING_PROJECT
+    hl.init(billing_project=BILLING_PROJECT,
+            remote_tmpdir=remote_tmpdir(),
+            driver_cores=8,
+            driver_memory='highmem')
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
     # filter out variants that didn't pass the VQSR filter
