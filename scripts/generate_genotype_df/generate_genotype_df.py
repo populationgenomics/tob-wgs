@@ -2,6 +2,7 @@
 
 """Generate genotype dfs for the association analysis"""
 
+import asyncio
 import hail as hl
 import os
 from cpg_utils.hail import dataset_path, output_path, remote_tmpdir
@@ -11,13 +12,20 @@ TOB_WGS = dataset_path('mt/v7.mt/')
 
 def main():
     """Generate genotype dfs for each chromosome"""
-    #init_batch()
-    BILLING_PROJECT = os.getenv('HAIL_BILLING_PROJECT')
-    assert BILLING_PROJECT
-    hl.init(billing_project=BILLING_PROJECT,
+
+    billing_project = os.getenv('HAIL_BILLING_PROJECT')
+    assert billing_project
+
+    asyncio.get_event_loop().run_until_complete(
+        hl.init_batch(
+            default_reference='GRCh38',
+            billing_project=billing_project,
             remote_tmpdir=remote_tmpdir(),
             driver_cores=8,
             driver_memory='highmem')
+        )
+    )
+
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
     # filter out variants that didn't pass the VQSR filter
