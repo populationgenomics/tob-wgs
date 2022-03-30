@@ -22,7 +22,7 @@ def main():
             billing_project=billing_project,
             remote_tmpdir=remote_tmpdir(),
             driver_cores=8,
-            driver_memory='highmem')
+            driver_memory='highmem'
         )
     )
 
