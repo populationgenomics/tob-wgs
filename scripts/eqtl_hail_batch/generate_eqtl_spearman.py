@@ -280,37 +280,21 @@ def main(
 
     # load in files literally to do the get_number of scatters
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
-    print("loaded in expression_df_literal")
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
-    print("loaded in geneloc_df_literal")
 
     # load files into a python job to avoid memory issues during a submission
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
-    print("loaded in expression_df")
     genotype_df = pd.read_csv(AnyPath(genotype), sep='\t')
-    print("loaded in genotype_df")
     geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
-    print("loaded in geneloc_df")
     snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
-    print("loaded in snploc_df")
     covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
-    print("loaded in covariate_df")
     sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
-    print("loaded in sampleid_keys")
-    calculate_residuals_job = batch.new_python_job('calculate-residuals')
-    residuals_df = calculate_residuals_job.call(
-        calculate_residuals,
+    residuals_df = calculate_residuals(
         expression_df=expression_df,
         covariate_df=covariate_df,
         output_prefix=output_prefix,
     )
-    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
-    print("running calculate_log_cpm_job")
-    calculate_log_cpm_job.call(
-        calculate_log_cpm,
-        expression_df=expression_df,
-        output_prefix=output_prefix,
-    )
+    calculate_log_cpm(expression_df=expression_df,output_prefix=output_prefix)
 
     spearman_dfs_from_scatter = []
     total_scatters = range(get_number_of_scatters(expression_df_literal, geneloc_df_literal))
@@ -340,10 +324,8 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
-    print("running merge_df_and_convert_to_string")
     corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
-    print("writing output")
     batch.run(wait=False)
 
 
