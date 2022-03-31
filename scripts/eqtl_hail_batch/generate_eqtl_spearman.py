@@ -339,8 +339,10 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
+    print("running merge_df_and_convert_to_string")
     corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
+    print("writing output")
     batch.run(wait=False)
 
 
