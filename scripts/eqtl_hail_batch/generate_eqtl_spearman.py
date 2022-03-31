@@ -313,8 +313,9 @@ def main(
     )
 
     spearman_dfs_from_scatter = []
+    total_scatters = range(get_number_of_scatters(expression_df_literal, geneloc_df_literal))
     for idx in range(get_number_of_scatters(expression_df_literal, geneloc_df_literal)):
-        # for i in range(5):
+        print(f'Idx = {idx} out of {total_scatters}')
         j = batch.new_python_job(name=f'process_{idx}')
         j.cpu(2)
         j.memory('8Gi')
