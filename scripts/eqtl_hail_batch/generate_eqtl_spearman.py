@@ -17,8 +17,8 @@ from cloudpathlib import AnyPath
 import click
 
 DEFAULT_DRIVER_MEMORY = '4G'
-DEFAULT_DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/analysis-runner/images/driver:d2a9c316d6d752edb27623542c8a062db4466842-hail-0.2.73.devc6f6f09cec08'  # noqa: E501; pylint: disable=line-too-long
-DRIVER_IMAGE = os.getenv('DRIVER_IMAGE', DEFAULT_DRIVER_IMAGE)
+DRIVER_IMAGE = os.getenv('CPG_DRIVER_IMAGE')
+assert DRIVER_IMAGE
 
 # TOB_WGS = 'gs://cpg-tob-wgs-test/mt/v7.mt/'
 
