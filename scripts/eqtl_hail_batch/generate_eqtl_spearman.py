@@ -118,20 +118,23 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
 # Run Spearman rank in parallel by sending genes in a batches
 def run_spearman_correlation_scatter(
     idx,
-    expression_df,
-    genotype_df,
-    geneloc_df,
-    snploc_df,
-    residuals_df,
-    sampleid_keys,
+    expression,
+    genotype,
+    geneloc,
+    snploc,
+    covariates,
+    output_prefix,
+    keys,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
 
-    log_expression_df = get_log_expression(expression_df)
-
     # Prepare variables used to calculate Spearman's correlation
+    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
+    log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
     # change genotype df sampleids from CPG internal IDs to OneK1K IDs
+    genotype_df = pd.read_csv(AnyPath(genotype), sep='\t')
+    sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
     onek1k_id = pd.merge(
         pd.DataFrame(genotype_df.sampleid),
         sampleid_keys,
@@ -146,12 +149,25 @@ def run_spearman_correlation_scatter(
     min_count = int(len(genotype_df.index) * 0.90)
     genotype_df = genotype_df.dropna(axis='columns', thresh=min_count)
     # filter snploc file to have the same snps as the genotype_df
+    snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
     snploc_df = snploc_df[snploc_df.snpid.isin(genotype_df.columns)]
 
     # Get 1Mb sliding window around each gene
+    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
     geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
+
+    # get log expression values
+    calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
+
+    # load in files used within spearman_correlation function
+    covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
+    residuals_df = calculate_residuals(
+        expression_df=expression_df,
+        covariate_df=covariate_df,
+        output_prefix=output_prefix,
+    )
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -168,7 +184,6 @@ def run_spearman_correlation_scatter(
         return (gene_symbol, gene_id, snp, coef, p)
 
     gene_info = geneloc_df.iloc[idx]
-    print(gene_info)
     snps_within_region = snploc_df[
         snploc_df['pos'].between(gene_info['left'], gene_info['right'])
     ]
@@ -282,24 +297,8 @@ def main(
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
 
-    # load files into a python job to avoid memory issues during a submission
-    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
-    genotype_df = pd.read_csv(AnyPath(genotype), sep='\t')
-    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
-    snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
-    covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
-    sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
-    residuals_df = calculate_residuals(
-        expression_df=expression_df,
-        covariate_df=covariate_df,
-        output_prefix=output_prefix,
-    )
-    calculate_log_cpm(expression_df=expression_df,output_prefix=output_prefix)
-
     spearman_dfs_from_scatter = []
-    total_scatters = range(get_number_of_scatters(expression_df_literal, geneloc_df_literal))
     for idx in range(get_number_of_scatters(expression_df_literal, geneloc_df_literal)):
-        print(f'Idx = {idx} out of {total_scatters}')
         j = batch.new_python_job(name=f'process_{idx}')
         j.cpu(2)
         j.memory('8Gi')
@@ -308,12 +307,13 @@ def main(
         result: hb.resource.PythonResult = j.call(
             run_spearman_correlation_scatter,
             idx=idx,
-            expression_df=expression_df,
-            genotype_df=genotype_df,
-            geneloc_df=geneloc_df,
-            snploc_df=snploc_df,
-            residuals_df=residuals_df,
-            sampleid_keys=sampleid_keys,
+            expression=expression,
+            genotype=genotype,
+            geneloc=geneloc,
+            snploc=snploc,
+            covariates=covariates,
+            output_prefix=output_prefix,
+            keys=keys,
         )
         spearman_dfs_from_scatter.append(result)
 
