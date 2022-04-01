@@ -214,7 +214,8 @@ def run_spearman_correlation_scatter(
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     # get alleles
-    # mt = hl.read_matrix_table(TOB_WGS).key_rows_by('locus')
+    mt = hl.read_matrix_table(TOB_WGS).key_rows_by('locus')
+    print(mt.show())
     t = t.key_by('locus')
     #    t = t.annotate(
     # alleles=mt.rows()[t.locus].alleles,
