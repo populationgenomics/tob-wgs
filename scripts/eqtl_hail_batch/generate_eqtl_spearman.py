@@ -20,7 +20,7 @@ DEFAULT_DRIVER_MEMORY = '4G'
 DRIVER_IMAGE = os.getenv('CPG_DRIVER_IMAGE')
 assert DRIVER_IMAGE
 
-# TOB_WGS = 'gs://cpg-tob-wgs-test/mt/v7.mt/'
+TOB_WGS = 'gs://cpg-tob-wgs-test/mt/v7.mt/'
 
 
 def get_number_of_scatters(expression_df, geneloc_df):
