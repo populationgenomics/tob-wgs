@@ -24,6 +24,7 @@ assert DRIVER_IMAGE
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 
+
 def get_number_of_scatters(expression_df, geneloc_df):
     """get index of total number of genes"""
 
@@ -128,13 +129,18 @@ def run_spearman_correlation_scatter(
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
 
-    # Prepare variables used to calculate Spearman's correlation
+    # calculate and save log expression values
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
-    gene_ids = list(log_expression_df.columns.values)[1:]
-
-    # save log expression values
     calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
+
+    # calculate and save residual values
+    covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
+    residuals_df = calculate_residuals(
+        expression_df=expression_df,
+        covariate_df=covariate_df,
+        output_prefix=output_prefix,
+    )
 
     # create genotype df
     init_batch()
@@ -173,20 +179,6 @@ def run_spearman_correlation_scatter(
     # FIXME: Only keep SNPs where 90% of individuals have values
     # min_count = int(len(genotype_df.index) * 0.90)
 
-    # Get 1Mb sliding window around each gene
-    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-    geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
-    geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
-
-    # calculate and save residual values
-    covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
-    residuals_df = calculate_residuals(
-        expression_df=expression_df,
-        covariate_df=covariate_df,
-        output_prefix=output_prefix,
-    )
-
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -211,6 +203,14 @@ def run_spearman_correlation_scatter(
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
         return (gene_symbol, gene_id, snp, coef, p)
 
+    # Get 1Mb sliding window around each gene
+    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
+    gene_ids = list(log_expression_df.columns.values)[1:]
+    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
+    geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
+    geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
+
+    # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
     snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
     snps_within_region = snploc_df[
