@@ -147,7 +147,7 @@ def run_spearman_correlation_scatter(
     init_batch()
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
     mt = mt.filter_rows(mt.locus.contig == '22')
-    print(f'printing mt: {mt.head()}')
+    print(f'printing mt: {mt.show()}')
     # mt = hl.read_matrix_table(TOB_WGS)
     # mt = hl.experimental.densify(mt)
     # # filter out variants that didn't pass the VQSR filter
@@ -181,7 +181,7 @@ def run_spearman_correlation_scatter(
     samples_to_keep = set(log_expression_df.sampleid)
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-    print(f'printing mt: {mt.head()}')
+    print(f'printing mt: {mt.show()}')
     # FIXME: Only keep SNPs where 90% of individuals have values
     # min_count = int(len(genotype_df.index) * 0.90)
 
@@ -287,7 +287,6 @@ def run_spearman_correlation_scatter(
     # get alleles
     mt = mt.key_rows_by('locus')
     t = t.key_by('locus')
-    # Stopped here ----------------------
     t = t.annotate(
         alleles=mt.rows()[t.locus].alleles,
         a1=mt.rows()[t.locus].alleles[0],
