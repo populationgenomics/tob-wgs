@@ -25,16 +25,6 @@ TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 
 
-def get_number_of_scatters(expression_df, geneloc_df):
-    """get index of total number of genes"""
-
-    expression_df = filter_lowly_expressed_genes(expression_df)
-    gene_ids = list(expression_df.columns.values)[1:]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-
-    return len(geneloc_df.index)
-
-
 def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples"""
 
@@ -52,6 +42,17 @@ def filter_lowly_expressed_genes(expression_df):
     expression_df.insert(loc=0, column='sampleid', value=sample_ids)
 
     return expression_df
+
+
+def get_number_of_scatters(expression_df, geneloc_df):
+    """get index of total number of genes"""
+
+    expression_df = filter_lowly_expressed_genes(expression_df)
+    gene_ids = list(expression_df.columns.values)[1:]
+    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
+
+    # return len(geneloc_df.index)
+    return 2
 
 
 def get_log_expression(expression_df):
@@ -146,6 +147,7 @@ def run_spearman_correlation_scatter(
     init_batch()
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
     mt = mt.filter_rows(mt.locus.contig == '22')
+    print(f'printing mt: {mt.head()}')
     # mt = hl.read_matrix_table(TOB_WGS)
     # mt = hl.experimental.densify(mt)
     # # filter out variants that didn't pass the VQSR filter
@@ -162,6 +164,7 @@ def run_spearman_correlation_scatter(
     # mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
+    print(f'printing sampleid keys: {sampleid_keys.head()}')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
     sampleid_keys = pd.merge(
         genotype_samples,
@@ -178,6 +181,7 @@ def run_spearman_correlation_scatter(
     samples_to_keep = set(log_expression_df.sampleid)
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+    print(f'printing mt: {mt.head()}')
     # FIXME: Only keep SNPs where 90% of individuals have values
     # min_count = int(len(genotype_df.index) * 0.90)
 
@@ -218,6 +222,7 @@ def run_spearman_correlation_scatter(
 
     # Get 1Mb sliding window around each gene
     geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
+    print(f'printing geneloc df: {geneloc_df.head()}')
     gene_ids = list(log_expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
@@ -226,6 +231,7 @@ def run_spearman_correlation_scatter(
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
     snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
+    print(f'printing snploc_df df: {snploc_df.head()}')
     snps_within_region = snploc_df[
         snploc_df['pos'].between(gene_info['left'], gene_info['right'])
     ]
