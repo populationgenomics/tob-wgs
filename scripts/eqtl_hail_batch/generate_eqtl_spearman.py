@@ -144,20 +144,22 @@ def run_spearman_correlation_scatter(
 
     # create genotype df
     init_batch()
-    mt = hl.read_matrix_table(TOB_WGS)
-    mt = hl.experimental.densify(mt)
-    # filter out variants that didn't pass the VQSR filter
-    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-    # VQSR does not filter out low quality genotypes. Filter these out
-    mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-    # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    n_samples = mt.count_cols()
-    call_rate = 0.8
-    mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
-    # filter out variants with MAF < 0.01
-    ht = hl.read_table(FREQ_TABLE)
-    mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-    mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
+    mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
+    mt = mt.filter_rows(mt.locus.contig == '22')
+    # mt = hl.read_matrix_table(TOB_WGS)
+    # mt = hl.experimental.densify(mt)
+    # # filter out variants that didn't pass the VQSR filter
+    # mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+    # # VQSR does not filter out low quality genotypes. Filter these out
+    # mt = mt.filter_entries(mt.GQ <= 20, keep=False)
+    # # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+    # n_samples = mt.count_cols()
+    # call_rate = 0.8
+    # mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
+    # # filter out variants with MAF < 0.01
+    # ht = hl.read_table(FREQ_TABLE)
+    # mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
+    # mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -183,24 +185,35 @@ def run_spearman_correlation_scatter(
     def spearman_correlation(df):
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
+        print(f'gene_symbol = {gene_symbol}')
         gene_id = df.gene_id
+        print(f'gene_id = {gene_id}')
         snp = df.snpid
+        print(f'snp = {snp}')
         genotype_table = t.filter(t.snpid == snp)
 
         start = datetime.now()
         genotype_df = genotype_table.to_pandas(flatten=True)
         print(f'SNP {snp}: Took {(datetime.now() - start).total_seconds()} to convert genotype table')
         columns = (genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})).snpid[0]
+        print(columns)
         genotypes = (genotype_df.groupby(['onek1k_id']).agg({'n_alt_alleles': lambda x: x.tolist()}))
+        print(f'printing genotypes: {genotypes}')
         genotype_df = pd.DataFrame(genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index)
+        print(f'printing genotype df: {genotype_df.head()}')
         genotype_df.reset_index(inplace=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True) 
+        print(f'printing genotype df after reset index: {genotype_df.head()}')
+        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+        print(f'printing genotype after rename index: {genotype_df.head()}')
         res_val = residuals_df[['sampleid', gene_symbol]]
+        print(f'printing res_val: {res_val.head()}')
         test_df = res_val.merge(genotype_df, on='sampleid', how='right')
+        print(f'printing test df: {test_df.head()}')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
         # this should be removed after resolving why NA values are in the genotype file
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
+        print(f'coef = {coef}')
         return (gene_symbol, gene_id, snp, coef, p)
 
     # Get 1Mb sliding window around each gene
@@ -219,6 +232,7 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
+    gene_snp_df = gene_snp_df.head(10)
     # get genotypes from mt in order to load individual SNPs into 
     # the spearman correlation function
     t = mt.entries()
