@@ -13,7 +13,7 @@ import statsmodels.api as sm
 import statsmodels.stats.multitest as multi
 from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
-from cpg_utils.hail import dataset_path, copy_common_env, init_batch, remote_tmpdir
+from cpg_utils.hail import dataset_path, output_path, copy_common_env, init_batch, remote_tmpdir
 from cloudpathlib import AnyPath
 import click
 
@@ -123,7 +123,6 @@ def run_spearman_correlation_scatter(
     idx,
     expression,
     geneloc,
-    snploc,
     covariates,
     output_prefix,
     keys,
@@ -147,7 +146,6 @@ def run_spearman_correlation_scatter(
     init_batch()
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
     mt = mt.filter_rows(mt.locus.contig == 'chr22')
-    print(f'printing mt: {mt.show()}')
     # mt = hl.read_matrix_table(TOB_WGS)
     # mt = hl.experimental.densify(mt)
     # # filter out variants that didn't pass the VQSR filter
@@ -200,24 +198,17 @@ def run_spearman_correlation_scatter(
         genotype_df = genotype_table.to_pandas(flatten=True)
         print(f'SNP {snp}: Took {(datetime.now() - start).total_seconds()} to convert genotype table')
         columns = (genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})).snpid[0]
-        print(columns)
         genotypes = (genotype_df.groupby(['onek1k_id']).agg({'n_alt_alleles': lambda x: x.tolist()}))
-        print(f'printing genotypes: {genotypes}')
         genotype_df = pd.DataFrame(genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index)
-        print(f'printing genotype df: {genotype_df.head()}')
         genotype_df.reset_index(inplace=True)
-        print(f'printing genotype df after reset index: {genotype_df.head()}')
         genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-        print(f'printing genotype after rename index: {genotype_df.head()}')
         res_val = residuals_df[['sampleid', gene_symbol]]
-        print(f'printing res_val: {res_val.head()}')
         test_df = res_val.merge(genotype_df, on='sampleid', how='right')
-        print(f'printing test df: {test_df.head()}')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
         # this should be removed after resolving why NA values are in the genotype file
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        print(f'coef = {coef}')
+        print(f'coef for {snp} = {coef}')
         return (gene_symbol, gene_id, snp, coef, p)
 
     # Get 1Mb sliding window around each gene
@@ -230,10 +221,16 @@ def run_spearman_correlation_scatter(
 
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
-    snploc_df = pd.read_csv(AnyPath(snploc), sep='\t')
-    print(f'printing snploc_df df: {snploc_df.head()}')
+    chromosome = gene_info.chr
+    position_table = mt.rows().select()
+    position_table = position_table.filter(position_table.locus.contig == chromosome)
+    position_table = position_table.annotate(
+        position=position_table.locus.position, 
+        snpid=hl.str(position_table.locus) + ':' + hl.str(position_table.alleles[0]) + ':' + hl.str(position_table.alleles[1])
+    )
+    snploc_df = position_table.to_pandas()
     snps_within_region = snploc_df[
-        snploc_df['pos'].between(gene_info['left'], gene_info['right'])
+        snploc_df['position'].between(gene_info['left'], gene_info['right'])
     ]
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
@@ -249,16 +246,12 @@ def run_spearman_correlation_scatter(
     t = t.annotate(snpid=hl.str(t.contig) + ':' + hl.str(t.position) + ':' + hl.str(t.alleles[0]) + ':' + hl.str(t.alleles[1]))
     # Do this only on SNPs contained within gene_snp_df to save on 
     # computational time
-    snps_to_keep = set(snps_within_region.snpid)
+    snps_to_keep = set(gene_snp_df.snpid)
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
-
-    # mfranklin: I think we need to persist here, otherwise within the .apply,
-    #               this could be executed for every iteration
-
-    start = datetime.now()
-    t = t.key_by(snpid=t.snpid).persist()
-    print(f'Took {(datetime.now() - start).total_seconds()} to persist df')
+    # checkpoint table in order to force calculations and make running in 
+    # spearman_df function significantly quicker
+    t = t.checkpoint(output_path('entries_table_checkpoint.ht', 'tmp'))
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
@@ -329,11 +322,6 @@ def merge_df_and_convert_to_string(*df_list):
     '--geneloc', required=True, help='A TSV of start and end positions for each gene'
 )
 @click.option(
-    '--snploc',
-    required=True,
-    help='A TSV of snp IDs with chromsome and position values for each',
-)
-@click.option(
     '--covariates', required=True, help='A TSV of covariates to calculate residuals'
 )
 @click.option(
@@ -349,7 +337,6 @@ def merge_df_and_convert_to_string(*df_list):
 def main(
     expression: str,
     geneloc,
-    snploc,
     covariates,
     keys,
     output_prefix: str,
@@ -377,7 +364,6 @@ def main(
             idx=idx,
             expression=expression,
             geneloc=geneloc,
-            snploc=snploc,
             covariates=covariates,
             output_prefix=output_prefix,
             keys=keys,
