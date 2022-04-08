@@ -233,7 +233,6 @@ def run_spearman_correlation_scatter(
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
-    mt = mt.filter_rows(mt.locus.contig == 'chr22')
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -251,7 +250,6 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
-    gene_snp_df = gene_snp_df.head(5)
     
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
