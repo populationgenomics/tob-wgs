@@ -90,12 +90,11 @@ def calculate_log_cpm(expression_df, output_prefix):
 
 def prepare_genotype_info(keys_path, expression_path):
 
+    init_batch()
     filtered_mt_path = output_path('genotype_table.ht', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
         log_expression_df = get_log_expression(expression_df)
-
-        init_batch()
         mt = hl.read_matrix_table(TOB_WGS)
         mt = hl.experimental.densify(mt)
         # filter out variants that didn't pass the VQSR filter
