@@ -251,7 +251,7 @@ def run_spearman_correlation_scatter(
     t = t.filter(set_to_keep.contains(t['snpid']))
     # checkpoint table in order to force calculations and make running in 
     # spearman_df function significantly quicker
-    t = t.checkpoint(output_path('entries_table_checkpoint.ht', 'tmp'), overwrite=True)
+    t = t.checkpoint(output_path(f'entries_table_{idx}_checkpoint.ht', 'tmp'))
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
