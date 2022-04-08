@@ -90,48 +90,51 @@ def calculate_log_cpm(expression_df, output_prefix):
 
 def prepare_genotype_info(keys_path, expression_path):
 
-    expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
-    log_expression_df = get_log_expression(expression_df)
+    filtered_mt_path = output_path('genotype_table.ht', 'tmp')
+    if not hl.hadoop_exists(filtered_mt_path):
+        expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
+        log_expression_df = get_log_expression(expression_df)
 
-    init_batch()
-    mt = hl.read_matrix_table(TOB_WGS)
-    mt = hl.experimental.densify(mt)
-    # filter out variants that didn't pass the VQSR filter
-    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-    # VQSR does not filter out low quality genotypes. Filter these out
-    mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-    # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    n_samples = mt.count_cols()
-    call_rate = 0.8
-    mt = mt.filter_rows(
-        hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
-    )
-    # filter out variants with MAF < 0.01
-    ht = hl.read_table(FREQ_TABLE)
-    mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-    mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    # add OneK1K IDs to genotype mt
-    sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-    genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
-    sampleid_keys = pd.merge(
-        genotype_samples,
-        sampleid_keys,
-        how='left',
-        left_on='sampleid',
-        right_on='InternalID',
-    )
-    sampleid_keys.fillna('', inplace=True)
-    sampleid_keys = hl.Table.from_pandas(sampleid_keys)
-    sampleid_keys = sampleid_keys.key_by('sampleid')
-    mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
-    # only keep samples that have rna-seq expression data
-    samples_to_keep = set(log_expression_df.sampleid)
-    set_to_keep = hl.literal(samples_to_keep)
-    mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+        init_batch()
+        mt = hl.read_matrix_table(TOB_WGS)
+        mt = hl.experimental.densify(mt)
+        # filter out variants that didn't pass the VQSR filter
+        mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+        # VQSR does not filter out low quality genotypes. Filter these out
+        mt = mt.filter_entries(mt.GQ <= 20, keep=False)
+        # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+        n_samples = mt.count_cols()
+        call_rate = 0.8
+        mt = mt.filter_rows(
+            hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
+        )
+        # filter out variants with MAF < 0.01
+        ht = hl.read_table(FREQ_TABLE)
+        mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
+        mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
+        # add OneK1K IDs to genotype mt
+        sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
+        genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
+        sampleid_keys = pd.merge(
+            genotype_samples,
+            sampleid_keys,
+            how='left',
+            left_on='sampleid',
+            right_on='InternalID',
+        )
+        sampleid_keys.fillna('', inplace=True)
+        sampleid_keys = hl.Table.from_pandas(sampleid_keys)
+        sampleid_keys = sampleid_keys.key_by('sampleid')
+        mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
+        # only keep samples that have rna-seq expression data
+        samples_to_keep = set(log_expression_df.sampleid)
+        set_to_keep = hl.literal(samples_to_keep)
+        mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+        filtered_mt = mt.write(filtered_mt_path)
+    else:
+        filtered_mt = mt.read_matrix_table(filtered_mt_path)
 
-    filtered_mt_path = mt.write(output_path('genotype_table.ht', 'tmp'))
-
-    return filtered_mt_path
+    return filtered_mt
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
@@ -171,7 +174,7 @@ def run_spearman_correlation_scatter(
     geneloc,
     covariates,
     output_prefix,
-    filtered_mt_path,
+    filtered_mt,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
 
@@ -232,7 +235,7 @@ def run_spearman_correlation_scatter(
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
     init_batch()
-    mt = hl.read_matrix_table(filtered_mt_path)
+    mt = hl.read_matrix_table(filtered_mt)
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -381,7 +384,7 @@ def main(
 
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(
+    filtered_mt = filter_mt_job.call(
         prepare_genotype_info, keys_path=keys, expression_path=expression
     )
 
@@ -398,7 +401,7 @@ def main(
             geneloc=geneloc,
             covariates=covariates,
             output_prefix=output_prefix,
-            filtered_mt_path=filtered_mt_path,
+            filtered_mt=filtered_mt,
         )
         spearman_dfs_from_scatter.append(result)
 
