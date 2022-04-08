@@ -177,7 +177,6 @@ def run_spearman_correlation_scatter(
     geneloc,
     covariates,
     output_prefix,
-    keys,
     filtered_mt_path,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
@@ -389,7 +388,9 @@ def main(
     spearman_dfs_from_scatter = []
 
     filter_mt_job = batch.new_python_job('filter_mt')
-    filtered_mt_path = filter_mt_job.call(prepare_genotype_info, **otherparams)
+    filtered_mt_path = filter_mt_job.call(
+        prepare_genotype_info, keys_path=keys, expression_path=expression
+    )
 
     for idx in range(get_number_of_scatters(expression_df_literal, geneloc_df_literal)):
         j = batch.new_python_job(name=f'process_{idx}')
@@ -404,7 +405,6 @@ def main(
             geneloc=geneloc,
             covariates=covariates,
             output_prefix=output_prefix,
-            keys=keys,
             filtered_mt_path=filtered_mt_path,
         )
         spearman_dfs_from_scatter.append(result)
