@@ -39,8 +39,6 @@ from google.cloud import storage
     required=True,
     help=(
         'A path prefix of where input files are located, eg: gs://MyBucket/folder/. '
-        'We expect 5 folders to exist in this subdirectory: '
-        'expression_files, gene_location_files, genotype_files, snp_location_files, covariates_files'  # noqa: E501; pylint: disable=line-too-long
     ),
 )
 @click.option(
@@ -104,19 +102,13 @@ def submit_eqtl_jobs(
                 logging.error(f'File {file} is missing')
 
         for chromosome in chromosomes:
-            genotype = os.path.join(
-                input_path, 'genotype_files', f'tob_genotype_chr{chromosome}.tsv'
-            )
             geneloc = os.path.join(
                 input_path, 'gene_location_files', f'GRCh38_geneloc_chr{chromosome}.tsv'
-            )
-            snploc = os.path.join(
-                input_path, 'snp_location_files', f'snpsloc_chr{chromosome}.tsv'
             )
 
             if dry_run:
                 # check all files exist before running
-                files_to_check = [genotype, geneloc, snploc]
+                files_to_check = [geneloc]
                 files_that_are_missing = filter(
                     lambda x: not file_exists(x), files_to_check
                 )
@@ -142,9 +134,7 @@ def submit_eqtl_jobs(
                         'generate_eqtl_spearman.py',
                         *('--expression', expression),
                         *('--covariates', covariates),
-                        *('--genotype', genotype),
                         *('--geneloc', geneloc),
-                        *('--snploc', snploc),
                         *('--keys', keys),
                         *('--output-prefix', output_prefix),
                     ],
