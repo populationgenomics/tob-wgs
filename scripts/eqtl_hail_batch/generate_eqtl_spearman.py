@@ -134,7 +134,7 @@ def prepare_genotype_info(keys_path, expression_path):
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
 
-    filtered_mt_path = mt.write(output_path(f'genotype_table.ht', 'tmp'))
+    filtered_mt_path = mt.write(output_path('genotype_table.ht', 'tmp'))
 
     return filtered_mt_path
 
@@ -194,10 +194,6 @@ def run_spearman_correlation_scatter(
         output_prefix=output_prefix,
     )
 
-    # create genotype df
-    init_batch()
-    mt = hl.load_matrix_table(filtered_mt_path)
-
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -240,6 +236,9 @@ def run_spearman_correlation_scatter(
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
     chromosome = gene_info.chr
+    # get all SNPs which are within 1Mb of each gene
+    init_batch()
+    mt = hl.load_matrix_table(filtered_mt_path)
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -261,7 +260,7 @@ def run_spearman_correlation_scatter(
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
 
-    # get genotype codes (n_alt_alleles, as in PLINK files)
+    # get genotype data for SNPs to test
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
