@@ -146,23 +146,22 @@ def run_spearman_correlation_scatter(
     init_batch()
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
     mt = mt.filter_rows(mt.locus.contig == 'chr22')
-    # mt = hl.read_matrix_table(TOB_WGS)
-    # mt = hl.experimental.densify(mt)
-    # # filter out variants that didn't pass the VQSR filter
-    # mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-    # # VQSR does not filter out low quality genotypes. Filter these out
-    # mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-    # # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    # n_samples = mt.count_cols()
-    # call_rate = 0.8
-    # mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
-    # # filter out variants with MAF < 0.01
-    # ht = hl.read_table(FREQ_TABLE)
-    # mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-    # mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
+    mt = hl.read_matrix_table(TOB_WGS)
+    mt = hl.experimental.densify(mt)
+    # filter out variants that didn't pass the VQSR filter
+    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+    # VQSR does not filter out low quality genotypes. Filter these out
+    mt = mt.filter_entries(mt.GQ <= 20, keep=False)
+    # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+    n_samples = mt.count_cols()
+    call_rate = 0.8
+    mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
+    # filter out variants with MAF < 0.01
+    ht = hl.read_table(FREQ_TABLE)
+    mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
+    mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys), sep='\t')
-    print(f'printing sampleid keys: {sampleid_keys.head()}')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
     sampleid_keys = pd.merge(
         genotype_samples,
@@ -179,19 +178,13 @@ def run_spearman_correlation_scatter(
     samples_to_keep = set(log_expression_df.sampleid)
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-    print(f'printing mt: {mt.show()}')
-    # FIXME: Only keep SNPs where 90% of individuals have values
-    # min_count = int(len(genotype_df.index) * 0.90)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
-        print(f'gene_symbol = {gene_symbol}')
         gene_id = df.gene_id
-        print(f'gene_id = {gene_id}')
         snp = df.snpid
-        print(f'snp = {snp}')
         genotype_table = t.filter(t.snpid == snp)
 
         start = datetime.now()
@@ -208,12 +201,10 @@ def run_spearman_correlation_scatter(
         # set spearmanr calculation to perform the calculation ignoring nan values
         # this should be removed after resolving why NA values are in the genotype file
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        print(f'coef for {snp} = {coef}')
         return (gene_symbol, gene_id, snp, coef, p)
 
     # Get 1Mb sliding window around each gene
     geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
-    print(f'printing geneloc df: {geneloc_df.head()}')
     gene_ids = list(log_expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
