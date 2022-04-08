@@ -380,6 +380,7 @@ def main(
     spearman_dfs_from_scatter = []
 
     filter_mt_job = batch.new_python_job('filter_mt')
+    copy_common_env(filter_mt_job)
     filtered_mt_path = filter_mt_job.call(
         prepare_genotype_info, keys_path=keys, expression_path=expression
     )
