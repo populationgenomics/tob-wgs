@@ -233,6 +233,7 @@ def run_spearman_correlation_scatter(
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
+    mt = mt.filter_rows(mt.locus.contig == '22')
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -250,7 +251,7 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
-    gene_snp_df = gene_snp_df.head(10)
+    gene_snp_df = gene_snp_df.head(5)
     
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
@@ -278,6 +279,7 @@ def run_spearman_correlation_scatter(
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
+    print(f'printing spearman df: {spearman_df.head()}')
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
@@ -295,6 +297,7 @@ def run_spearman_correlation_scatter(
         bp,
     ]
     spearman_df['round'] = 1
+    print(f'printing spearman df: {spearman_df.head()}')
     # turn back into hail table and annotate with global bp,
     # locus, and alleles
     t = hl.Table.from_pandas(spearman_df)
@@ -324,7 +327,9 @@ def run_spearman_correlation_scatter(
             ]
         )
     )
+    print(t.show())
     spearman_df = t.to_pandas()
+    print(f'printing spearman df: {spearman_df.head()}')
     return spearman_df
 
 
