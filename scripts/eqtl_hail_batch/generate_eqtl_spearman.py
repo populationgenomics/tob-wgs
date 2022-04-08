@@ -35,7 +35,6 @@ def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples"""
 
     expression_df = expression_df.loc[:, (expression_df != 0).any(axis=0)]
-    # Number of individuals with non-zero expression
     genes_not_equal_zero = expression_df.iloc[:, 1:].values != 0
     n_expr_over_zero = pd.DataFrame(genes_not_equal_zero.sum(axis=0))
     percent_expr_over_zero = (n_expr_over_zero / len(expression_df.index)) * 100
@@ -66,11 +65,7 @@ def get_log_expression(expression_df):
     """get logged expression values"""
 
     expression_df = filter_lowly_expressed_genes(expression_df)
-
-    # Prepare variables
     sample_ids = expression_df.iloc[:, 0]
-
-    # log expression values
     to_log = expression_df.iloc[:, 1:].columns
     log_expression_df = expression_df[to_log].applymap(lambda x: np.log(x + 1))
     log_expression_df.insert(loc=0, column='sampleid', value=sample_ids)
@@ -143,7 +138,6 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     """Calculate residuals for each gene in scatter"""
 
     log_expression_df = get_log_expression(expression_df)
-    # Prepare variables
     gene_ids = list(log_expression_df.columns.values)[1:]
     sample_ids = log_expression_df.iloc[:, 0]
 
@@ -257,10 +251,9 @@ def run_spearman_correlation_scatter(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
     gene_snp_df = gene_snp_df.head(10)
+    
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
-
-    # get genotype data for SNPs to test
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
