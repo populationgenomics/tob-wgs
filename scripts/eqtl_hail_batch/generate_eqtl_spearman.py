@@ -130,11 +130,9 @@ def prepare_genotype_info(keys_path, expression_path):
         samples_to_keep = set(log_expression_df.sampleid)
         set_to_keep = hl.literal(samples_to_keep)
         mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-        filtered_mt = mt.write(filtered_mt_path)
-    else:
-        filtered_mt = mt.read_matrix_table(filtered_mt_path)
+        mt.write(filtered_mt_path)
 
-    return filtered_mt
+    return filtered_mt_path
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
@@ -174,7 +172,7 @@ def run_spearman_correlation_scatter(
     geneloc,
     covariates,
     output_prefix,
-    filtered_mt,
+    filtered_mt_path,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
 
@@ -235,7 +233,7 @@ def run_spearman_correlation_scatter(
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
     init_batch()
-    mt = hl.read_matrix_table(filtered_mt)
+    mt = hl.read_matrix_table(filtered_mt_path)
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -384,7 +382,7 @@ def main(
 
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
-    filtered_mt = filter_mt_job.call(
+    filtered_mt_path = filter_mt_job.call(
         prepare_genotype_info, keys_path=keys, expression_path=expression
     )
 
@@ -401,7 +399,7 @@ def main(
             geneloc=geneloc,
             covariates=covariates,
             output_prefix=output_prefix,
-            filtered_mt=filtered_mt,
+            filtered_mt_path=filtered_mt_path,
         )
         spearman_dfs_from_scatter.append(result)
 
