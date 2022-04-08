@@ -144,8 +144,6 @@ def run_spearman_correlation_scatter(
 
     # create genotype df
     init_batch()
-    mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/kat/v0/tob_wgs_densified_filtered.mt/')
-    mt = mt.filter_rows(mt.locus.contig == 'chr22')
     mt = hl.read_matrix_table(TOB_WGS)
     mt = hl.experimental.densify(mt)
     # filter out variants that didn't pass the VQSR filter
