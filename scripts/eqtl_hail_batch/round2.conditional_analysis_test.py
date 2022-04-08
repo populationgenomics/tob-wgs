@@ -11,7 +11,7 @@ import statsmodels.stats.multitest as multi
 from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail import copy_common_env, init_query_service, remote_tmpdir
-
+from cloudpathlib import AnyPath
 import click
 
 
@@ -89,12 +89,10 @@ def calculate_residual_df(genotype_df, residual_df, significant_snps_df, samplei
     # Find residuals after adjustment of lead SNP
     def calculate_adjusted_residuals(gene_id):
         gene = gene_id
-        print(gene)
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene]]
         # select SNP to add
         snp = list(esnp1.snpid[esnp1.gene_symbol == gene].values)
-        print(snp)
         snp.append('sampleid')
         snp_genotype = genotype_df[snp]
 
@@ -302,10 +300,10 @@ def main(
     else:
         # load these literally to do the get_number of scatters
         print(f'Loading residuals: {residuals}')
-        residual_df_literal = pd.read_csv(residuals)
+        residual_df_literal = pd.read_csv(AnyPath(residuals))
         print(f'Loading significant_snps: {significant_snps}')
-        significant_snps_df_literal = pd.read_csv(
-            significant_snps, sep=' ', skipinitialspace=True
+        significant_snps_df_literal = pd.read_csv(AnyPath(
+            significant_snps), sep=' ', skipinitialspace=True
         )
 
         print('Loaded data to prepare workflow')
