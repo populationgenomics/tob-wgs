@@ -232,7 +232,7 @@ def run_spearman_correlation_scatter(
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
     init_batch()
-    mt = hl.load_matrix_table(filtered_mt_path)
+    mt = hl.read_matrix_table(filtered_mt_path)
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
