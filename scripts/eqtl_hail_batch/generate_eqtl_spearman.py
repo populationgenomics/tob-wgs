@@ -194,24 +194,9 @@ def run_spearman_correlation_scatter(
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
-        genotype_table = t.filter(t.snpid == snp)
+        genotype_df = genotype_df[['sampleid', snp]]
 
         start = datetime.now()
-        genotype_df = genotype_table.to_pandas(flatten=True)
-        print(
-            f'SNP {snp}: Took {(datetime.now() - start).total_seconds()} to convert genotype table'
-        )
-        columns = (
-            genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})
-        ).snpid[0]
-        genotypes = genotype_df.groupby(['onek1k_id']).agg(
-            {'n_alt_alleles': lambda x: x.tolist()}
-        )
-        genotype_df = pd.DataFrame(
-            genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index
-        )
-        genotype_df.reset_index(inplace=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(genotype_df, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
@@ -273,7 +258,18 @@ def run_spearman_correlation_scatter(
     t = t.filter(set_to_keep.contains(t['snpid']))
     # checkpoint table in order to force calculations and make running in
     # spearman_df function significantly quicker
-    t = t.checkpoint(output_path(f'entries_table_{idx}_checkpoint.ht', 'tmp'))
+    genotype_df = t.to_pandas(flatten=True)
+    columns = (
+        genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})
+    ).snpid[0]
+    genotypes = genotype_df.groupby(['onek1k_id']).agg(
+        {'n_alt_alleles': lambda x: x.tolist()}
+    )
+    genotype_df = pd.DataFrame(
+        genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index
+    )
+    genotype_df.reset_index(inplace=True)
+    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
