@@ -229,7 +229,6 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(position_table.alleles[1]),
     )
-    print(f'Printing positions table: {position_table.show()}')
     snploc_df = position_table.to_pandas()
     snps_within_region = snploc_df[
         snploc_df['position'].between(gene_info['left'], gene_info['right'])
@@ -237,7 +236,6 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
-    print(f'Printing gene_snp_df: {gene_snp_df.head()}')
     
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
@@ -254,23 +252,29 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(t.alleles[1])
     )
+    print(f'Printing table: {t.show()}')
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_df.snpid)
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
+    print(f'Printing table after filter: {t.show()}')
     # checkpoint table in order to force calculations and make running in
     # spearman_df function significantly quicker
     genotype_df = t.to_pandas(flatten=True)
+    print(f'Printing genotype df: {genotype_df.head()}')
     columns = (
         genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})
     ).snpid[0]
+    print(f'Printing columns: {columns}')
     genotypes = genotype_df.groupby(['onek1k_id']).agg(
         {'n_alt_alleles': lambda x: x.tolist()}
     )
+    print(f'Printing genotypes: {genotypes}')
     genotype_df = pd.DataFrame(
         genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index
     )
+    print(f'Printing genotype df after filtering to list: {genotype_df.head()}')
     genotype_df.reset_index(inplace=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
     print(f'Printing genotype df before loop: {genotype_df.head()}')
