@@ -195,6 +195,7 @@ def run_spearman_correlation_scatter(
         gene_id = df.gene_id
         snp = df.snpid
         genotype_df = genotype_df[['sampleid', snp]]
+        print(f'Printing genotype df inside loop: {genotype_df.head()}')
 
         start = datetime.now()
         res_val = residuals_df[['sampleid', gene_symbol]]
@@ -228,6 +229,7 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(position_table.alleles[1]),
     )
+    print(f'Printing positions table: {position_table.show()}')
     snploc_df = position_table.to_pandas()
     snps_within_region = snploc_df[
         snploc_df['position'].between(gene_info['left'], gene_info['right'])
@@ -235,6 +237,7 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
+    print(f'Printing gene_snp_df: {gene_snp_df.head()}')
     
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
@@ -270,6 +273,7 @@ def run_spearman_correlation_scatter(
     )
     genotype_df.reset_index(inplace=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    print(f'Printing genotype df before loop: {genotype_df.head()}')
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
