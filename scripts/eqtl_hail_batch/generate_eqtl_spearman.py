@@ -258,7 +258,7 @@ def run_spearman_correlation_scatter(
     snps_to_keep = set(gene_snp_df.snpid)
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
-    print(f'Printing table after filter: {t.show()}')
+    t.write(output_path('filtered_snps_table.ht', 'tmp'))
     # checkpoint table in order to force calculations and make running in
     # spearman_df function significantly quicker
     genotype_df = t.to_pandas(flatten=True)
