@@ -260,7 +260,6 @@ def run_spearman_correlation_scatter(
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
-    print(f'Printing table: {t.show()}')
     t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
     genotype_df = t.to_pandas(flatten=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
@@ -288,7 +287,6 @@ def run_spearman_correlation_scatter(
         bp,
     ]
     spearman_df['round'] = 1
-    print(f'printing spearman df: {spearman_df.head()}')
     # turn back into hail table and annotate with global bp,
     # locus, and alleles
     t = hl.Table.from_pandas(spearman_df)
@@ -298,7 +296,6 @@ def run_spearman_correlation_scatter(
     mt = mt.key_rows_by('locus')
     t = t.key_by('locus')
     t = t.annotate(
-        alleles=mt.rows()[t.locus].alleles,
         a1=mt.rows()[t.locus].alleles[0],
         a2=hl.if_else(
             hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
@@ -318,9 +315,7 @@ def run_spearman_correlation_scatter(
             ]
         )
     )
-    print(t.show())
     spearman_df = t.to_pandas()
-    print(f'printing spearman df: {spearman_df.head()}')
     return spearman_df
 
 
