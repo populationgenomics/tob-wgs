@@ -97,6 +97,8 @@ def prepare_genotype_info(keys_path, expression_path):
         log_expression_df = get_log_expression(expression_df)
         mt = hl.read_matrix_table(TOB_WGS)
         mt = hl.experimental.densify(mt)
+        # filter to biallelic loci only
+        mt = mt.filter_rows(hl.len(mt.alleles) == 2)
         # filter out variants that didn't pass the VQSR filter
         mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
         # VQSR does not filter out low quality genotypes. Filter these out
@@ -194,12 +196,11 @@ def run_spearman_correlation_scatter(
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
-        genotype_df = genotype_df[['sampleid', snp]]
-        print(f'Printing genotype df inside loop: {genotype_df.head()}')
+        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
 
         start = datetime.now()
         res_val = residuals_df[['sampleid', gene_symbol]]
-        test_df = res_val.merge(genotype_df, on='sampleid', how='right')
+        test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
         # this should be removed after resolving why NA values are in the genotype file
@@ -252,32 +253,20 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(t.alleles[1])
     )
-    print(f'Printing table: {t.show()}')
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_df.snpid)
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
-    t.write(output_path('filtered_snps_table.ht', 'tmp'))
-    # checkpoint table in order to force calculations and make running in
-    # spearman_df function significantly quicker
+    # only keep SNPs where all samples have an alt_allele value
+    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
+    print(f'Printing table: {t.show()}')
+    t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
     genotype_df = t.to_pandas(flatten=True)
-    print(f'Printing genotype df: {genotype_df.head()}')
-    columns = (
-        genotype_df.groupby(['onek1k_id']).agg({'snpid': lambda x: x.tolist()})
-    ).snpid[0]
-    print(f'Printing columns: {columns}')
-    genotypes = genotype_df.groupby(['onek1k_id']).agg(
-        {'n_alt_alleles': lambda x: x.tolist()}
-    )
-    print(f'Printing genotypes: {genotypes}')
-    genotype_df = pd.DataFrame(
-        genotypes['n_alt_alleles'].to_list(), columns=columns, index=genotypes.index
-    )
-    print(f'Printing genotype df after filtering to list: {genotype_df.head()}')
-    genotype_df.reset_index(inplace=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-    print(f'Printing genotype df before loop: {genotype_df.head()}')
+    # filter gene_snp_df to have the same snps after filtering SNPs that
+    # don't have an alt_allele value   
+    gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
