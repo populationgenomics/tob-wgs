@@ -90,7 +90,7 @@ def submit_eqtl_jobs(
             input_path, 'expression_files', f'{cell_type}_expression.tsv'
         )
         covariates = os.path.join(
-            input_path, 'covariates_files', f'{cell_type}_peer_factors.tsv'
+            input_path, 'covariates_files', f'{cell_type}_peer_factors_file.txt'
         )
 
         if dry_run:

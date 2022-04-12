@@ -141,17 +141,18 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
 
     log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
-    sample_ids = log_expression_df.iloc[:, 0]
+    sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').sampleid
 
     # Calculate expression residuals
     def calculate_gene_residual(gene_id):
         """Calculate gene residuals"""
         gene = gene_id
         exprs_val = log_expression_df[['sampleid', gene]]
-        test_df = exprs_val.merge(covariate_df, on='sampleid', how='left')
+        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right')
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
+        test_df[['sex','age']] = test_df[['sex','age']].astype(int)
         y, x = dmatrices(
-            'expression ~ sex + pc1 + pc2 + pc3 + pc4 + pc5 + pc6 + age + pf1 + pf2',
+            'expression ~ sex + PC1 + PC2 + PC3 + PC4 + age + pf1 + pf2',
             test_df,
         )
         model = sm.OLS(y, x)
@@ -178,17 +179,18 @@ def run_spearman_correlation_scatter(
     """Run genes in scatter"""
 
     # calculate and save log expression values
-    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
     calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
 
     # calculate and save residual values
+    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
     residuals_df = calculate_residuals(
         expression_df=expression_df,
         covariate_df=covariate_df,
         output_prefix=output_prefix,
     )
+    filtered_sampleid = residuals_df.sampleid
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -220,6 +222,8 @@ def run_spearman_correlation_scatter(
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
+    samples_to_keep = hl.literal(list(filtered_sampleid))
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
