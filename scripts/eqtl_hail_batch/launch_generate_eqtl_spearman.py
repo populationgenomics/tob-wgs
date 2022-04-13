@@ -129,6 +129,8 @@ def submit_eqtl_jobs(
                     dataset='tob-wgs',
                     access_level='test',
                     output_dir=analysis_runner_output_path,
+                    memory='highmem',
+                    cpu=8,
                     # commit, sha and cwd can be inferred automatically
                     script=[
                         'generate_eqtl_spearman.py',
