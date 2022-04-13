@@ -179,11 +179,11 @@ def run_spearman_correlation_scatter(
     """Run genes in scatter"""
 
     # calculate and save log expression values
+    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
     calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
 
     # calculate and save residual values
-    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
     residuals_df = calculate_residuals(
         expression_df=expression_df,
