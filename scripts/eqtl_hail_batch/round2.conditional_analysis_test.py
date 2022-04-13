@@ -145,12 +145,11 @@ def calculate_residual_df(genotype_df, residual_df, significant_snps_df):
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene]]
         # select SNP to add
-        snp = list(esnp1.snpid[esnp1.gene_symbol == gene].values)
-        snp.append('sampleid')
-        snp_genotype = genotype_df[snp]
+        snp = esnp1.snpid[esnp1.gene_symbol == gene][0]
+        snp_genotype = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
 
         # Create a test df by adding covariates
-        test_df = exprs_val.merge(snp_genotype, on='sampleid', how='left')
+        test_df = exprs_val.merge(snp_genotype, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'expression', 'genotype']
 
         y, x = dmatrices('expression ~ genotype', test_df)
