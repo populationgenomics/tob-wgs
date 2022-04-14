@@ -87,7 +87,7 @@ def prepare_genotype_info(keys_path):
 
 def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     """load genotype df and filter"""
-    # init_batch()
+    init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     samples_to_keep = set(residual_df.sampleid)
