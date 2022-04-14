@@ -87,7 +87,7 @@ def prepare_genotype_info(keys_path):
 
 def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     """load genotype df and filter"""
-    init_batch()
+    # init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     samples_to_keep = set(residual_df.sampleid)
@@ -113,9 +113,13 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
-    t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-    genotype_df = t.to_pandas(flatten=True)
-    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    if len(snps_to_remove) > 0:
+        t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+        genotype_df = t.to_pandas(flatten=True)
+        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    else:
+        genotype_df = t.to_pandas(flatten=True)
+        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
     return genotype_df
 
@@ -151,7 +155,7 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene]]
         # select SNP to add
-        snp = esnp1.snpid[esnp1.gene_symbol == gene][0]
+        snp = esnp1.snpid[esnp1.gene_symbol == gene].to_string(index=False)
         snp_genotype = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
 
         # Create a test df by adding covariates
@@ -373,13 +377,6 @@ def main(
         prepare_genotype_info, keys_path=keys
     )
 
-    # stuck here -----------
-    genotype_job = batch.new_python_job('generate_genotype')
-    copy_common_env(genotype_job)
-    genotype_df = genotype_job.call(
-        prepare_genotype_info, keys_path=keys
-    )
-
     # load these in a python job to avoid memory issues during a submission
     load_small_files = batch.new_python_job('load-small-files')
     load_small_files.memory('8Gi')
@@ -401,9 +398,9 @@ def main(
         calc_resid_df_job.storage('2Gi')
         previous_residual_result = calc_resid_df_job.call(
             calculate_residual_df,
-            genotype_df,
             previous_residual_result,
             previous_sig_snps_result,
+            filtered_mt_path
         )
 
         # convert residual df to string for output
