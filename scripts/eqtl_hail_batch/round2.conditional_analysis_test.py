@@ -120,7 +120,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     return genotype_df
 
 
-def calculate_residual_df(genotype_df, residual_df, significant_snps_df):
+def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     """calculate residuals for gene list"""
 
     # Identify the top eSNP for each eGene and assign remaining to df
@@ -130,7 +130,7 @@ def calculate_residual_df(genotype_df, residual_df, significant_snps_df):
         .first()
         .reset_index()
     )
-    esnp1 = esnp1.drop_duplicates(subset=['gene_symbol'], keep='last')
+    # esnp1 = esnp1.drop_duplicates(subset=['gene_symbol'], keep='last')
 
     # Subset residuals for the genes to be tested
     sample_ids = residual_df.loc[:, ['sampleid']]
@@ -138,6 +138,12 @@ def calculate_residual_df(genotype_df, residual_df, significant_snps_df):
     # only keep residual df columns which have an eSNP
     residual_df = residual_df.loc[:, residual_df.columns.isin(gene_ids)]
     residual_df['sampleid'] = sample_ids
+
+    # get genotype df
+    gene_snp_test_df = esnp1[['snpid', 'gene_symbol', 'gene_id']]
+    genotype_df = get_genotype_df(
+        filtered_mt_path, residual_df, gene_snp_test_df
+    )
 
     # Find residuals after adjustment of lead SNP
     def calculate_adjusted_residuals(gene_id):
