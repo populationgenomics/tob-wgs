@@ -354,17 +354,14 @@ def main(
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
+    residual_df = pd.read_csv(AnyPath(residuals))
+    significant_snps_df = pd.read_csv(AnyPath(
+        significant_snps), sep=' ', skipinitialspace=True
+    )
+
     if test_subset_genes:
         n_genes = test_subset_genes
     else:
-        # load these literally to do the get_number of scatters
-        print(f'Loading residuals: {residuals}')
-        residual_df = pd.read_csv(AnyPath(residuals))
-        print(f'Loading significant_snps: {significant_snps}')
-        significant_snps_df = pd.read_csv(AnyPath(
-            significant_snps), sep=' ', skipinitialspace=True
-        )
-
         print('Loaded data to prepare workflow')
         # test with 5 genes
         n_genes = test_subset_genes or get_number_of_scatters(
