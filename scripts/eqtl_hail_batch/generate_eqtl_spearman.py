@@ -85,7 +85,7 @@ def calculate_log_cpm(expression_df, output_prefix):
     log_cpm = np.log(cpm_df + 1)
     # add sampleids back in
     log_cpm = log_cpm.assign(sampleid=list(sample_ids))
-    # log_cpm.to_csv(os.path.join(output_prefix, f'log_cpm.tsv'), index=False)
+    log_cpm.to_csv(AnyPath(os.path.join(output_prefix, f'log_cpm.tsv')), index=False)
 
 
 def prepare_genotype_info(keys_path, expression_path):
@@ -162,7 +162,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
     residual_df.columns = gene_ids
     residual_df = residual_df.assign(sampleid=list(sample_ids))
-    # residual_df.to_csv(os.path.join(output_prefix, f'log_residuals.tsv'), index=False)
+    residual_df.to_csv(AnyPath(os.path.join(output_prefix, f'log_residuals.tsv')), index=False)
 
     return residual_df
 
