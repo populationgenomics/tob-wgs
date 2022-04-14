@@ -4,10 +4,10 @@ This runs a Hail batch script in order to generate a list of eQTLs from scRNA-se
 
 ```sh
 analysis-runner --dataset tob-wgs \
-    --access-level test --output-dir "plasma/chr22/v0" \
+    --access-level test --output-dir "plasma/chr22/v0"  --memory=highmem --cpu=8 \
     --description "eqtl batch job" \
     python3 generate_eqtl_spearman.py \
-        --output-prefix 'gs://cpg-tob-wgs-test/kat/plasma/chr22/'
+        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0'
         --expression 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_intermediate_expression.tsv' \
         --geneloc 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv' \
         --covariates 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/B_intermediate_peer_factors.tsv' \
@@ -18,10 +18,10 @@ For the conditional analysis (rounds 2-5), execute the following command:
 
 ```sh
 analysis-runner --dataset tob-wgs \
-    --access-level test --output-dir "plasma/chr22/v0" \
+    --access-level test --output-dir "plasma/chr22/v0" --output-dir "plasma/chr22/v0"  --memory=highmem --cpu=8 \
     --description "eqtl batch job" \
     python3 round2.conditional_analysis_test.py \
-        --output-prefix 'gs://cpg-tob-wgs-test/kat/plasma/chr22/' \
+        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0' \
         --residuals 'gs://cpg-tob-wgs-test/kat/plasma/chr22/log_residuals.tsv' \
         --significant-snps 'gs://cpg-tob-wgs-test/kat/plasma/chr22/correlation_results.csv' \
         --genotype 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/genotype_files/tob_genotype_chr22.tsv' \
