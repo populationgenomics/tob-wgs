@@ -359,31 +359,22 @@ def main(
     else:
         # load these literally to do the get_number of scatters
         print(f'Loading residuals: {residuals}')
-        residual_df_literal = pd.read_csv(AnyPath(residuals))
+        residual_df = pd.read_csv(AnyPath(residuals))
         print(f'Loading significant_snps: {significant_snps}')
-        significant_snps_df_literal = pd.read_csv(AnyPath(
+        significant_snps_df = pd.read_csv(AnyPath(
             significant_snps), sep=' ', skipinitialspace=True
         )
 
         print('Loaded data to prepare workflow')
         # test with 5 genes
         n_genes = test_subset_genes or get_number_of_scatters(
-            residual_df_literal, significant_snps_df_literal
+            residual_df, significant_snps_df
         )
 
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
     filtered_mt_path = filter_mt_job.call(
         prepare_genotype_info, keys_path=keys
-    )
-
-    # load these in a python job to avoid memory issues during a submission
-    load_small_files = batch.new_python_job('load-small-files')
-    load_small_files.memory('8Gi')
-    load_small_files.storage('2Gi')
-    residual_df = load_small_files.call(pd.read_csv, residuals)
-    significant_snps_df = load_small_files.call(
-        pd.read_csv, significant_snps, sep=' ', skipinitialspace=True
     )
 
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
