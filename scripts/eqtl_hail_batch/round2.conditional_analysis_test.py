@@ -384,6 +384,7 @@ def main(
         calc_resid_df_job.cpu(2)
         calc_resid_df_job.memory('8Gi')
         calc_resid_df_job.storage('2Gi')
+        copy_common_env(calc_resid_df_job)
         previous_residual_result = calc_resid_df_job.call(
             calculate_residual_df,
             previous_residual_result,
