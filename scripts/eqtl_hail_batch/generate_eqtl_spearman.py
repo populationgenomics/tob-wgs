@@ -56,8 +56,7 @@ def get_number_of_scatters(expression_df, geneloc_df):
     gene_ids = list(expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
 
-    # return len(geneloc_df.index)
-    return 2
+    return len(geneloc_df.index)
 
 
 def get_log_expression(expression_df):
