@@ -28,6 +28,7 @@ assert DRIVER_IMAGE
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 
+
 def get_number_of_scatters(residual_df, significant_snps_df):
     """get index of total number of genes"""
 
@@ -231,7 +232,6 @@ def run_computation_in_scatter(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
         return (gene_symbol, gene_id, snp, spearmans_rho, p)
-
 
     adjusted_spearman_df = pd.DataFrame(
         list(gene_snp_test_df.apply(spearman_correlation, axis=1))

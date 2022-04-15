@@ -149,7 +149,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
         exprs_val = log_expression_df[['sampleid', gene]]
         test_df = exprs_val.merge(covariate_df, on='sampleid', how='right')
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
-        test_df[['sex','age']] = test_df[['sex','age']].astype(int)
+        test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
         y, x = dmatrices(
             'expression ~ sex + PC1 + PC2 + PC3 + PC4 + age + pf1 + pf2',
             test_df,
@@ -198,8 +198,6 @@ def run_spearman_correlation_scatter(
         gene_id = df.gene_id
         snp = df.snpid
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
-
-        start = datetime.now()
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
