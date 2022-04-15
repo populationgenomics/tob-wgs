@@ -378,6 +378,9 @@ def main(
     previous_residual_result = residual_df  # pylint: disable=invalid-name
     for iteration in range(iterations):
 
+        # if iteration == 0:
+        #    previous_residual_result = previous_residual_result
+        # else:
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration+2}'
         )
