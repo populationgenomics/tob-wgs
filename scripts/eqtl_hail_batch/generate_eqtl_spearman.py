@@ -2,7 +2,6 @@
 
 """Run Spearman rank correlation on SNPs and expression residuals"""
 
-from datetime import datetime
 import os
 
 import hail as hl
