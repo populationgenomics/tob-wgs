@@ -180,10 +180,9 @@ def run_spearman_correlation_scatter(
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
 
-    # calculate and save log expression values
+    # calculate log expression values
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
-    calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -369,6 +368,13 @@ def main(
         calculate_residuals,
         expression_df=expression_df_literal,
         covariate_df=covariate_df_literal,
+        output_prefix=output_prefix,
+    )
+    # calculate and save log cpm values
+    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
+    calculate_log_cpm_job.call(
+        calculate_log_cpm,
+        expression_df=expression_df_literal,
         output_prefix=output_prefix,
     )
 
