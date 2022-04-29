@@ -83,8 +83,8 @@ def calculate_log_cpm(expression_df, output_prefix):
     log_cpm = np.log(cpm_df + 1)
     # add sampleids back in
     log_cpm = log_cpm.assign(sampleid=list(sample_ids))
-    log_cpcm_path = AnyPath(output_prefix) / 'log_cpm.tsv'
-    with log_cpcm_path.open('w') as fp:
+    log_cpm_path = AnyPath(output_prefix) / 'log_cpm.tsv'
+    with log_cpm_path.open('w') as fp:
         log_cpm.to_csv(fp, index=False)
 
 
@@ -174,7 +174,7 @@ def run_spearman_correlation_scatter(
     idx,
     expression,
     geneloc,
-    covariates,
+    residuals_df,
     output_prefix,
     filtered_mt_path,
 ):  # pylint: disable=too-many-locals
@@ -184,15 +184,6 @@ def run_spearman_correlation_scatter(
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
     calculate_log_cpm(expression_df=expression_df, output_prefix=output_prefix)
-
-    # calculate and save residual values
-    covariate_df = pd.read_csv(AnyPath(covariates), sep=',')
-    residuals_df = calculate_residuals(
-        expression_df=expression_df,
-        covariate_df=covariate_df,
-        output_prefix=output_prefix,
-    )
-    filtered_sampleid = residuals_df.sampleid
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -222,7 +213,7 @@ def run_spearman_correlation_scatter(
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
-    samples_to_keep = hl.literal(list(filtered_sampleid))
+    samples_to_keep = hl.literal(list(residuals_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
@@ -368,9 +359,18 @@ def main(
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
-    # load in files literally to do the get_number of scatters
+    # load in files literally to get number of scatters and get residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
+    covariate_df_literal = pd.read_csv(AnyPath(covariates), sep=',')
+
+    calculate_residuals_job = batch.new_python_job('calculate-residuals')
+    residuals_df = calculate_residuals_job.call(
+        calculate_residuals,
+        expression_df=expression_df_literal,
+        covariate_df=covariate_df_literal,
+        output_prefix=output_prefix,
+    )
 
     spearman_dfs_from_scatter = []
 
@@ -391,7 +391,7 @@ def main(
             idx=idx,
             expression=expression,
             geneloc=geneloc,
-            covariates=covariates,
+            residuals_df=residuals_df,
             output_prefix=output_prefix,
             filtered_mt_path=filtered_mt_path,
         )
