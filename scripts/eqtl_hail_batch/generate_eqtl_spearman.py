@@ -205,13 +205,17 @@ def run_spearman_correlation_scatter(
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
     geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
+    print(geneloc_df.head())
 
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
+    print(gene_info)
     chromosome = gene_info.chr
+    print(chromosome)
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
+    print(mt.show())
     samples_to_keep = hl.literal(list(residuals_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     position_table = mt.rows().select()
@@ -225,6 +229,7 @@ def run_spearman_correlation_scatter(
         + hl.str(position_table.alleles[1]),
     )
     snploc_df = position_table.to_pandas()
+    print(snploc_df.head())
     snps_within_region = snploc_df[
         snploc_df['position'].between(gene_info['left'], gene_info['right'])
     ]
@@ -250,8 +255,10 @@ def run_spearman_correlation_scatter(
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_df.snpid)
+    print(f'Printing snps_to_keep: {snps_to_keep}')
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
+    print(t.show())
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
@@ -309,6 +316,7 @@ def run_spearman_correlation_scatter(
             ]
         )
     )
+    print(f'Printing final table: {t.show()}')
     spearman_df = t.to_pandas()
     return spearman_df
 
