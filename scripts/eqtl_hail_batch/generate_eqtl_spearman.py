@@ -12,7 +12,7 @@ import statsmodels.api as sm
 import statsmodels.stats.multitest as multi
 from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
-from cpg_utils.hail_batch import (
+from cpg_utils.hail import (
     dataset_path,
     output_path,
     copy_common_env,
