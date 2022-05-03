@@ -259,31 +259,33 @@ def run_computation_in_scatter(
         bp,
     ]
     adjusted_spearman_df['round'] = iteration + 2
-    init_batch()
-    t = hl.Table.from_pandas(adjusted_spearman_df)
-    t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
-    t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    # get alleles
-    mt = hl.read_matrix_table(filtered_mt_path).key_rows_by('locus')
-    t = t.key_by('locus')
-    t = t.annotate(
-        a1=mt.rows()[t.locus].alleles[0],
-        a2=mt.rows()[t.locus].alleles[1],
-    )
-    t = t.annotate(
-        id=hl.str(':').join(
-            [
-                hl.str(t.chrom),
-                hl.str(t.bp),
-                t.a1,
-                t.a2,
-                t.gene_symbol,
-                # result.db_key, # cell_type_id (eg nk, mononc)
-                hl.str(t.round),
-            ]
-        )
-    )
-    adjusted_spearman_df = t.to_pandas()
+    print(f'adjusted_spearman_df finished')
+    print(f'adjusted_spearman_df.head(): {adjusted_spearman_df.head()}')
+    # init_batch()
+    # t = hl.Table.from_pandas(adjusted_spearman_df)
+    # t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
+    # t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
+    # # get alleles
+    # mt = hl.read_matrix_table(filtered_mt_path).key_rows_by('locus')
+    # t = t.key_by('locus')
+    # t = t.annotate(
+    #     a1=mt.rows()[t.locus].alleles[0],
+    #     a2=mt.rows()[t.locus].alleles[1],
+    # )
+    # t = t.annotate(
+    #     id=hl.str(':').join(
+    #         [
+    #             hl.str(t.chrom),
+    #             hl.str(t.bp),
+    #             t.a1,
+    #             t.a2,
+    #             t.gene_symbol,
+    #             # result.db_key, # cell_type_id (eg nk, mononc)
+    #             hl.str(t.round),
+    #         ]
+    #     )
+    # )
+    # adjusted_spearman_df = t.to_pandas()
 
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
