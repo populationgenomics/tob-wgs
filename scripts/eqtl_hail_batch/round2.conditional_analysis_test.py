@@ -262,7 +262,8 @@ def run_computation_in_scatter(
     print(f'adjusted_spearman_df finished')
     print(f'adjusted_spearman_df.head(): {adjusted_spearman_df.head()}')
     # init_batch()
-    # t = hl.Table.from_pandas(adjusted_spearman_df)
+    t = hl.Table.from_pandas(adjusted_spearman_df)
+    print(f't.show(): {t.show()}')
     # t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     # t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     # # get alleles
