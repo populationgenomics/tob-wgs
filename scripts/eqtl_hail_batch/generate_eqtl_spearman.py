@@ -184,21 +184,6 @@ def run_spearman_correlation_scatter(
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
 
-    # define spearman correlation function, then compute for each SNP
-    def spearman_correlation(df):
-        """get Spearman rank correlation"""
-        gene_symbol = df.gene_symbol
-        gene_id = df.gene_id
-        snp = df.snpid
-        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
-        res_val = residuals_df[['sampleid', gene_symbol]]
-        test_df = res_val.merge(gt, on='sampleid', how='right')
-        test_df.columns = ['sampleid', 'residual', 'SNP']
-        # set spearmanr calculation to perform the calculation ignoring nan values
-        # this should be removed after resolving why NA values are in the genotype file
-        coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        return (gene_symbol, gene_id, snp, coef, p)
-
     # Get 1Mb sliding window around each gene
     geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
     gene_ids = list(log_expression_df.columns.values)[1:]
@@ -267,6 +252,21 @@ def run_spearman_correlation_scatter(
     # filter gene_snp_df to have the same snps after filtering SNPs that
     # don't have an alt_allele value   
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+
+    # define spearman correlation function, then compute for each SNP
+    def spearman_correlation(df):
+        """get Spearman rank correlation"""
+        gene_symbol = df.gene_symbol
+        gene_id = df.gene_id
+        snp = df.snpid
+        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        res_val = residuals_df[['sampleid', gene_symbol]]
+        test_df = res_val.merge(gt, on='sampleid', how='right')
+        test_df.columns = ['sampleid', 'residual', 'SNP']
+        # set spearmanr calculation to perform the calculation ignoring nan values
+        # this should be removed after resolving why NA values are in the genotype file
+        coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
+        return (gene_symbol, gene_id, snp, coef, p)
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
