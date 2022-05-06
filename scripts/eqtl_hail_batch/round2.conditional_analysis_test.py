@@ -91,9 +91,23 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
+    # this is important, since not all indivuduals have expression/residual
+    # data (this varies by cell type)
     samples_to_keep = set(residual_df.sampleid)
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+    # Do this only on SNPs contained within gene_snp_df to save on
+    # computational time
+    snps_to_keep = set(gene_snp_test_df.snpid)
+    sorted_snps = sorted(snps_to_keep)
+    # only keep chromosome and position
+    sorted_snp_positions = list(map(lambda x: x.split(":")[:2][1], sorted_snps))
+    # convert all elements in list to int type
+    sorted_snp_positions = [int(i) for i in sorted_snp_positions]
+    # get first and last positions, with 1 added to last position (to make it inclusive)
+    first_and_last_snp = 'chr22:' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
+    # parse mt to region of interest
+    mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
@@ -107,9 +121,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
         + ':'
         + hl.str(t.alleles[1])
     )
-    # Do this only on SNPs contained within gene_snp_df to save on
-    # computational time
-    snps_to_keep = set(gene_snp_test_df.snpid)
+    # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
@@ -127,27 +139,30 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
 
 def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     """calculate residuals for gene list"""
+    
+    # make sure 'gene_symbol' is the first column
+    # otherwise, error thrown when using reset_index
+    cols = list(significant_snps_df)
+    cols.insert(0, cols.pop(cols.index('gene_symbol')))
+    significant_snps_df = significant_snps_df.loc[:, cols]
 
-    # Identify the top eSNP for each eGene and assign remaining to df
+    # Identify the top eSNP for each eGene 
     esnp1 = (
         significant_snps_df.sort_values(['gene_symbol', 'fdr'], ascending=True)
         .groupby('gene_symbol')
         .first()
         .reset_index()
     )
-    # esnp1 = esnp1.drop_duplicates(subset=['gene_symbol'], keep='last')
 
     # Subset residuals for the genes to be tested
     sample_ids = residual_df.loc[:, ['sampleid']]
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
-    # only keep residual df columns which have an eSNP
     residual_df = residual_df.loc[:, residual_df.columns.isin(gene_ids)]
     residual_df['sampleid'] = sample_ids
 
-    # get genotype df
-    gene_snp_test_df = esnp1[['snpid', 'gene_symbol', 'gene_id']]
+    # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
-        filtered_mt_path, residual_df, gene_snp_test_df
+        filtered_mt_path, residual_df, esnp1
     )
 
     # Find residuals after adjustment of lead SNP
@@ -195,24 +210,31 @@ def run_computation_in_scatter(
     cols = list(significant_snps_df)
     cols.insert(0, cols.pop(cols.index('gene_symbol')))
     significant_snps_df = significant_snps_df.loc[:, cols]
-    esnps_to_test = (
-        significant_snps_df.sort_values(['gene_symbol', 'fdr'], ascending=True)
-        .groupby('gene_symbol')
-        .apply(lambda group: group.iloc[1:, 1:])
-        .reset_index()
-    )
+
+    # Identify the top eSNP for each eGene
     esnp1 = (
         significant_snps_df.sort_values(['gene_symbol', 'fdr'], ascending=True)
         .groupby('gene_symbol')
         .first()
         .reset_index()
     )
+
+    # Remaning eSNPs to test
+    esnps_to_test = (
+        significant_snps_df.sort_values(['gene_symbol', 'fdr'], ascending=True)
+        .groupby('gene_symbol')
+        .apply(lambda group: group.iloc[1:, 1:])
+        .reset_index()
+    )
+
+    # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
     gene_snp_test_df = esnps_to_test[['snpid', 'gene_symbol', 'gene_id']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
+    # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         filtered_mt_path, residual_df, gene_snp_test_df
     )
@@ -233,6 +255,7 @@ def run_computation_in_scatter(
         )
         return (gene_symbol, gene_id, snp, spearmans_rho, p)
 
+    # calculate spearman correlation
     adjusted_spearman_df = pd.DataFrame(
         list(gene_snp_test_df.apply(spearman_correlation, axis=1))
     )
@@ -379,11 +402,9 @@ def main(
 
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
     previous_residual_result = residual_df  # pylint: disable=invalid-name
+    # Perform conditional analysis for n iterations (specified in click interface)
     for iteration in range(iterations):
 
-        # if iteration == 0:
-        #    previous_residual_result = previous_residual_result
-        # else:
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration+2}'
         )
