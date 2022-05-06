@@ -105,7 +105,8 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     # convert all elements in list to int type
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    first_and_last_snp = 'chr22:' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
+    chromosome = gene_snp_test_df.snpid[0].split(':')[:1][0]
+    first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     # parse mt to region of interest
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
