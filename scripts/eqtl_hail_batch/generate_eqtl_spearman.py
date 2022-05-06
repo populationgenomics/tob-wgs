@@ -200,9 +200,16 @@ def run_spearman_correlation_scatter(
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
-    print(mt.show())
+    # only keep samples that are contained within the residuals df
+    # this is important, since not all indivuduals have expression/residual
+    # data (this varies by cell type)
     samples_to_keep = hl.literal(list(residuals_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
+
+    first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
+    # Do this only on SNPs contained within 1Mb gene region to save on
+    # computational time
+    mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     position_table = mt.rows().select()
     position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
@@ -214,7 +221,6 @@ def run_spearman_correlation_scatter(
         + hl.str(position_table.alleles[1]),
     )
     snploc_df = position_table.to_pandas()
-    print(snploc_df.head())
     snps_within_region = snploc_df[
         snploc_df['position'].between(gene_info['left'], gene_info['right'])
     ]
@@ -240,10 +246,8 @@ def run_spearman_correlation_scatter(
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_df.snpid)
-    print(f'Printing snps_to_keep: {snps_to_keep}')
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
-    print(t.show())
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
