@@ -101,7 +101,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     snps_to_keep = set(gene_snp_test_df.snpid)
     sorted_snps = sorted(snps_to_keep)
     # only keep chromosome and position
-    sorted_snp_positions = list(map(lambda x: x.split(":")[:2][1], sorted_snps))
+    sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     # convert all elements in list to int type
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
