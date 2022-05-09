@@ -190,8 +190,16 @@ def run_spearman_correlation_scatter(
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
     geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
-    print(geneloc_df.head())
+    # subset genes to 10 test genes
+    genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
+    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
+    # pseudo code below:
+    # if not dataframe.empty:
+        # indent everything below and perform tests
+    # else:
+        # exit gracefully without crashing
+        
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
     print(gene_info)
