@@ -54,6 +54,9 @@ def get_number_of_scatters(expression_df, geneloc_df):
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = list(expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
+    # subset genes to 10 test genes
+    genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
+    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
     return len(geneloc_df.index)
 
@@ -194,12 +197,6 @@ def run_spearman_correlation_scatter(
     genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
-    # pseudo code below:
-    # if not dataframe.empty:
-        # indent everything below and perform tests
-    # else:
-        # exit gracefully without crashing
-        
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
     print(gene_info)
@@ -406,34 +403,35 @@ def main(
         prepare_genotype_info, keys_path=keys, expression_path=expression
     )
 
-    # for idx in range(get_number_of_scatters(expression_df_literal, geneloc_df_literal)):
-    for idx in range(5):
-        j = batch.new_python_job(name=f'process_{idx}')
-        j.cpu(2)
-        j.memory('8Gi')
-        j.storage('2Gi')
-        copy_common_env(j)
-        result: hb.resource.PythonResult = j.call(
-            run_spearman_correlation_scatter,
-            idx=idx,
-            expression=expression,
-            geneloc=geneloc,
-            residuals_df=residuals_df,
-            output_prefix=output_prefix,
-            filtered_mt_path=filtered_mt_path,
-        )
-        spearman_dfs_from_scatter.append(result)
+    n_genes_in_scatter = get_number_of_scatters(expression_df_literal, geneloc_df_literal)
+    if n_genes_in_scatter > 0:
+        for idx in range(n_genes_in_scatter):
+            j = batch.new_python_job(name=f'process_{idx}')
+            j.cpu(2)
+            j.memory('8Gi')
+            j.storage('2Gi')
+            copy_common_env(j)
+            result: hb.resource.PythonResult = j.call(
+                run_spearman_correlation_scatter,
+                idx=idx,
+                expression=expression,
+                geneloc=geneloc,
+                residuals_df=residuals_df,
+                output_prefix=output_prefix,
+                filtered_mt_path=filtered_mt_path,
+            )
+            spearman_dfs_from_scatter.append(result)
 
-    merge_job = batch.new_python_job(name='merge_scatters')
-    merge_job.cpu(2)
-    merge_job.memory('8Gi')
-    merge_job.storage('2Gi')
-    result_second = merge_job.call(
-        merge_df_and_convert_to_string, *spearman_dfs_from_scatter
-    )
-    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
-    batch.write_output(result_second.as_str(), corr_result_output_path)
-    batch.run(wait=False)
+        merge_job = batch.new_python_job(name='merge_scatters')
+        merge_job.cpu(2)
+        merge_job.memory('8Gi')
+        merge_job.storage('2Gi')
+        result_second = merge_job.call(
+            merge_df_and_convert_to_string, *spearman_dfs_from_scatter
+        )
+        corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+        batch.write_output(result_second.as_str(), corr_result_output_path)
+        batch.run(wait=False)
 
 
 if __name__ == '__main__':
