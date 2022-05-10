@@ -382,9 +382,13 @@ def main(
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
     residual_df = pd.read_csv(AnyPath(residuals))
+    # significant_snps_df = pd.read_csv(AnyPath(
+    #     significant_snps), sep=' ', skipinitialspace=True
+    # )
     significant_snps_df = pd.read_csv(AnyPath(
-        significant_snps), sep=' ', skipinitialspace=True
+        significant_snps)
     )
+    
 
     if test_subset_genes:
         n_genes = test_subset_genes
