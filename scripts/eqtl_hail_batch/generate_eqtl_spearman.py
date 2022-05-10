@@ -91,85 +91,86 @@ def calculate_log_cpm(expression_df, output_prefix):
         log_cpm.to_csv(fp, index=False)
 
 
-def prepare_genotype_info(keys_path, expression_path):
+# def prepare_genotype_info(keys_path, expression_path):
 
-    init_batch()
-    filtered_mt_path = output_path('genotype_table.ht', 'tmp')
-    if not hl.hadoop_exists(filtered_mt_path):
-        expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
-        log_expression_df = get_log_expression(expression_df)
-        mt = hl.read_matrix_table(TOB_WGS)
-        mt = hl.experimental.densify(mt)
-        # filter to biallelic loci only
-        mt = mt.filter_rows(hl.len(mt.alleles) == 2)
-        # filter out variants that didn't pass the VQSR filter
-        mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-        # VQSR does not filter out low quality genotypes. Filter these out
-        mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-        # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-        n_samples = mt.count_cols()
-        call_rate = 0.8
-        mt = mt.filter_rows(
-            hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
-        )
-        # filter out variants with MAF < 0.01
-        ht = hl.read_table(FREQ_TABLE)
-        mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-        mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-        # add OneK1K IDs to genotype mt
-        sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-        genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
-        sampleid_keys = pd.merge(
-            genotype_samples,
-            sampleid_keys,
-            how='left',
-            left_on='sampleid',
-            right_on='InternalID',
-        )
-        sampleid_keys.fillna('', inplace=True)
-        sampleid_keys = hl.Table.from_pandas(sampleid_keys)
-        sampleid_keys = sampleid_keys.key_by('sampleid')
-        mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
-        # only keep samples that have rna-seq expression data
-        samples_to_keep = set(log_expression_df.sampleid)
-        set_to_keep = hl.literal(samples_to_keep)
-        mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-        mt.write(filtered_mt_path)
+#     init_batch()
+#     filtered_mt_path = output_path('genotype_table.ht', 'tmp')
+#     if not hl.hadoop_exists(filtered_mt_path):
+#         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
+#         log_expression_df = get_log_expression(expression_df)
+#         mt = hl.read_matrix_table(TOB_WGS)
+#         mt = hl.experimental.densify(mt)
+#         # filter to biallelic loci only
+#         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
+#         # filter out variants that didn't pass the VQSR filter
+#         mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+#         # VQSR does not filter out low quality genotypes. Filter these out
+#         mt = mt.filter_entries(mt.GQ <= 20, keep=False)
+#         # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+#         n_samples = mt.count_cols()
+#         call_rate = 0.8
+#         mt = mt.filter_rows(
+#             hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
+#         )
+#         # filter out variants with MAF < 0.01
+#         ht = hl.read_table(FREQ_TABLE)
+#         mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
+#         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
+#         # add OneK1K IDs to genotype mt
+#         sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
+#         genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
+#         sampleid_keys = pd.merge(
+#             genotype_samples,
+#             sampleid_keys,
+#             how='left',
+#             left_on='sampleid',
+#             right_on='InternalID',
+#         )
+#         sampleid_keys.fillna('', inplace=True)
+#         sampleid_keys = hl.Table.from_pandas(sampleid_keys)
+#         sampleid_keys = sampleid_keys.key_by('sampleid')
+#         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
+#         # only keep samples that have rna-seq expression data
+#         samples_to_keep = set(log_expression_df.sampleid)
+#         set_to_keep = hl.literal(samples_to_keep)
+#         mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+#         mt.write(filtered_mt_path)
 
-    return filtered_mt_path
+    # return filtered_mt_path
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
-    """Calculate residuals for each gene in scatter"""
+#     """Calculate residuals for each gene in scatter"""
 
     log_expression_df = get_log_expression(expression_df)
-    gene_ids = list(log_expression_df.columns.values)[1:]
-    sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').sampleid
+#     gene_ids = list(log_expression_df.columns.values)[1:]
+#     sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').sampleid
 
-    # Calculate expression residuals
-    def calculate_gene_residual(gene_id):
-        """Calculate gene residuals"""
-        gene = gene_id
-        exprs_val = log_expression_df[['sampleid', gene]]
-        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right')
-        test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
-        test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
-        y, x = dmatrices(
-            'expression ~ sex + pc1 + pc2 + pc3 + pc4 + age + pf1 + pf2',
-            test_df,
-        )
-        model = sm.OLS(y, x)
-        residuals = list(model.fit().resid)
-        return residuals
+#     # Calculate expression residuals
+#     def calculate_gene_residual(gene_id):
+#         """Calculate gene residuals"""
+#         gene = gene_id
+#         exprs_val = log_expression_df[['sampleid', gene]]
+#         test_df = exprs_val.merge(covariate_df, on='sampleid', how='right')
+#         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
+#         test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
+#         y, x = dmatrices(
+#             'expression ~ sex + pc1 + pc2 + pc3 + pc4 + age + pf1 + pf2',
+#             test_df,
+#         )
+#         model = sm.OLS(y, x)
+#         residuals = list(model.fit().resid)
+#         return residuals
 
-    residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
-    residual_df.columns = gene_ids
-    residual_df = residual_df.assign(sampleid=list(sample_ids))
-    residual_path = AnyPath(output_prefix) / 'log_residuals.tsv'
-    with residual_path.open('w') as fp:
-        residual_df.to_csv(fp, index=False)
+#     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
+#     residual_df.columns = gene_ids
+#     residual_df = residual_df.assign(sampleid=list(sample_ids))
+#     residual_path = AnyPath(output_prefix) / 'log_residuals.tsv'
+#     with residual_path.open('w') as fp:
+#         residual_df.to_csv(fp, index=False)
 
-    return residual_df
+#     return residual_df
+    return log_expression_df.head()
 
 
 # Run Spearman rank in parallel by sending genes in a batches
@@ -187,147 +188,148 @@ def run_spearman_correlation_scatter(
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
 
-    # Get 1Mb sliding window around each gene
-    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
-    gene_ids = list(log_expression_df.columns.values)[1:]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-    geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
-    geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
-    # subset genes to 10 test genes
-    genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
+    # # Get 1Mb sliding window around each gene
+    # geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
+    # gene_ids = list(log_expression_df.columns.values)[1:]
+    # geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
+    # geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
+    # geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
+    # # subset genes to 10 test genes
+    # genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
+    # geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
-    # perform correlation in chunks by gene
-    gene_info = geneloc_df.iloc[idx]
-    print(gene_info)
-    chromosome = gene_info.chr
-    print(chromosome)
-    # get all SNPs which are within 1Mb of each gene
-    init_batch()
-    mt = hl.read_matrix_table(filtered_mt_path)
-    # only keep samples that are contained within the residuals df
-    # this is important, since not all indivuduals have expression/residual
-    # data (this varies by cell type)
-    samples_to_keep = hl.literal(list(residuals_df.sampleid))
-    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
+    # # perform correlation in chunks by gene
+    # gene_info = geneloc_df.iloc[idx]
+    # print(gene_info)
+    # chromosome = gene_info.chr
+    # print(chromosome)
+    # # get all SNPs which are within 1Mb of each gene
+    # init_batch()
+    # mt = hl.read_matrix_table(filtered_mt_path)
+    # # only keep samples that are contained within the residuals df
+    # # this is important, since not all indivuduals have expression/residual
+    # # data (this varies by cell type)
+    # samples_to_keep = hl.literal(list(residuals_df.sampleid))
+    # mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
 
-    first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
-    # Do this only on SNPs contained within 1Mb gene region to save on
-    # computational time
-    mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
-    position_table = mt.rows().select()
-    position_table = position_table.filter(position_table.locus.contig == chromosome)
-    position_table = position_table.annotate(
-        position=position_table.locus.position,
-        snpid=hl.str(position_table.locus)
-        + ':'
-        + hl.str(position_table.alleles[0])
-        + ':'
-        + hl.str(position_table.alleles[1]),
-    )
-    snploc_df = position_table.to_pandas()
-    snps_within_region = snploc_df[
-        snploc_df['position'].between(gene_info['left'], gene_info['right'])
-    ]
-    gene_snp_df = snps_within_region.assign(
-        gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
-    )
+    # first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
+    # # Do this only on SNPs contained within 1Mb gene region to save on
+    # # computational time
+    # mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
+    # position_table = mt.rows().select()
+    # position_table = position_table.filter(position_table.locus.contig == chromosome)
+    # position_table = position_table.annotate(
+    #     position=position_table.locus.position,
+    #     snpid=hl.str(position_table.locus)
+    #     + ':'
+    #     + hl.str(position_table.alleles[0])
+    #     + ':'
+    #     + hl.str(position_table.alleles[1]),
+    # )
+    # snploc_df = position_table.to_pandas()
+    # snps_within_region = snploc_df[
+    #     snploc_df['position'].between(gene_info['left'], gene_info['right'])
+    # ]
+    # gene_snp_df = snps_within_region.assign(
+    #     gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
+    # )
     
-    # get genotypes from mt in order to load individual SNPs into
-    # the spearman correlation function
-    t = mt.entries()
-    t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
-    t = t.key_by(contig=t.locus.contig, position=t.locus.position)
-    t = t.select(t.alleles, t.onek1k_id, t.n_alt_alleles)
-    t = t.annotate(
-        snpid=hl.str(t.contig)
-        + ':'
-        + hl.str(t.position)
-        + ':'
-        + hl.str(t.alleles[0])
-        + ':'
-        + hl.str(t.alleles[1])
-    )
-    # Do this only on SNPs contained within gene_snp_df to save on
-    # computational time
-    snps_to_keep = set(gene_snp_df.snpid)
-    set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
-    # only keep SNPs where all samples have an alt_allele value
-    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
-    t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-    genotype_df = t.to_pandas(flatten=True)
-    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-    # filter gene_snp_df to have the same snps after filtering SNPs that
-    # don't have an alt_allele value   
-    gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+    # # get genotypes from mt in order to load individual SNPs into
+    # # the spearman correlation function
+    # t = mt.entries()
+    # t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
+    # t = t.key_by(contig=t.locus.contig, position=t.locus.position)
+    # t = t.select(t.alleles, t.onek1k_id, t.n_alt_alleles)
+    # t = t.annotate(
+    #     snpid=hl.str(t.contig)
+    #     + ':'
+    #     + hl.str(t.position)
+    #     + ':'
+    #     + hl.str(t.alleles[0])
+    #     + ':'
+    #     + hl.str(t.alleles[1])
+    # )
+    # # Do this only on SNPs contained within gene_snp_df to save on
+    # # computational time
+    # snps_to_keep = set(gene_snp_df.snpid)
+    # set_to_keep = hl.literal(snps_to_keep)
+    # t = t.filter(set_to_keep.contains(t['snpid']))
+    # # only keep SNPs where all samples have an alt_allele value
+    # snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
+    # t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+    # genotype_df = t.to_pandas(flatten=True)
+    # genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    # # filter gene_snp_df to have the same snps after filtering SNPs that
+    # # don't have an alt_allele value   
+    # gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
-    # define spearman correlation function, then compute for each SNP
-    def spearman_correlation(df):
-        """get Spearman rank correlation"""
-        gene_symbol = df.gene_symbol
-        gene_id = df.gene_id
-        snp = df.snpid
-        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
-        res_val = residuals_df[['sampleid', gene_symbol]]
-        test_df = res_val.merge(gt, on='sampleid', how='right')
-        test_df.columns = ['sampleid', 'residual', 'SNP']
-        # set spearmanr calculation to perform the calculation ignoring nan values
-        # this should be removed after resolving why NA values are in the genotype file
-        coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        return (gene_symbol, gene_id, snp, coef, p)
+    # # define spearman correlation function, then compute for each SNP
+    # def spearman_correlation(df):
+    #     """get Spearman rank correlation"""
+    #     gene_symbol = df.gene_symbol
+    #     gene_id = df.gene_id
+    #     snp = df.snpid
+    #     gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+    #     res_val = residuals_df[['sampleid', gene_symbol]]
+    #     test_df = res_val.merge(gt, on='sampleid', how='right')
+    #     test_df.columns = ['sampleid', 'residual', 'SNP']
+    #     # set spearmanr calculation to perform the calculation ignoring nan values
+    #     # this should be removed after resolving why NA values are in the genotype file
+    #     coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
+    #     return (gene_symbol, gene_id, snp, coef, p)
 
-    # run spearman correlation function
-    spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
-    print(f'printing spearman df: {spearman_df.head()}')
-    spearman_df.columns = [
-        'gene_symbol',
-        'gene_id',
-        'snpid',
-        'spearmans_rho',
-        'p_value',
-    ]
-    # add in global position and round
-    locus = spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(':'.join, axis=1)
-    chrom = locus.str.split(':', expand=True)[0]
-    bp = locus.str.split(':', expand=True)[1]
-    spearman_df['locus'], spearman_df['chrom'], spearman_df['bp'] = [
-        locus,
-        chrom,
-        bp,
-    ]
-    spearman_df['round'] = 1
-    # turn back into hail table and annotate with global bp,
-    # locus, and alleles
-    t = hl.Table.from_pandas(spearman_df)
-    t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
-    t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    # get alleles
-    mt = mt.key_rows_by('locus')
-    t = t.key_by('locus')
-    t = t.annotate(
-        a1=mt.rows()[t.locus].alleles[0],
-        a2=hl.if_else(
-            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
-        ),
-    )
-    # add ID annotation after adding in alleles, a1, and a2
-    t = t.annotate(
-        id=hl.str(':').join(
-            [
-                hl.str(t.chrom),
-                hl.str(t.bp),
-                t.a1,
-                t.a2,
-                t.gene_symbol,
-                # result.db_key, # cell_type_id (eg nk, mononc)
-                hl.str(t.round),
-            ]
-        )
-    )
-    print(f'Printing final table: {t.show()}')
-    spearman_df = t.to_pandas()
-    return spearman_df
+    # # run spearman correlation function
+    # spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
+    # print(f'printing spearman df: {spearman_df.head()}')
+    # spearman_df.columns = [
+    #     'gene_symbol',
+    #     'gene_id',
+    #     'snpid',
+    #     'spearmans_rho',
+    #     'p_value',
+    # ]
+    # # add in global position and round
+    # locus = spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(':'.join, axis=1)
+    # chrom = locus.str.split(':', expand=True)[0]
+    # bp = locus.str.split(':', expand=True)[1]
+    # spearman_df['locus'], spearman_df['chrom'], spearman_df['bp'] = [
+    #     locus,
+    #     chrom,
+    #     bp,
+    # ]
+    # spearman_df['round'] = 1
+    # # turn back into hail table and annotate with global bp,
+    # # locus, and alleles
+    # t = hl.Table.from_pandas(spearman_df)
+    # t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
+    # t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
+    # # get alleles
+    # mt = mt.key_rows_by('locus')
+    # t = t.key_by('locus')
+    # t = t.annotate(
+    #     a1=mt.rows()[t.locus].alleles[0],
+    #     a2=hl.if_else(
+    #         hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
+    #     ),
+    # )
+    # # add ID annotation after adding in alleles, a1, and a2
+    # t = t.annotate(
+    #     id=hl.str(':').join(
+    #         [
+    #             hl.str(t.chrom),
+    #             hl.str(t.bp),
+    #             t.a1,
+    #             t.a2,
+    #             t.gene_symbol,
+    #             # result.db_key, # cell_type_id (eg nk, mononc)
+    #             hl.str(t.round),
+    #         ]
+    #     )
+    # )
+    # print(f'Printing final table: {t.show()}')
+    # spearman_df = t.to_pandas()
+    # return spearman_df
+    return expression_df.head()
 
 
 def merge_df_and_convert_to_string(*df_list):
@@ -380,31 +382,33 @@ def main(
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
     covariate_df_literal = pd.read_csv(AnyPath(covariates), sep=',')
 
-    calculate_residuals_job = batch.new_python_job('calculate-residuals')
-    residuals_df = calculate_residuals_job.call(
-        calculate_residuals,
-        expression_df=expression_df_literal,
-        covariate_df=covariate_df_literal,
-        output_prefix=output_prefix,
-    )
-    # calculate and save log cpm values
-    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
-    calculate_log_cpm_job.call(
-        calculate_log_cpm,
-        expression_df=expression_df_literal,
-        output_prefix=output_prefix,
-    )
-
-    spearman_dfs_from_scatter = []
-
-    filter_mt_job = batch.new_python_job('filter_mt')
-    copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(
-        prepare_genotype_info, keys_path=keys, expression_path=expression
-    )
-
+    # only run batch jobs of there are test genes in the chromosome
     n_genes_in_scatter = get_number_of_scatters(expression_df_literal, geneloc_df_literal)
     if n_genes_in_scatter > 0:
+
+        calculate_residuals_job = batch.new_python_job('calculate-residuals')
+        residuals_df = calculate_residuals_job.call(
+            calculate_residuals,
+            expression_df=expression_df_literal,
+            covariate_df=covariate_df_literal,
+            output_prefix=output_prefix,
+        )
+        # calculate and save log cpm values
+        calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
+        calculate_log_cpm_job.call(
+            calculate_log_cpm,
+            expression_df=expression_df_literal,
+            output_prefix=output_prefix,
+        )
+
+        spearman_dfs_from_scatter = []
+
+        filter_mt_job = batch.new_python_job('filter_mt')
+        copy_common_env(filter_mt_job)
+        filtered_mt_path = filter_mt_job.call(
+            prepare_genotype_info, keys_path=keys, expression_path=expression
+        )
+
         for idx in range(n_genes_in_scatter):
             j = batch.new_python_job(name=f'process_{idx}')
             j.cpu(2)
