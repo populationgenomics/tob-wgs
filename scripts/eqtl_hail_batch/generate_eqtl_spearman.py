@@ -149,14 +149,14 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
 
     log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
-    sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').sampleid
+    sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').dropna(axis=0, how='any').sampleid
 
     # Calculate expression residuals
     def calculate_gene_residual(gene_id):
         """Calculate gene residuals"""
         gene = gene_id
         exprs_val = log_expression_df[['sampleid', gene]]
-        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right')
+        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right').dropna(axis=0, how='any')
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
         test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
         y, x = dmatrices(
