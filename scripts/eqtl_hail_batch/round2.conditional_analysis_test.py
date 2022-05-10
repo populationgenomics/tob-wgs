@@ -188,7 +188,7 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
         list(map(calculate_adjusted_residuals, gene_ids))
     ).T
     adjusted_residual_mat.columns = gene_ids
-    adjusted_residual_mat.insert(loc=0, column='sampleid', value=sample_ids.sampleid)
+    adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
 
     return adjusted_residual_mat
 
@@ -267,6 +267,8 @@ def run_computation_in_scatter(
         'spearmans_rho',
         'p_value',
     ]
+    # remove any NA values. Remove this line when run on main dataset
+    adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
     # add in global position and round
     locus = adjusted_spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
@@ -382,11 +384,8 @@ def main(
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
     residual_df = pd.read_csv(AnyPath(residuals))
-    # significant_snps_df = pd.read_csv(AnyPath(
-    #     significant_snps), sep=' ', skipinitialspace=True
-    # )
     significant_snps_df = pd.read_csv(AnyPath(
-        significant_snps)
+        significant_snps), sep=' ', skipinitialspace=True
     )
     
 
