@@ -69,7 +69,9 @@ def prepare_genotype_info(keys_path):
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
         # add OneK1K IDs to genotype mt
         sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
+        print(f'Printing sampleid_keys: {sampleid_keys.head()}')
         genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
+        print(f'Printing genotype samples: {genotype_samples.head()}')
         sampleid_keys = pd.merge(
             genotype_samples,
             sampleid_keys,
@@ -93,6 +95,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
+    print(f'printing residual_df: {residual_df.head()}')
     samples_to_keep = set(residual_df.sampleid)
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
@@ -135,6 +138,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
         genotype_df = t.to_pandas(flatten=True)
         genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
+    print(f'printing genotype_df: {genotype_df.head()}')
     return genotype_df
 
 
@@ -189,6 +193,7 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     ).T
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
+    print(f'printing adjusted_residual_mat: {adjusted_residual_mat.head()}')
 
     return adjusted_residual_mat
 
@@ -205,6 +210,8 @@ def run_computation_in_scatter(
 
     print(f'iteration = {iteration+2}')
     print(f'idx = {idx}')
+    print(f'Printing residual_df {residual_df.head()}')
+    print(f'Printing residual_df columns {residual_df.columns}')
 
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
@@ -239,8 +246,6 @@ def run_computation_in_scatter(
     genotype_df = get_genotype_df(
         filtered_mt_path, residual_df, gene_snp_test_df
     )
-    print(f'Printing residual_df {residual_df.head()}')
-    print(f'Printing residual_df columns {residual_df.columns}')
     print(f'Printing genotype_df {genotype_df.head()}')
 
     def spearman_correlation(df):
@@ -250,7 +255,7 @@ def run_computation_in_scatter(
         snp = df.snpid
         print(snp)
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
-        print(f'Printing gt {genotype_df.head()}')
+        print(f'Printing gt {gt.head()}')
 
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
