@@ -239,6 +239,9 @@ def run_computation_in_scatter(
     genotype_df = get_genotype_df(
         filtered_mt_path, residual_df, gene_snp_test_df
     )
+    print(f'Printing residual_df {residual_df.head()}')
+    print(f'Printing residual_df columns {residual_df.columns}')
+    print(f'Printing genotype_df {genotype_df.head()}')
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -247,6 +250,7 @@ def run_computation_in_scatter(
         snp = df.snpid
         print(snp)
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        print(f'Printing gt {genotype_df.head()}')
 
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
