@@ -55,7 +55,8 @@ def get_number_of_scatters(expression_df, geneloc_df):
     gene_ids = list(expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     # subset genes to 10 test genes
-    genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7", "HDHD5"]
+    # remove this when running on entire dataset
+    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
     return len(geneloc_df.index)
@@ -69,6 +70,10 @@ def get_log_expression(expression_df):
     sample_ids = expression_df.iloc[:, 0]
     to_log = expression_df.iloc[:, 1:].columns
     log_expression_df = expression_df[to_log].applymap(lambda x: np.log(x + 1))
+    # subset genes to 10 test genes
+    # remove this when running on entire dataset
+    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
+    log_expression_df = log_expression_df[log_expression_df.columns.intersection(genes_to_test)]
     log_expression_df.insert(loc=0, column='sampleid', value=sample_ids)
 
     return log_expression_df
@@ -170,7 +175,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
         residual_df.to_csv(fp, index=False)
 
     return residual_df
-    
+
 
 # Run Spearman rank in parallel by sending genes in a batches
 def run_spearman_correlation_scatter(
@@ -194,7 +199,8 @@ def run_spearman_correlation_scatter(
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
     geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
     # subset genes to 10 test genes
-    genes_to_test = ["ERAP2", "LAMB1", "POLR2J2", "GBP7", "GSTM3", "CCDC163P", "CTLA4", "AIF1", "BRCA1", "IL7"]
+    # remove this when running on entire dataset
+    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
     # perform correlation in chunks by gene
@@ -216,7 +222,6 @@ def run_spearman_correlation_scatter(
     # computational time
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     position_table = mt.rows().select()
-    position_table = position_table.filter(position_table.locus.contig == chromosome)
     position_table = position_table.annotate(
         position=position_table.locus.position,
         snpid=hl.str(position_table.locus)
@@ -255,12 +260,16 @@ def run_spearman_correlation_scatter(
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
-    t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-    genotype_df = t.to_pandas(flatten=True)
-    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-    # filter gene_snp_df to have the same snps after filtering SNPs that
-    # don't have an alt_allele value   
-    gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+    if len(snps_to_remove) > 0:
+        t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+        genotype_df = t.to_pandas(flatten=True)
+        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+        # filter gene_snp_df to have the same snps after filtering SNPs that
+        # don't have an alt_allele value 
+        gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+    else:
+        genotype_df = t.to_pandas(flatten=True)
+        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -268,6 +277,7 @@ def run_spearman_correlation_scatter(
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
+        print(snp)
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
@@ -328,6 +338,7 @@ def run_spearman_correlation_scatter(
     print(f'Printing final table: {t.show()}')
     spearman_df = t.to_pandas()
     return spearman_df
+
 
 def merge_df_and_convert_to_string(*df_list):
     """Merge all Spearman dfs and convert to string using .to_string() on df"""
