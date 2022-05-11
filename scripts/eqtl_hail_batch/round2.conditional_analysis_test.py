@@ -97,6 +97,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     # data (this varies by cell type)
     print(f'printing residual_df: {residual_df.head()}')
     print(f'printing residual_df columns: {residual_df.columns}')
+    print(f'printing residual_df, dtype: {residual_df.dtypes}')
     samples_to_keep = set(residual_df.sampleid)
     print(f'printing samples_to_keep: {samples_to_keep}')
     set_to_keep = hl.literal(samples_to_keep)
@@ -156,6 +157,9 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
 def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     """calculate residuals for gene list"""
     
+    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
+    print(f'printing adjusted_residual_mat within loop, dtype: {adjusted_residual_mat.dtypes}')
+
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
     cols = list(significant_snps_df)
@@ -172,9 +176,14 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
 
     # Subset residuals for the genes to be tested
     sample_ids = residual_df.loc[:, ['sampleid']]
+    (f'printing sample ids: {sample_ids}')
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     residual_df = residual_df.loc[:, residual_df.columns.isin(gene_ids)]
+    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
+    print(f'printing adjusted_residual_mat within loop, dtype: {adjusted_residual_mat.dtypes}')
     residual_df['sampleid'] = sample_ids
+    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
+    print(f'printing adjusted_residual_mat within loop, dtype: {adjusted_residual_mat.dtypes}')
 
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
@@ -202,9 +211,11 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     adjusted_residual_mat = pd.DataFrame(
         list(map(calculate_adjusted_residuals, gene_ids))
     ).T
+    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
+    print(f'printing adjusted_residual_mat within loop, dtype: {adjusted_residual_mat.dtypes}')
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
-    print(f'printing adjusted_residual_mat: {adjusted_residual_mat.head()}')
+    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
 
     # call adjusted_residual_mat.sampleid - should fail
     return adjusted_residual_mat
