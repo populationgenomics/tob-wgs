@@ -175,7 +175,6 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     )
 
     # Subset residuals for the genes to be tested
-    print(f'printing sample ids: {sample_ids}')
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     # save sampleids before filtering redidual_df
     sample_ids = residual_df.sampleid
