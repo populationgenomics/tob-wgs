@@ -212,6 +212,7 @@ def run_computation_in_scatter(
     print(f'idx = {idx}')
     print(f'Printing residual_df {residual_df.head()}')
     print(f'Printing residual_df columns {residual_df.columns}')
+    print(f'Printing residual_df dtypes {residual_df.dtypes}')
 
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
@@ -242,6 +243,7 @@ def run_computation_in_scatter(
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
+    print(f'printing gene_snp_test_df: {gene_snp_test_df.head()}')
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         filtered_mt_path, residual_df, gene_snp_test_df
