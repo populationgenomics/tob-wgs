@@ -207,11 +207,6 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     print(f'printing adjusted_residual_mat: {adjusted_residual_mat.head()}')
 
     # call adjusted_residual_mat.sampleid - should fail
-    print(f'printing residual_df: {adjusted_residual_mat.head()}')
-    print(f'printing residual_df columns: {adjusted_residual_mat.columns}')
-    samples_to_keep = set(adjusted_residual_mat.sampleid)
-    print(samples_to_keep)
-
     return adjusted_residual_mat
 
 
@@ -431,84 +426,67 @@ def main(
 
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
     previous_residual_result = residual_df  # pylint: disable=invalid-name
+    # Perform conditional analysis for n iterations (specified in click interface)
+    for iteration in range(iterations):
 
-    # START TESTING
-    calc_resid_df_job = batch.new_python_job(
-        f'TEST-calculate-resid-df'
-    )
-    calc_resid_df_job.cpu(2)
-    calc_resid_df_job.memory('8Gi')
-    calc_resid_df_job.storage('2Gi')
-    copy_common_env(calc_resid_df_job)
-    previous_residual_result = calc_resid_df_job.call(
-        calculate_residual_df,
-        previous_residual_result,
-        previous_sig_snps_result,
-        filtered_mt_path
-    )
-    # END TESTING
+        calc_resid_df_job = batch.new_python_job(
+            f'calculate-resid-df-iter-{iteration+2}'
+        )
+        calc_resid_df_job.cpu(2)
+        calc_resid_df_job.memory('8Gi')
+        calc_resid_df_job.storage('2Gi')
+        copy_common_env(calc_resid_df_job)
+        previous_residual_result = calc_resid_df_job.call(
+            calculate_residual_df,
+            previous_residual_result,
+            previous_sig_snps_result,
+            filtered_mt_path
+        )
 
-    # # Perform conditional analysis for n iterations (specified in click interface)
-    # for iteration in range(iterations):
+        # convert residual df to string for output
+        residual_as_str = calc_resid_df_job.call(
+            convert_dataframe_to_text, previous_residual_result
+        )
+        # output residual df for each iteration
+        batch.write_output(
+            residual_as_str.as_str(),
+            os.path.join(output_prefix, f'round{iteration+2}_residual_results.csv'),
+        )
 
-    #     calc_resid_df_job = batch.new_python_job(
-    #         f'calculate-resid-df-iter-{iteration+2}'
-    #     )
-    #     calc_resid_df_job.cpu(2)
-    #     calc_resid_df_job.memory('8Gi')
-    #     calc_resid_df_job.storage('2Gi')
-    #     copy_common_env(calc_resid_df_job)
-    #     previous_residual_result = calc_resid_df_job.call(
-    #         calculate_residual_df,
-    #         previous_residual_result,
-    #         previous_sig_snps_result,
-    #         filtered_mt_path
-    #     )
+        sig_snps_dfs = []
+        for gene_idx in range(n_genes):
+            j = batch.new_python_job(name=f'process_iter_{iteration+2}_job_{gene_idx}')
+            j.cpu(2)
+            j.memory('8Gi')
+            j.storage('2Gi')
+            copy_common_env(j)
+            gene_result: hb.resource.PythonResult = j.call(
+                run_computation_in_scatter,
+                iteration,
+                gene_idx,
+                previous_residual_result,
+                previous_sig_snps_result,
+                filtered_mt_path
+            )
+            sig_snps_dfs.append(gene_result)
 
-    #     # convert residual df to string for output
-    #     residual_as_str = calc_resid_df_job.call(
-    #         convert_dataframe_to_text, previous_residual_result
-    #     )
-    #     # output residual df for each iteration
-    #     batch.write_output(
-    #         residual_as_str.as_str(),
-    #         os.path.join(output_prefix, f'round{iteration+2}_residual_results.csv'),
-    #     )
+        merge_job = batch.new_python_job(name='merge_scatters')
+        merge_job.cpu(2)
+        merge_job.memory('8Gi')
+        merge_job.storage('2Gi')
+        previous_sig_snps_result = merge_job.call(
+            merge_significant_snps_dfs, *sig_snps_dfs
+        )
 
-    #     sig_snps_dfs = []
-    #     for gene_idx in range(n_genes):
-    #         j = batch.new_python_job(name=f'process_iter_{iteration+2}_job_{gene_idx}')
-    #         j.cpu(2)
-    #         j.memory('8Gi')
-    #         j.storage('2Gi')
-    #         copy_common_env(j)
-    #         gene_result: hb.resource.PythonResult = j.call(
-    #             run_computation_in_scatter,
-    #             iteration,
-    #             gene_idx,
-    #             previous_residual_result,
-    #             previous_sig_snps_result,
-    #             filtered_mt_path
-    #         )
-    #         sig_snps_dfs.append(gene_result)
-
-    #     merge_job = batch.new_python_job(name='merge_scatters')
-    #     merge_job.cpu(2)
-    #     merge_job.memory('8Gi')
-    #     merge_job.storage('2Gi')
-    #     previous_sig_snps_result = merge_job.call(
-    #         merge_significant_snps_dfs, *sig_snps_dfs
-    #     )
-
-    #     # convert sig snps to string for output
-    #     sig_snps_as_string = merge_job.call(
-    #         convert_dataframe_to_text, previous_sig_snps_result
-    #     )
-    #     # output sig snps for each iteration
-    #     sig_snps_output_path = os.path.join(
-    #         output_prefix, f'esnp_round{iteration+2}_table.csv'
-    #     )
-    #     batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
+        # convert sig snps to string for output
+        sig_snps_as_string = merge_job.call(
+            convert_dataframe_to_text, previous_sig_snps_result
+        )
+        # output sig snps for each iteration
+        sig_snps_output_path = os.path.join(
+            output_prefix, f'esnp_round{iteration+2}_table.csv'
+        )
+        batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
 
     batch.run(wait=False)
 
