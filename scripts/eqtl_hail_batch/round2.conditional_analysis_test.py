@@ -175,15 +175,15 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     )
 
     # Subset residuals for the genes to be tested
-    sample_ids = residual_df.loc[:, ['sampleid']]
-    (f'printing sample ids: {sample_ids}')
+    print(f'printing sample ids: {sample_ids}')
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
+    # save sampleids before filtering redidual_df
+    sample_ids = residual_df.sampleid
     residual_df = residual_df.loc[:, residual_df.columns.isin(gene_ids)]
-    print(f'printing residual_df within loop: {residual_df.head()}')
+    # reassign sample ids
+    residual_df = residual_df.assign(sampleid=list(sample_ids))
     print(f'printing residual_df within loop, dtype: {residual_df.dtypes}')
-    residual_df['sampleid'] = sample_ids
     print(f'printing residual_df within loop: {residual_df.head()}')
-    print(f'printing residual_df within loop, dtype: {residual_df.dtypes}')
 
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
