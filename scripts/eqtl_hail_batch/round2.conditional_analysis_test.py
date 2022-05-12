@@ -69,9 +69,7 @@ def prepare_genotype_info(keys_path):
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
         # add OneK1K IDs to genotype mt
         sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-        print(f'Printing sampleid_keys: {sampleid_keys.head()}')
         genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
-        print(f'Printing genotype samples: {genotype_samples.head()}')
         sampleid_keys = pd.merge(
             genotype_samples,
             sampleid_keys,
@@ -95,29 +93,18 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
-    print(f'printing residual_df: {residual_df.head()}')
-    print(f'printing residual_df columns: {residual_df.columns}')
-    print(f'printing residual_df, dtype: {residual_df.dtypes}')
     samples_to_keep = set(residual_df.sampleid)
-    print(f'printing samples_to_keep: {samples_to_keep}')
     set_to_keep = hl.literal(samples_to_keep)
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-    print(f'printing mt: {mt.show()}')
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_test_df.snpid)
-    print(f'printing snps_to_keep: {snps_to_keep}')
     sorted_snps = sorted(snps_to_keep)
-    # only keep chromosome and position
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
-    # convert all elements in list to int type
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
-    print(f'printing sorted_snp_positions: {sorted_snp_positions}')
     # get first and last positions, with 1 added to last position (to make it inclusive)
     chromosome = gene_snp_test_df.snpid[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
-    print(f'printing first_and_last_snp: {first_and_last_snp}')
-    # parse mt to region of interest
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
@@ -137,29 +124,20 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
-    print(f'printing snps_to_remove: {snps_to_remove}')
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
         genotype_df = t.to_pandas(flatten=True)
-        print(f'printing genotype_df: {genotype_df.head()}')
         genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-        print(f'printing genotype_df: {genotype_df.head()}')
     else:
         genotype_df = t.to_pandas(flatten=True)
-        print(f'printing genotype_df: {genotype_df.head()}')
         genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-        print(f'printing genotype_df: {genotype_df.head()}')
 
-    print(f'printing genotype_df: {genotype_df.head()}')
     return genotype_df
 
 
 def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     """calculate residuals for gene list"""
     
-    print(f'printing residual_df within loop: {residual_df.head()}')
-    print(f'printing residual_df within loop, dtype: {residual_df.dtypes}')
-
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
     cols = list(significant_snps_df)
@@ -181,8 +159,6 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     residual_df = residual_df[gene_ids]
     # reassign sample ids
     residual_df = residual_df.assign(sampleid=sample_ids.to_list())
-    print(f'printing residual_df within loop, dtype: {residual_df.dtypes}')
-    print(f'printing residual_df within loop: {residual_df.head()}')
 
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
@@ -210,13 +186,9 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     adjusted_residual_mat = pd.DataFrame(
         list(map(calculate_adjusted_residuals, gene_ids))
     ).T
-    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
-    print(f'printing adjusted_residual_mat within loop, dtype: {adjusted_residual_mat.dtypes}')
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
-    print(f'printing adjusted_residual_mat within loop: {adjusted_residual_mat.head()}')
 
-    # call adjusted_residual_mat.sampleid - should fail
     return adjusted_residual_mat
 
 
@@ -262,21 +234,17 @@ def run_computation_in_scatter(
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
-    print(f'printing gene_snp_test_df: {gene_snp_test_df.head()}')
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         filtered_mt_path, residual_df, gene_snp_test_df
     )
-    print(f'Printing genotype_df {genotype_df.head()}')
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
-        print(snp)
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
-        print(f'Printing gt {gt.head()}')
 
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
@@ -315,11 +283,7 @@ def run_computation_in_scatter(
         bp,
     ]
     adjusted_spearman_df['round'] = iteration + 2
-    print(f'adjusted_spearman_df finished')
-    print(f'adjusted_spearman_df.head(): {adjusted_spearman_df.head()}')
-    # init_batch()
     t = hl.Table.from_pandas(adjusted_spearman_df)
-    print(f't.show(): {t.show()}')
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     # get alleles
@@ -421,8 +385,6 @@ def main(
     if test_subset_genes:
         n_genes = test_subset_genes
     else:
-        print('Loaded data to prepare workflow')
-        # test with 5 genes
         n_genes = test_subset_genes or get_number_of_scatters(
             residual_df, significant_snps_df
         )
