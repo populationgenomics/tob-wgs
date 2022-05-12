@@ -184,7 +184,6 @@ def run_spearman_correlation_scatter(
     expression,
     geneloc,
     residuals_df,
-    output_prefix,
     filtered_mt_path,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter"""
@@ -428,7 +427,6 @@ def main(
                 expression=expression,
                 geneloc=geneloc,
                 residuals_df=residuals_df,
-                output_prefix=output_prefix,
                 filtered_mt_path=filtered_mt_path,
             )
             spearman_dfs_from_scatter.append(result)
