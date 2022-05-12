@@ -39,8 +39,6 @@ from google.cloud import storage
     required=True,
     help=(
         'A path prefix of where input files are located, eg: gs://MyBucket/folder/. '
-        'We expect 5 folders to exist in this subdirectory: '
-        'expression_files, gene_location_files, genotype_files, snp_location_files, covariates_files'  # noqa: E501; pylint: disable=line-too-long
     ),
 )
 @click.option(
@@ -107,21 +105,6 @@ def submit_eqtl_jobs(
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
 
     for cell_type in cell_types:
-        expression = os.path.join(
-            input_path, 'expression_files', f'{cell_type}_expression.tsv'
-        )
-        covariates = os.path.join(
-            input_path, 'covariates_files', f'{cell_type}_peer_factors.tsv'
-        )
-
-        if dry_run:
-            files_to_check = [expression, covariates]
-            files_that_are_missing = filter(
-                lambda x: not file_exists(x), files_to_check
-            )
-            for file in files_that_are_missing:
-                logging.error(f'File {file} is missing')
-
         for chromosome in chromosomes:
             residuals = os.path.join(
                 first_round_path, cell_type, f'chr{chromosome}', f'log_residuals.tsv'
@@ -132,13 +115,10 @@ def submit_eqtl_jobs(
                 f'chr{chromosome}',
                 f'correlation_results.csv',
             )
-            genotype = os.path.join(
-                input_path, 'genotype_files', f'tob_genotype_chr{chromosome}.tsv'
-            )
 
             if dry_run:
                 # check all files exist before running
-                files_to_check = [genotype, residuals]
+                files_to_check = [residuals]
                 files_that_are_missing = filter(
                     lambda x: not file_exists(x), files_to_check
                 )
@@ -159,12 +139,13 @@ def submit_eqtl_jobs(
                     dataset='tob-wgs',
                     access_level='test',
                     output_dir=analysis_runner_output_path,
+                    memory='highmem',
+                    cpu=8,
                     # commit, sha and cwd can be inferred automatically
                     script=[
                         'round2.conditional_analysis_test.py',
                         *('--residuals', residuals),
                         *('--significant-snps', significant_snps),
-                        *('--genotype', genotype),
                         *('--output-prefix', output_prefix),
                         *(
                             ['--test-subset-genes', str(test_subset_genes)]
