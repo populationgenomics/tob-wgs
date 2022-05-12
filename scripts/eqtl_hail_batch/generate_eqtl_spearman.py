@@ -33,6 +33,7 @@ FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analys
 def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples"""
 
+    # Remove genes with 0 expression in all samples
     expression_df = expression_df.loc[:, (expression_df != 0).any(axis=0)]
     genes_not_equal_zero = expression_df.iloc[:, 1:].values != 0
     n_expr_over_zero = pd.DataFrame(genes_not_equal_zero.sum(axis=0))
@@ -99,7 +100,7 @@ def calculate_log_cpm(expression_df, output_prefix):
 def prepare_genotype_info(keys_path, expression_path):
 
     init_batch()
-    filtered_mt_path = output_path('genotype_table.ht', 'tmp')
+    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
         log_expression_df = get_log_expression(expression_df)
@@ -177,7 +178,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     return residual_df
 
 
-# Run Spearman rank in parallel by sending genes in a batches
+# Run Spearman rank in parallel by sending genes in batches
 def run_spearman_correlation_scatter(
     idx,
     expression,
@@ -205,21 +206,19 @@ def run_spearman_correlation_scatter(
 
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
-    print(gene_info)
     chromosome = gene_info.chr
-    print(chromosome)
     # get all SNPs which are within 1Mb of each gene
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
-    # this is important, since not all indivuduals have expression/residual
+    # this is important, since not all individuals have expression/residual
     # data (this varies by cell type)
     samples_to_keep = hl.literal(list(residuals_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
 
-    first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     # Do this only on SNPs contained within 1Mb gene region to save on
     # computational time
+    first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     position_table = mt.rows().select()
     position_table = position_table.annotate(
@@ -230,9 +229,9 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(position_table.alleles[1]),
     )
-    snploc_df = position_table.to_pandas()
-    snps_within_region = snploc_df[
-        snploc_df['position'].between(gene_info['left'], gene_info['right'])
+    position_table = position_table.to_pandas()
+    snps_within_region = position_table[
+        position_table['position'].between(gene_info['left'], gene_info['right'])
     ]
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
@@ -259,6 +258,7 @@ def run_spearman_correlation_scatter(
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
+    # (argument must be a string, a bytes-like object or a number)
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
@@ -283,7 +283,6 @@ def run_spearman_correlation_scatter(
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
-        # this should be removed after resolving why NA values are in the genotype file
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
         return (gene_symbol, gene_id, snp, coef, p)
 
@@ -385,12 +384,12 @@ def main(
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
-    # load in files literally to get number of scatters and get residuals
+    # load in files to get number of scatters and residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
     covariate_df_literal = pd.read_csv(AnyPath(covariates), sep=',')
 
-    # only run batch jobs of there are test genes in the chromosome
+    # only run batch jobs if there are test genes in the chromosome
     n_genes_in_scatter = get_number_of_scatters(expression_df_literal, geneloc_df_literal)
     if n_genes_in_scatter > 0:
 
