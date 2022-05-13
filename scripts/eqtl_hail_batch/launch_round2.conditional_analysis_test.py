@@ -3,7 +3,7 @@ Launch analysis runner for all cell types and chromosomes
 
 For example:
 
-    python3 scripts/hail_batch/eqtl_hail_batch/launch_round2.conditional_analysis_test.py \
+    python3 scripts/hail_batch/eqtl_hail_batch/launch.conditional_analysis.py \
         --input-path "gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files" \
         --dry-run \
         --output-dir gs://cpg-tob-wgs-test/eqtl_output \
@@ -142,7 +142,7 @@ def submit_eqtl_jobs(
                     cpu=8,
                     # commit, sha and cwd can be inferred automatically
                     script=[
-                        'round2.conditional_analysis_test.py',
+                        'conditional_analysis.py',
                         *('--residuals', residuals),
                         *('--significant-snps', significant_snps),
                         *('--output-prefix', output_prefix),
