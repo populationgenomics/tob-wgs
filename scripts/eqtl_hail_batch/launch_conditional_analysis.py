@@ -133,10 +133,12 @@ def submit_eqtl_jobs(
                 # The analysis-runner output path doesn't want the BUCKET specified,
                 # so let's remove it from the output_prefix
                 analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
+                # get access level from bucket, rather than manual input
+                access_level=bucket_name.split('-')[-1]
                 run_analysis_runner(
                     description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
                     dataset='tob-wgs',
-                    access_level='test',
+                    access_level=access_level,
                     output_dir=analysis_runner_output_path,
                     memory='highmem',
                     cpu=8,
