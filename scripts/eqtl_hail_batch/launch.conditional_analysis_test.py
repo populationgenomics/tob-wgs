@@ -107,11 +107,11 @@ def submit_eqtl_jobs(
     for cell_type in cell_types:
         for chromosome in chromosomes:
             residuals = os.path.join(
-                first_round_path, f'eqtl_results_{cell_type}', f'chr{chromosome}', f'log_residuals.tsv'
+                first_round_path, f'{cell_type}', f'chr{chromosome}', f'log_residuals.tsv'
             )
             significant_snps = os.path.join(
                 first_round_path,
-                f'eqtl_results_{cell_type}',
+                f'{cell_type}',
                 f'chr{chromosome}correlation_results.csv',
             )
 
@@ -126,7 +126,7 @@ def submit_eqtl_jobs(
             else:
 
                 output_prefix = os.path.join(
-                    output_dir, f'eqtl_results_{cell_type}', f'chr{chromosome}'
+                    output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
                 # add in sampleid keys
                 keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')

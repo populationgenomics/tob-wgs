@@ -117,7 +117,7 @@ def submit_eqtl_jobs(
             else:
 
                 output_prefix = os.path.join(
-                    output_dir, f'eqtl_results_{cell_type}', f'chr{chromosome}'
+                    output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
                 # add in sampleid keys
                 keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
