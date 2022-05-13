@@ -3,7 +3,7 @@ Launch analysis runner for all cell types and chromosomes
 
 For example:
 
-    python3 scripts/hail_batch/eqtl_hail_batch/launch.conditional_analysis.py \
+    python3 scripts/hail_batch/eqtl_hail_batch/_conditional_analysis.py \
         --input-path "gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files" \
         --dry-run \
         --output-dir gs://cpg-tob-wgs-test/eqtl_output \
