@@ -134,7 +134,7 @@ def submit_eqtl_jobs(
                 # so let's remove it from the output_prefix
                 analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
                 # get access level from bucket, rather than manual input
-                access_level=bucket_name.split('-')[-1]
+                access_level = bucket_name.split('-')[-1]
                 run_analysis_runner(
                     description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
                     dataset='tob-wgs',
