@@ -20,7 +20,7 @@ For the conditional analysis (rounds 2-5), execute the following command:
 analysis-runner --dataset tob-wgs \
     --access-level test --output-dir "plasma/chr22/v0" --output-dir "plasma/chr22/v0"  --memory=highmem --cpu=8 \
     --description "eqtl batch job" \
-    python3 round2.conditional_analysis_test.py \
+    python3 conditional_analysis.py \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5' \
         --residuals 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5residual_df.tsv' \
         --significant-snps 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5correlation_results.csv' \
@@ -39,7 +39,7 @@ python3 launch_generate_eqtl_spearman.py \
 For the conditional analysis (rounds 2-5), execute the following command:
 
 ```sh
-python3 launch_round2.conditional_analysis_test.py \
+python3 launch.conditional_analysis_test.py \
 --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" \
 --output-dir 'gs://cpg-tob-wgs-test/eqtl_output' --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/eqtl_output/'
 ```
