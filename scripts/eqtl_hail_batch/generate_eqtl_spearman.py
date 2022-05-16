@@ -48,6 +48,12 @@ def filter_lowly_expressed_genes(expression_df):
 
     return expression_df
 
+def remove_sc_outliers(df):
+    # remove outlier samples, as identified by sc analysis
+    outliers = ['966_967','88_88']
+    df = df[-df.sampleid.isin(outliers)]
+
+    return df
 
 def get_number_of_scatters(expression_df, geneloc_df):
     """get index of total number of genes"""
@@ -76,6 +82,8 @@ def get_log_expression(expression_df):
     genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
     log_expression_df = log_expression_df[log_expression_df.columns.intersection(genes_to_test)]
     log_expression_df.insert(loc=0, column='sampleid', value=sample_ids)
+    # remove sc outlier samples
+    log_expression_df = remove_sc_outliers(log_expression_df)
 
     return log_expression_df
 
@@ -212,6 +220,7 @@ def run_spearman_correlation_scatter(
     # only keep samples that are contained within the residuals df
     # this is important, since not all individuals have expression/residual
     # data (this varies by cell type)
+    # this also filters out any sc sample outliers
     samples_to_keep = hl.literal(list(residuals_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
 
@@ -261,14 +270,12 @@ def run_spearman_correlation_scatter(
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-        genotype_df = t.to_pandas(flatten=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
         # filter gene_snp_df to have the same snps after filtering SNPs that
         # don't have an alt_allele value 
         gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
-    else:
-        genotype_df = t.to_pandas(flatten=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    
+    genotype_df = t.to_pandas(flatten=True)
+    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
