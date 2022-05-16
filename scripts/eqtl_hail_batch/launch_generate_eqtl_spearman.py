@@ -77,9 +77,10 @@ def submit_eqtl_jobs(
         path_to_expression_files = os.path.join(bucket_path, 'expression_files')
         logging.info(f'Going to fetch cell types from {path_to_expression_files}')
         blobs = bucket.list_blobs(prefix=path_to_expression_files + '/', delimiter='/')
+        ending = '_expression.tsv'
 
         cell_types = [
-            os.path.basename(b.name)[:-15]
+            os.path.basename(b.name)[:-len(ending)]
             for b in blobs
             if b.name.endswith('_expression.tsv')
         ]

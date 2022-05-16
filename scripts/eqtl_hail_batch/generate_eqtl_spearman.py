@@ -390,57 +390,58 @@ def main(
 
     # only run batch jobs if there are test genes in the chromosome
     n_genes_in_scatter = get_number_of_scatters(expression_df_literal, geneloc_df_literal)
-    if n_genes_in_scatter > 0:
+    if n_genes_in_scatter == 0:
+        raise ValueError('No genes in get_number_of_scatters()')
 
-        calculate_residuals_job = batch.new_python_job('calculate-residuals')
-        residuals_df = calculate_residuals_job.call(
-            calculate_residuals,
-            expression_df=expression_df_literal,
-            covariate_df=covariate_df_literal,
-            output_prefix=output_prefix,
+    calculate_residuals_job = batch.new_python_job('calculate-residuals')
+    residuals_df = calculate_residuals_job.call(
+        calculate_residuals,
+        expression_df=expression_df_literal,
+        covariate_df=covariate_df_literal,
+        output_prefix=output_prefix,
+    )
+    # calculate and save log cpm values
+    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
+    calculate_log_cpm_job.call(
+        calculate_log_cpm,
+        expression_df=expression_df_literal,
+        output_prefix=output_prefix,
+    )
+
+    spearman_dfs_from_scatter = []
+
+    filter_mt_job = batch.new_python_job('filter_mt')
+    copy_common_env(filter_mt_job)
+    filtered_mt_path = filter_mt_job.call(
+        prepare_genotype_info, keys_path=keys, expression_path=expression
+    )
+
+    for idx in range(n_genes_in_scatter):
+        j = batch.new_python_job(name=f'process_{idx}')
+        j.cpu(2)
+        j.memory('8Gi')
+        j.storage('2Gi')
+        copy_common_env(j)
+        result: hb.resource.PythonResult = j.call(
+            run_spearman_correlation_scatter,
+            idx=idx,
+            expression=expression,
+            geneloc=geneloc,
+            residuals_df=residuals_df,
+            filtered_mt_path=filtered_mt_path,
         )
-        # calculate and save log cpm values
-        calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
-        calculate_log_cpm_job.call(
-            calculate_log_cpm,
-            expression_df=expression_df_literal,
-            output_prefix=output_prefix,
-        )
+        spearman_dfs_from_scatter.append(result)
 
-        spearman_dfs_from_scatter = []
-
-        filter_mt_job = batch.new_python_job('filter_mt')
-        copy_common_env(filter_mt_job)
-        filtered_mt_path = filter_mt_job.call(
-            prepare_genotype_info, keys_path=keys, expression_path=expression
-        )
-
-        for idx in range(n_genes_in_scatter):
-            j = batch.new_python_job(name=f'process_{idx}')
-            j.cpu(2)
-            j.memory('8Gi')
-            j.storage('2Gi')
-            copy_common_env(j)
-            result: hb.resource.PythonResult = j.call(
-                run_spearman_correlation_scatter,
-                idx=idx,
-                expression=expression,
-                geneloc=geneloc,
-                residuals_df=residuals_df,
-                filtered_mt_path=filtered_mt_path,
-            )
-            spearman_dfs_from_scatter.append(result)
-
-        merge_job = batch.new_python_job(name='merge_scatters')
-        merge_job.cpu(2)
-        merge_job.memory('8Gi')
-        merge_job.storage('2Gi')
-        result_second = merge_job.call(
-            merge_df_and_convert_to_string, *spearman_dfs_from_scatter
-        )
-        corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
-        batch.write_output(result_second.as_str(), corr_result_output_path)
-        batch.run(wait=False)
+    merge_job = batch.new_python_job(name='merge_scatters')
+    merge_job.cpu(2)
+    merge_job.memory('8Gi')
+    merge_job.storage('2Gi')
+    result_second = merge_job.call(
+        merge_df_and_convert_to_string, *spearman_dfs_from_scatter
+    )
+    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+    batch.write_output(result_second.as_str(), corr_result_output_path)
+    batch.run(wait=False)
 
 
 if __name__ == '__main__':
