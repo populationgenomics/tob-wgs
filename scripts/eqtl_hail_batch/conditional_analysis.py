@@ -126,11 +126,9 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-        genotype_df = t.to_pandas(flatten=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-    else:
-        genotype_df = t.to_pandas(flatten=True)
-        genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+
+    genotype_df = t.to_pandas(flatten=True)
+    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
 
     return genotype_df
 
