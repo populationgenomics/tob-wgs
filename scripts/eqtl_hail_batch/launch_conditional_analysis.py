@@ -140,8 +140,6 @@ def submit_eqtl_jobs(
                     dataset='tob-wgs',
                     access_level=access_level,
                     output_dir=analysis_runner_output_path,
-                    memory='highmem',
-                    cpu=8,
                     # commit, sha and cwd can be inferred automatically
                     script=[
                         'conditional_analysis.py',

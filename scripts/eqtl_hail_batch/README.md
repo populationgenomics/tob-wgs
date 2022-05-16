@@ -4,7 +4,7 @@ This runs a Hail batch script in order to generate a list of eQTLs from scRNA-se
 
 ```sh
 analysis-runner --dataset tob-wgs \
-    --access-level test --output-dir "plasma/chr22/v0"  --memory=highmem --cpu=8 \
+    --access-level test --output-dir "plasma/chr22/v0" \
     --description "eqtl batch job" \
     python3 generate_eqtl_spearman.py \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0'
@@ -18,7 +18,7 @@ For the conditional analysis (rounds 2-5), execute the following command:
 
 ```sh
 analysis-runner --dataset tob-wgs \
-    --access-level test --output-dir "plasma/chr22/v0" --output-dir "plasma/chr22/v0"  --memory=highmem --cpu=8 \
+    --access-level test --output-dir "plasma/chr22/v0" --output-dir "plasma/chr22/v0" \
     --description "eqtl batch job" \
     python3 conditional_analysis.py \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5' \
