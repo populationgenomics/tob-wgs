@@ -21,6 +21,7 @@ from cpg_utils.hail_batch import (
 )
 from cloudpathlib import AnyPath
 import click
+from multipy.fdr import qvalue
 
 DEFAULT_DRIVER_MEMORY = '4G'
 DRIVER_IMAGE = os.getenv('CPG_DRIVER_IMAGE')
@@ -351,7 +352,8 @@ def merge_df_and_convert_to_string(*df_list):
     """Merge all Spearman dfs and convert to string using .to_string() on df"""
     merged_df: pd.DataFrame = pd.concat(df_list)
     pvalues = merged_df['p_value']
-    fdr_values = pd.DataFrame(list(multi.fdrcorrection(pvalues))).iloc[1]
+    _, qvals = qvalue(pvalues)
+    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_df = merged_df.assign(fdr=fdr_values)
     merged_df['fdr'] = merged_df.fdr.astype(float)
     return merged_df.to_string()
