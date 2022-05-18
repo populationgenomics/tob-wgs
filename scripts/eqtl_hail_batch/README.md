@@ -8,7 +8,7 @@ analysis-runner --dataset tob-wgs \
     --description "eqtl batch job" \
     --image australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16 \
     python3 generate_eqtl_spearman.py \
-        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0'
+        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0' \
         --expression 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_intermediate_expression.tsv' \
         --geneloc 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv' \
         --covariates 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/B_intermediate_peer_factors_file.txt' \
