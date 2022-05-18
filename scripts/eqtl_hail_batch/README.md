@@ -1,6 +1,6 @@
 # Run hail batch job to generate list of eQTLs
 
-This runs a Hail batch script in order to generate a list of eQTLs from scRNA-seq expression. This code was taken from Seyhan Yazar from Joseph Powell's group at the Garvan-Weizmann Centre for Cellular Genomics, then converted into Python/hail batch. To run, use conda to install the analysis-runner. For the first round of eQTLs, execute the following command for running one cell type and chromosome (B_intermediate cells and chromosome 22 are shown here as an example):
+This runs a Hail batch script in order to generate a list of eQTLs from scRNA-seq expression. This [code](https://github.com/powellgenomicslab/onek1k_phase1/tree/main/single_cell_cis_eQTL_mapping) was taken from Seyhan Yazar from Joseph Powell's group at the Garvan-Weizmann Centre for Cellular Genomics, then converted into Python/hail batch. To run, use conda to install the analysis-runner. For the first round of eQTLs, execute the following command for running one cell type and chromosome (B_intermediate cells and chromosome 22 are shown here as an example):
 
 ```sh
 analysis-runner --dataset tob-wgs \
