@@ -396,7 +396,7 @@ def main(
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
     previous_residual_result = residual_df  # pylint: disable=invalid-name
     # Perform conditional analysis for n iterations (specified in click interface)
-    for iteration in range(iterations):
+    for iteration in range(2, iterations +2):
 
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration+2}'
