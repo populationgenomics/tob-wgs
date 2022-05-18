@@ -109,7 +109,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
-    t = t.select(t.alleles, t.onek1k_id, t.n_alt_alleles)
+    t = t.select(t.alleles, sampleid=t.onek1k_id, t.n_alt_alleles)
     t = t.annotate(
         snpid=hl.str(t.contig)
         + ':'
