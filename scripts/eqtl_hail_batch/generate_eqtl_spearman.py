@@ -253,7 +253,7 @@ def run_spearman_correlation_scatter(
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
-    t = t.select(t.alleles, sampleid=t.onek1k_id, t.n_alt_alleles)
+    t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
     t = t.annotate(
         snpid=hl.str(t.contig)
         + ':'

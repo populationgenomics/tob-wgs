@@ -109,7 +109,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
-    t = t.select(t.alleles, sampleid=t.onek1k_id, t.n_alt_alleles)
+    t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
     t = t.annotate(snpid=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
     # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
@@ -192,7 +192,7 @@ def run_computation_in_scatter(
 ):
     """Run genes in scatter"""
 
-    print(f'iteration = {iteration+2}')
+    print(f'iteration = {iteration}')
     print(f'idx = {idx}')
 
     # make sure 'gene_symbol' is the first column
@@ -272,7 +272,7 @@ def run_computation_in_scatter(
         chrom,
         bp,
     ]
-    adjusted_spearman_df['round'] = iteration + 2
+    adjusted_spearman_df['round'] = iteration
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
@@ -359,9 +359,8 @@ def main(
     test_subset_genes=None,
 ):
     """
-    Creates a Hail Batch pipeline for calculating EQTL using {iterations} iterations,
-    scattered across the number of genes. Note, {iterations} iterations are run, however
-    iterations start at 2, since round 1 is completed in `generate_eqtl_spearan.py`.
+    Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
+    scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
     """
     dataset = os.getenv('CPG_DATASET')
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
@@ -388,10 +387,12 @@ def main(
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
     previous_residual_result = residual_df  # pylint: disable=invalid-name
     # Perform conditional analysis for n iterations (specified in click interface)
+    # note, iteration 1 is performed in generate_eqtl_spearman.py, which requires starting
+    # the iteration at 2 (from a 0 index)
     for iteration in range(2, iterations +2):
 
         calc_resid_df_job = batch.new_python_job(
-            f'calculate-resid-df-iter-{iteration+2}'
+            f'calculate-resid-df-iter-{iteration}'
         )
         calc_resid_df_job.cpu(2)
         calc_resid_df_job.memory('8Gi')
@@ -411,12 +412,12 @@ def main(
         # output residual df for each iteration
         batch.write_output(
             residual_as_str.as_str(),
-            os.path.join(output_prefix, f'round{iteration+2}_residual_results.csv'),
+            os.path.join(output_prefix, f'round{iteration}_residual_results.csv'),
         )
 
         sig_snps_dfs = []
         for gene_idx in range(n_genes):
-            j = batch.new_python_job(name=f'process_iter_{iteration+2}_job_{gene_idx}')
+            j = batch.new_python_job(name=f'process_iter_{iteration}_job_{gene_idx}')
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
@@ -445,7 +446,7 @@ def main(
         )
         # output sig snps for each iteration
         sig_snps_output_path = os.path.join(
-            output_prefix, f'esnp_round{iteration+2}_table.csv'
+            output_prefix, f'esnp_round{iteration}_table.csv'
         )
         batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
 
