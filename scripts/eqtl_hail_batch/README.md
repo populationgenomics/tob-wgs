@@ -6,6 +6,7 @@ This runs a Hail batch script in order to generate a list of eQTLs from scRNA-se
 analysis-runner --dataset tob-wgs \
     --access-level test --output-dir "plasma/chr22/v0" \
     --description "eqtl batch job" \
+    --image australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16 \
     python3 generate_eqtl_spearman.py \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0'
         --expression 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_intermediate_expression.tsv' \
