@@ -29,7 +29,7 @@ TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 
 
-def get_number_of_scatters(residual_df, significant_snps_df):
+def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame) -> int:
     """get index of total number of genes"""
 
     # Identify the top eSNP for each eGene and assign remaining to df
