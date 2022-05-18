@@ -7,7 +7,6 @@ import hail as hl
 import hailtop.batch as hb
 import pandas as pd
 import statsmodels.api as sm
-import statsmodels.stats.multitest as multi
 from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
@@ -19,10 +18,11 @@ from cpg_utils.hail_batch import (
 )
 from cloudpathlib import AnyPath
 import click
+from multipy.fdr import qvalue
 
 
 DEFAULT_DRIVER_MEMORY = '4G'
-DRIVER_IMAGE = "australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16"
+DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
 assert DRIVER_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
@@ -311,7 +311,8 @@ def merge_significant_snps_dfs(*df_list):
 
     merged_sig_snps = pd.concat(df_list)
     pvalues = merged_sig_snps['p_value']
-    fdr_values = pd.DataFrame(list(multi.fdrcorrection(pvalues))).iloc[1]
+    _, qvals = qvalue(pvalues)
+    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
     merged_sig_snps.append(merged_sig_snps)

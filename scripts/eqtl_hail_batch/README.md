@@ -21,6 +21,7 @@ For the conditional analysis (rounds 2-5), execute the following command:
 analysis-runner --dataset tob-wgs \
     --access-level test --output-dir "plasma/chr22/v0" --output-dir "plasma/chr22/v0" \
     --description "eqtl batch job" \
+    --image australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16 \
     python3 conditional_analysis.py \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5' \
         --residuals 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v5residual_df.tsv' \
