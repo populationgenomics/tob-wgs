@@ -110,15 +110,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, sampleid=t.onek1k_id, t.n_alt_alleles)
-    t = t.annotate(
-        snpid=hl.str(t.contig)
-        + ':'
-        + hl.str(t.position)
-        + ':'
-        + hl.str(t.alleles[0])
-        + ':'
-        + hl.str(t.alleles[1])
-    )
+    t = t.annotate(snpid=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
     # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
     t = t.filter(set_to_keep.contains(t['snpid']))
