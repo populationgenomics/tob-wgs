@@ -275,7 +275,6 @@ def run_spearman_correlation_scatter(
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
     
     genotype_df = t.to_pandas(flatten=True)
-    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
     # filter gene_snp_df to have the same snps after filtering SNPs that
     # don't have an alt_allele value 
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
