@@ -389,7 +389,7 @@ def main(
     # Perform conditional analysis for n iterations (specified in click interface)
     # note, iteration 1 is performed in generate_eqtl_spearman.py, which requires starting
     # the iteration at 2 (from a 0 index)
-    for iteration in range(2, iterations +2):
+    for iteration in range(2, iterations + 2):
 
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration}'
