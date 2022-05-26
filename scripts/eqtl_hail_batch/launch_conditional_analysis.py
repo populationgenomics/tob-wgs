@@ -18,11 +18,6 @@ from analysis_runner.cli_analysisrunner import run_analysis_runner
 from google.cloud import storage
 
 
-# def run_analysis_runner(*args, **kwargs):
-#     """Run analysis runner for all cell types and chromosomes"""
-#     print(args, kwargs)
-
-
 @click.command()
 @click.option(
     '--cell-types',
@@ -32,7 +27,8 @@ from google.cloud import storage
 @click.option(
     '--chromosomes',
     required=True,
-    help='List of chromosome numbers to run eQTL analysis on. Space separated, as one argument',  # noqa: E501; pylint: disable=line-too-long
+    help='List of chromosome numbers to run eQTL analysis on. \
+        Space separated, as one argument',
 )
 @click.option(
     '--input-path',

@@ -32,7 +32,7 @@ FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analys
 def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame) -> int:
     """get index of total number of genes"""
 
-    # Identify the top eSNP for each eGene and assign remaining to df
+    # Identify the top eSNP for each eGene
     esnp1 = (
         significant_snps_df.sort_values(['gene_symbol', 'fdr'], ascending=True)
         .groupby('gene_symbol')

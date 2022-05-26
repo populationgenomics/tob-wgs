@@ -31,7 +31,16 @@ FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analys
 
 
 def filter_lowly_expressed_genes(expression_df):
-    """Remove genes with low expression in all samples"""
+    """Remove genes with low expression in all samples
+
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns, 
+    containing expression values as transcripts per million (TPM).
+
+    Returns:
+    A filtered version of the input data frame, after removing columns (genes) 
+    with 0 values in more than 10% of the rows (samples).
+    """
 
     # Remove genes with 0 expression in all samples
     expression_df = expression_df.loc[:, (expression_df != 0).any(axis=0)]
@@ -58,7 +67,18 @@ def remove_sc_outliers(df):
 
 
 def get_number_of_scatters(expression_df, geneloc_df):
-    """get index of total number of genes"""
+    """get index of total number of genes
+
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns, 
+    containing expression values as transcripts per million (TPM).
+    geneloc_df: a data frame with the gene location (chromosome, start, and 
+    end locations as columns) specified for each gene (rows).
+
+    Returns:
+    The number of genes (as an int) after filtering for lowly expressed genes.
+    This integer number gets fed into the number of scatters to run.
+    """
 
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = list(expression_df.columns.values)[1:]
@@ -73,7 +93,15 @@ def get_number_of_scatters(expression_df, geneloc_df):
 
 def get_log_expression(expression_df):
 
-    """get logged expression values"""
+    """get logged expression values
+
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns, 
+    containing expression values as transcripts per million (TPM).
+
+    Returns:
+    The natural logarithm of expression values, with an offset of 1 to avoid undefined values.
+    """
 
     expression_df = filter_lowly_expressed_genes(expression_df)
     sample_ids = expression_df.iloc[:, 0]
@@ -91,7 +119,15 @@ def get_log_expression(expression_df):
 
 
 def calculate_log_cpm(expression_df, output_prefix):
-    """Calculate log cpm for each cell type and chromosome"""
+    """Calculate log cpm for each cell type and chromosome
+
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns, 
+    containing expression values as transcripts per million (TPM).
+
+    Returns:
+    Counts per million mapped reads
+    """
 
     expression_df = filter_lowly_expressed_genes(expression_df)
     sample_ids = expression_df.iloc[:, 0]
@@ -108,6 +144,20 @@ def calculate_log_cpm(expression_df, output_prefix):
 
 
 def prepare_genotype_info(keys_path, expression_path):
+    """Calculate log cpm for each cell type and chromosome
+
+    Input:
+    keys_path: path to a tsv file with information on
+    OneK1K amd CPG IDs (columns) for each sample (rows).
+    expression_path: path to a tsv file of expression values (in transcripts per million)
+    with genes as columns and samples as rows.
+
+    Returns:
+    A hail matrix table, with rows (alleles) filtered on the following requirements:
+    1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
+    4) call rate of 0.8, and 5) variants with MAF < 0.01. Columns (samples) are filtered
+    on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
+    """
 
     init_batch()
     filtered_mt_path = output_path('genotype_table.mt', 'tmp')
@@ -128,7 +178,7 @@ def prepare_genotype_info(keys_path, expression_path):
         mt = mt.filter_rows(
             hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
         )
-        # filter out variants with MAF < 0.01
+        # filter out variants with MAF <= 0.01
         ht = hl.read_table(FREQ_TABLE)
         mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
