@@ -443,19 +443,27 @@ def merge_df_and_convert_to_string(*df_list):
 # Create click command line to enter dependency files
 @click.command()
 @click.option(
-    '--expression', required=True, help='A sample x gene TSV of expression values'
+    '--expression', required=True, help='A TSV of normalised expression values, \
+        where values represent the average number of molecules for each gene. Gene information \
+        is contained in columns and sample information in rows.'
 )
 @click.option(
-    '--geneloc', required=True, help='A TSV of start and end positions for each gene'
+    '--geneloc', required=True, help='A TSV of start and end positions for each gene. Each row in \
+        this df contains a gene, with ENSEMBL gene id, gene symbol, chromosome, start and end \
+        positions, and strand information as columns.'
 )
 @click.option(
-    '--covariates', required=True, help='A TSV of covariates to calculate residuals'
+    '--covariates', required=True, help='A TSV of covariates to calculate residuals. Sample ids \
+        are contained in rows and covariate information in columns. As a minimum, covariate \
+        information should include PCA scores for the first 4 PCs, the top 2 PEER factors, \
+        sex, and age.'
 )
 @click.option(
     '--keys',
     required=True,
-    help='A TSV of sample ids to convert external to internal IDs',
-)  # pylint: disable=too-many-locals
+    help='A TSV of sample ids to convert external to internal IDs. Rows contain \
+        sample ids, while columns contain OneK1K IDs and CPG IDs.',
+) 
 @click.option(
     '--output-prefix',
     required=True,

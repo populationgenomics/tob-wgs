@@ -396,14 +396,17 @@ def convert_dataframe_to_text(dataframe):
 # Create click command line to enter dependency files
 @click.command()
 @click.option(
-    '--significant-snps', required=True, help='A space separated list of SNPs'
+    '--significant-snps', required=True, help='A space separated list of SNPs (as rows), \
+        and significance levels, spearmans rho, and gene information as columns.'
 )
-@click.option('--residuals', required=True, help='A CSV of gene residuals')
+@click.option('--residuals', required=True, help='A CSV of gene residuals, with genes \
+    as columns and samples as rows.')
 @click.option(
     '--keys',
     required=True,
-    help='A TSV of sample ids to convert external to internal IDs',
-)
+    help='A TSV of sample ids to convert external to internal IDs. Rows contain \
+        sample ids, while columns contain OneK1K IDs and CPG IDs.',
+) 
 @click.option(
     '--output-prefix',
     required=True,
