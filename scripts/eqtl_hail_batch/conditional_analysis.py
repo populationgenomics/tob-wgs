@@ -30,7 +30,18 @@ FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analys
 
 
 def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame) -> int:
-    """get index of total number of genes"""
+    """get index of total number of genes
+    
+    Input:
+    significant_snps_df: a dataframe with significance results (p-value and FDR) from the Spearman rank 
+    correlation calculated in `conditional_analysis.py`. Each row contains information for a SNP, 
+    and columns contain information on significance levels, spearmans rho, and gene information.
+
+    Returns:
+    The number of genes (as an int) returned after sorting each row of the significant_snps_df
+    and taking the top SNP for each gene. This integer number gets fed into the number of 
+    scatters to run.
+    """
 
     # Identify the top eSNP for each eGene
     esnp1 = (
@@ -45,6 +56,18 @@ def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.Da
 
 
 def prepare_genotype_info(keys_path):
+    """Calculate log cpm for each cell type and chromosome
+
+    Input:
+    keys_path: path to a tsv file with information on
+    OneK1K amd CPG IDs (columns) for each sample (rows).
+
+    Returns:
+    Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
+    1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
+    4) call rate of 0.8, and 5) variants with MAF < 0.01. Columns (samples) are filtered
+    on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
+    """
 
     init_batch()
     filtered_mt_path = output_path('genotype_table.ht', 'tmp')
@@ -87,7 +110,21 @@ def prepare_genotype_info(keys_path):
 
 
 def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
-    """load genotype df and filter"""
+    """load genotype df and filter
+    Input:
+    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
+    (and filtering requirements outlined in the same function).
+    residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
+    each round/iteration of conditional analysis. The dataframe consists of genes as columns 
+    and samples as rows. 
+    gene_snp_test_df: a dataframe with rows as SNPs and columns containing snpid, gene_symbol, and 
+    gene_id information. 
+
+    Returns:
+    A pandas dataframe, with genotypes for each sample (in rows) for every SNP. Genotype information is 
+    stored as the number of alternative alleles (n_alt_alleles; 0, 1, or 2).
+    """
+
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
@@ -126,7 +163,20 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
 
 
 def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
-    """calculate residuals for gene list"""
+    """calculate residuals for gene list
+
+    Input:
+    residual_df: a dataframe of expression residuals, with genes as columns and samples
+    as rows. 
+    significant_snps_df: a dataframe with significance results (p-value and FDR) from the Spearman rank 
+    correlation calculated in `conditional_analysis.py`. Each row contains information for a SNP, 
+    and columns contain information on significance levels, spearmans rho, and gene information.
+    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
+    (and filtering requirements outlined in the same function).
+
+    Returns: a dataframe of expression residuals, with genes as columns and samples
+    as rows, which have been conditioned on the lead eSNP. 
+    """
     
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
@@ -190,7 +240,23 @@ def run_computation_in_scatter(
     significant_snps_df,
     filtered_mt_path
 ):
-    """Run genes in scatter"""
+    """Run genes in scatter
+    
+    Input:
+    iteration: synonymous with round. 4 iterations are performed by default for the conditional
+    analysis, which results in 5 total rounds with the addition of the first analysis. 
+    idx: the index of each gene with a top eSNP. Note: a 1Mb region is taken 
+    up and downstream of each gene.
+    residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
+    each round/iteration of conditional analysis. 
+    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
+    (and filtering requirements outlined in the same function).
+
+    Returns:
+    A dataframe with significance results (p-value and FDR) from the Spearman rank correlation. Each
+    row contains information for a SNP, and columns contain information on significance levels, 
+    spearmans rho, and gene information.
+    """
 
     print(f'iteration = {iteration}')
     print(f'idx = {idx}')

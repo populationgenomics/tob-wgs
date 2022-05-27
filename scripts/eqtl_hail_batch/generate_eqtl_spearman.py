@@ -35,7 +35,8 @@ def filter_lowly_expressed_genes(expression_df):
 
     Input:
     expression_df: a data frame with samples as rows and genes as columns, 
-    containing expression values as transcripts per million (TPM).
+    containing normalised expression values (i.e., the average number of molecules 
+    for each gene detected in each person).
 
     Returns:
     A filtered version of the input data frame, after removing columns (genes) 
@@ -71,7 +72,8 @@ def get_number_of_scatters(expression_df, geneloc_df):
 
     Input:
     expression_df: a data frame with samples as rows and genes as columns, 
-    containing expression values as transcripts per million (TPM).
+    containing normalised expression values (i.e., the average number of molecules 
+    for each gene detected in each person).
     geneloc_df: a data frame with the gene location (chromosome, start, and 
     end locations as columns) specified for each gene (rows).
 
@@ -97,7 +99,8 @@ def get_log_expression(expression_df):
 
     Input:
     expression_df: a data frame with samples as rows and genes as columns, 
-    containing expression values as transcripts per million (TPM).
+    containing normalised expression values (i.e., the average number of molecules 
+    for each gene detected in each person).
 
     Returns:
     The natural logarithm of expression values, with an offset of 1 to avoid undefined values.
@@ -123,7 +126,8 @@ def calculate_log_cpm(expression_df, output_prefix):
 
     Input:
     expression_df: a data frame with samples as rows and genes as columns, 
-    containing expression values as transcripts per million (TPM).
+    containing normalised expression values (i.e., the average number of molecules 
+    for each gene detected in each person).
 
     Returns:
     Counts per million mapped reads
@@ -153,7 +157,7 @@ def prepare_genotype_info(keys_path, expression_path):
     with genes as columns and samples as rows.
 
     Returns:
-    A hail matrix table, with rows (alleles) filtered on the following requirements:
+    Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF < 0.01. Columns (samples) are filtered
     on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
@@ -206,7 +210,18 @@ def prepare_genotype_info(keys_path, expression_path):
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
-    """Calculate residuals for each gene in scatter"""
+    """Calculate residuals for each gene in scatter
+    
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns, 
+    containing normalised expression values (i.e., the average number of molecules 
+    for each gene detected in each person).
+    covariate_df: a data frame with samples as rows and cpvariate information 
+    as columns (PCA scores, sex, age, and PEER factors).
+
+    Returns: a dataframe of expression residuals, with genes as columns and samples
+    as rows.
+    """
 
     log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
@@ -246,7 +261,25 @@ def run_spearman_correlation_scatter(
     residuals_df,
     filtered_mt_path,
 ):  # pylint: disable=too-many-locals
-    """Run genes in scatter"""
+    """Run genes in scatter
+    
+    Input:
+    idx: the index of a gene within the filtered expression_df. Note: a 1Mb region is taken 
+    up and downstream of each gene.
+    expression: input path for the expression data, which consists of a data frame 
+    with samples as rows and genes as columns, containing normalised expression 
+    values.
+    geneloc: input path for gene location data, which consists of a data frame with the 
+    gene location (chromosome, start, and end locations as columns) specified for each gene (rows)
+    residuals_df: residual dataframe, calculated in calculate_residuals(). 
+    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
+    (and filtering requirements outlined in the same function).
+
+    Returns:
+    A dataframe with significance results (p-value and FDR) from the Spearman rank correlation. Each
+    row contains information for a SNP, and columns contain information on significance levels, 
+    spearmans rho, and gene information.
+    """
 
     # calculate log expression values
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
