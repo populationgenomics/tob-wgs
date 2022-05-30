@@ -65,7 +65,7 @@ def prepare_genotype_info(keys_path):
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF < 0.01. Columns (samples) are filtered
+    4) call rate of 0.8, and 5) variants with MAF <= 0.01. Columns (samples) are filtered
     on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
     """
 
@@ -86,7 +86,7 @@ def prepare_genotype_info(keys_path):
         mt = mt.filter_rows(
             hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
         )
-        # filter out variants with MAF < 0.01
+        # filter out variants with MAF <= 0.01
         ht = hl.read_table(FREQ_TABLE)
         mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)

@@ -159,7 +159,7 @@ def prepare_genotype_info(keys_path, expression_path):
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF < 0.01. Columns (samples) are filtered
+    4) call rate of 0.8, and 5) variants with MAF <= 0.01. Columns (samples) are filtered
     on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
     """
 
