@@ -4,7 +4,7 @@ This runs a Hail batch script in order to generate a list of eQTLs from scRNA-se
 
 ## Workflow:
 
-Base analysis (Round 1):
+**Base analysis (Round 1):**
 
 Input: all SNP genotypes (run on each chromosome, full scRNA-seq expression data (run for each cell type)
 
@@ -14,7 +14,7 @@ Steps:
 1. Fit a linear model to the expression data in order to account for experimental covariates (sex, age, PCs 1-4, Peer Factors 1 & 2). Take the residuals, which are then used as the adjusted expression values.
 2. Test the association of all SNPs to the adjusted expression values
 
-Conditional analysis (Rounds 2-5):
+**Conditional analysis (Rounds 2-5):**
 
 Input: significant SNP genotypes from the previous round, expression data adjusted for experimental covariates (or in round 3+, adjusted for experimental covariates and previous round lead SNPs)
 
