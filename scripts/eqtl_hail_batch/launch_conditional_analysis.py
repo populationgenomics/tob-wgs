@@ -151,7 +151,6 @@ def submit_eqtl_jobs(
                         ),
                         *('--keys', keys),
                     ],
-                    image='australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16',
                 )
 
 

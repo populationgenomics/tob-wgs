@@ -143,7 +143,6 @@ def submit_eqtl_jobs(
                         *('--keys', keys),
                         *('--output-prefix', output_prefix),
                     ],
-                    image='australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16',
                 )
 
 

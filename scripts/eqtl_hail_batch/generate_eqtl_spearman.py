@@ -368,7 +368,6 @@ def run_spearman_correlation_scatter(
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
-        print(snp)
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
@@ -379,7 +378,6 @@ def run_spearman_correlation_scatter(
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
-    print(f'printing spearman df: {spearman_df.head()}')
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
@@ -521,7 +519,7 @@ def main(
     )
 
     for idx in range(n_genes_in_scatter):
-        j = batch.new_python_job(name=f'process_{idx}')
+        j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')

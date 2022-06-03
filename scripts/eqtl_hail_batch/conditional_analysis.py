@@ -18,13 +18,11 @@ from cpg_utils.hail_batch import (
 )
 from cloudpathlib import AnyPath
 import click
-from multipy.fdr import qvalue
 
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
-DRIVER_IMAGE = # get equivalent get driver image
-assert DRIVER_IMAGE
+assert MULTIPY_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
@@ -259,9 +257,6 @@ def run_computation_in_scatter(
     spearmans rho, and gene information.
     """
 
-    print(f'iteration = {iteration}')
-    print(f'idx = {idx}')
-
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
     cols = list(significant_snps_df)
@@ -377,6 +372,7 @@ def merge_significant_snps_dfs(*df_list):
     """
 
     from multipy.fdr import qvalue 
+
     merged_sig_snps = pd.concat(df_list)
     pvalues = merged_sig_snps['p_value']
     _, qvals = qvalue(pvalues)
@@ -434,9 +430,8 @@ def main(
     Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
     scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
     """
-    dataset = os.getenv('CPG_DATASET')
-    backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
+    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(
