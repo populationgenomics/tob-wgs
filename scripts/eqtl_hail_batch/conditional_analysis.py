@@ -22,7 +22,8 @@ from multipy.fdr import qvalue
 
 
 DEFAULT_DRIVER_MEMORY = '4G'
-DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
+MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
+DRIVER_IMAGE = # get equivalent get driver image
 assert DRIVER_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
