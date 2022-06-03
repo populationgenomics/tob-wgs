@@ -19,6 +19,7 @@ Steps:
 Input: significant SNP genotypes from the previous round, expression data adjusted for experimental covariates (or in round 3+, adjusted for experimental covariates and previous round lead SNPs)
 
 Output: set of significantly associated SNPs, expression data adjusted for lead SNP & covariates
+
 Steps:
 1. Fit a model to the adjusted expression data to account for the genotype of the most significant SNP. Take the residuals, which are the SNP + covariate adjusted expression values
 2. Test the association of significant SNPs from the previous round against SNP & covariate adjusted expression data

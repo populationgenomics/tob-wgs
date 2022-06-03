@@ -260,6 +260,7 @@ def run_spearman_correlation_scatter(
     geneloc,
     residuals_df,
     filtered_mt_path,
+    celltype,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
     
@@ -382,12 +383,12 @@ def run_spearman_correlation_scatter(
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
-        'snpid',
+        'snp_id',
         'spearmans_rho',
         'p_value',
     ]
-    # add in global position and round
-    locus = spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(':'.join, axis=1)
+    # add in locus and chromosome information to get global position in hail
+    locus = spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(':'.join, axis=1)
     chrom = locus.str.split(':', expand=True)[0]
     bp = locus.str.split(':', expand=True)[1]
     spearman_df['locus'], spearman_df['chrom'], spearman_df['bp'] = [
@@ -395,9 +396,7 @@ def run_spearman_correlation_scatter(
         chrom,
         bp,
     ]
-    spearman_df['round'] = 1
-    # turn back into hail table and annotate with global bp,
-    # locus, and alleles
+    # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
@@ -410,22 +409,21 @@ def run_spearman_correlation_scatter(
             hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
         ),
     )
-    # add ID annotation after adding in alleles, a1, and a2
-    t = t.annotate(
-        id=hl.str(':').join(
-            [
-                hl.str(t.chrom),
-                hl.str(t.bp),
-                t.a1,
-                t.a2,
-                t.gene_symbol,
-                # result.db_key, # cell_type_id (eg nk, mononc)
-                hl.str(t.round),
-            ]
-        )
-    )
-    print(f'Printing final table: {t.show()}')
+    # turn back into pandas df and add additional information
+    # for front-end analysis
     spearman_df = t.to_pandas()
+    spearman_df['round'] = '1'
+    # add celltype id
+    celltype_id = celltype.lower()
+    spearman_df['cell_type_id'] = celltype_id
+    # chromosome must be turned into a number solely
+    # note, 'chr' + chromosome number was necessary in the previous step, 
+    # as 'chr' indicates GrCh38 format
+    spearman_df.chrom = spearman_df.chrom.str.split('chr', expand=True)[1]
+    # add association ID annotation after adding in alleles, a1, and a2
+    spearman_df.association_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]),axis=1)
+    spearman_df.variant_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]),axis=1)
+    spearman_df.snp_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]),axis=1)
     return spearman_df
 
 
@@ -483,6 +481,9 @@ def main(
     backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
+    # get cell type to feed into run_spearman_correlation_scatter
+    celltype = expression.split('/')[-1].split('_expression')[0]
+
     # load in files to get number of scatters and residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
     geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
@@ -529,6 +530,7 @@ def main(
             geneloc=geneloc,
             residuals_df=residuals_df,
             filtered_mt_path=filtered_mt_path,
+            celltype=celltype,
         )
         spearman_dfs_from_scatter.append(result)
 
