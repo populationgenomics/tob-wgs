@@ -18,10 +18,10 @@ from cpg_utils.hail_batch import (
     init_batch,
     remote_tmpdir,
 )
+from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
 from multipy.fdr import qvalue
-from cpg_utils.config import get_config
 
 DEFAULT_DRIVER_MEMORY = '4G'
 DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
@@ -422,9 +422,9 @@ def run_spearman_correlation_scatter(
     # as 'chr' indicates GrCh38 format
     spearman_df.chrom = spearman_df.chrom.str.split('chr', expand=True)[1]
     # add association ID annotation after adding in alleles, a1, and a2
-    spearman_df.association_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]),axis=1)
-    spearman_df.variant_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]),axis=1)
-    spearman_df.snp_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]),axis=1)
+    spearman_df.association_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
+    spearman_df.variant_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
+    spearman_df.snp_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
     return spearman_df
 
 
