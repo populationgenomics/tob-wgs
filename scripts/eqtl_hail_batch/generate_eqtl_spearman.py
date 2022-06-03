@@ -5,6 +5,7 @@
 import os
 
 import hail as hl
+import get_config from cpg_utils.config
 import hailtop.batch as hb
 import pandas as pd
 import numpy as np
@@ -477,8 +478,7 @@ def main(
     """
     Creates a Hail Batch pipeline for calculating EQTLs
     """
-    dataset = os.getenv('CPG_DATASET')
-    backend = hb.ServiceBackend(billing_project=dataset, remote_tmpdir=remote_tmpdir())
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
 
     # get cell type to feed into run_spearman_correlation_scatter
