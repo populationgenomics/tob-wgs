@@ -5,7 +5,6 @@
 import os
 
 import hail as hl
-import get_config from cpg_utils.config
 import hailtop.batch as hb
 import pandas as pd
 import numpy as np
@@ -22,6 +21,7 @@ from cpg_utils.hail_batch import (
 from cloudpathlib import AnyPath
 import click
 from multipy.fdr import qvalue
+from cpg_utils.config import get_config
 
 DEFAULT_DRIVER_MEMORY = '4G'
 DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
