@@ -375,6 +375,7 @@ def merge_significant_snps_dfs(*df_list):
     Merge list of list of sig_snps dataframes
     """
 
+    from multipy.fdr import qvalue 
     merged_sig_snps = pd.concat(df_list)
     pvalues = merged_sig_snps['p_value']
     _, qvals = qvalue(pvalues)
