@@ -504,6 +504,7 @@ def main(
             sig_snps_dfs.append(gene_result)
 
         merge_job = batch.new_python_job(name='merge_scatters')
+        merge_job.image(MULTIPY_IMAGE)
         merge_job.cpu(2)
         merge_job.memory('8Gi')
         merge_job.storage('2Gi')
