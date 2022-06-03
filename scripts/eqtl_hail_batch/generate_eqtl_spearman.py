@@ -410,18 +410,20 @@ def run_spearman_correlation_scatter(
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
-    # spearman_df['round'] = '1'
-    # # add celltype id
-    # celltype_id = celltype.lower()
-    # spearman_df['cell_type_id'] = celltype_id
-    # # chromosome must be turned into a number solely
-    # # note, 'chr' + chromosome number was necessary in the previous step, 
-    # # as 'chr' indicates GrCh38 format
-    # spearman_df.chrom = spearman_df.chrom.str.split('chr', expand=True)[1]
-    # # add association ID annotation after adding in alleles, a1, and a2
-    # spearman_df.association_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
-    # spearman_df.variant_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
-    # spearman_df.snp_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
+    spearman_df['round'] = '1'
+    # add celltype id
+    celltype_id = celltype.lower()
+    print(f'celltype ID = {celltype_id}')
+    spearman_df['cell_type_id'] = celltype_id
+    # chromosome must be turned into a number solely
+    # note, 'chr' + chromosome number was necessary in the previous step, 
+    # as 'chr' indicates GrCh38 format
+    spearman_df.chrom = spearman_df.chrom.str.split('chr', expand=True)[1]
+    print(f'Spearman df chrom is {spearman_df.chrom}')
+    # add association ID annotation after adding in alleles, a1, and a2
+    spearman_df.association_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
+    spearman_df.variant_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
+    spearman_df.snp_id = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
     return spearman_df
 
 
