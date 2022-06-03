@@ -16,6 +16,7 @@ from cpg_utils.hail_batch import (
     init_batch,
     remote_tmpdir,
 )
+from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
 
