@@ -21,11 +21,10 @@ from cpg_utils.hail_batch import (
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
-from multipy.fdr import qvalue
 
 DEFAULT_DRIVER_MEMORY = '4G'
-DRIVER_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
-assert DRIVER_IMAGE
+MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
+assert MULTIPY_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
@@ -430,6 +429,10 @@ def run_spearman_correlation_scatter(
 
 def merge_df_and_convert_to_string(*df_list):
     """Merge all Spearman dfs and convert to string using .to_string() on df"""
+    
+    # import multipy here to avoid issues with driver image updates
+    from multipy.fdr import qvalue 
+
     merged_df: pd.DataFrame = pd.concat(df_list)
     pvalues = merged_df['p_value']
     _, qvals = qvalue(pvalues)
@@ -479,7 +482,7 @@ def main(
     Creates a Hail Batch pipeline for calculating EQTLs
     """
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=DRIVER_IMAGE)
+    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     # get cell type to feed into run_spearman_correlation_scatter
     celltype = expression.split('/')[-1].split('_expression')[0]
@@ -536,6 +539,7 @@ def main(
 
     merge_job = batch.new_python_job(name='merge_scatters')
     merge_job.cpu(2)
+    merge_job.image(MULTIPY_IMAGE)
     merge_job.memory('8Gi')
     merge_job.storage('2Gi')
     result_second = merge_job.call(
