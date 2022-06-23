@@ -141,13 +141,14 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
     log_cpm = np.log(cpm_df + 1)
     # get gene expression distribution in the output
     # specified here https://github.com/populationgenomics/tob-wgs/issues/97
+    
     def create_struct(gene):
         hist, bin_edges = np.histogram(gene, bins=10)
         n_samples = gene.count()
         min_val = gene.min()
         max_val = gene.max()
         mean_val = gene.mean()
-        q1, median_val, q3 = gene.quantile([0.25,0.5,0.75])
+        q1, median_val, q3 = gene.quantile([0.25, 0.5, 0.75])
         iqr = q3 - q1
         # not sure what this value is doing here
         iqr_min = q1 - 1.5 * (q3 - q1)
@@ -536,6 +537,7 @@ def main(
         calculate_log_cpm,
         expression_df=expression_df_literal,
         output_prefix=output_prefix,
+        celltype=celltype,
     )
 
     spearman_dfs_from_scatter = []
