@@ -121,7 +121,7 @@ def get_log_expression(expression_df):
     return log_expression_df
 
 
-def calculate_log_cpm(expression_df, output_prefix):
+def calculate_log_cpm(expression_df, output_prefix, celltype):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
@@ -134,17 +134,42 @@ def calculate_log_cpm(expression_df, output_prefix):
     """
 
     expression_df = filter_lowly_expressed_genes(expression_df)
-    sample_ids = expression_df.iloc[:, 0]
     # remove sampleid column and get log expression
     # this can only be done on integers
     expression_df = expression_df.iloc[:, 1:]
     cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
     log_cpm = np.log(cpm_df + 1)
-    # add sampleids back in
-    log_cpm = log_cpm.assign(sampleid=list(sample_ids))
-    log_cpm_path = AnyPath(output_prefix) / 'log_cpm.tsv'
-    with log_cpm_path.open('w') as fp:
-        log_cpm.to_csv(fp, index=False)
+    # get gene expression distribution in the output
+    # specified here https://github.com/populationgenomics/tob-wgs/issues/97
+    def create_struct(gene):
+        hist, bin_edges = np.histogram(gene, bins=10)
+        n_samples = gene.count()
+        min_val = gene.min()
+        max_val = gene.max()
+        mean_val = gene.mean()
+        q1, median_val, q3 = gene.quantile([0.25,0.5,0.75])
+        iqr = q3 - q1
+        # not sure what this value is doing here
+        iqr_min = q1 - 1.5 * (q3 - q1)
+        iqr_max = q3 + 1.5 * (q3 - q1)
+        data_struct = {
+            'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
+            'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
+            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
+            }
+
+        return data_struct
+
+    # apply function over all columns (genes) and reset index so that gene names are in the df
+    data_summary = pd.DataFrame(log_cpm.apply(create_struct, axis=0), columns=['data']).reset_index()
+    data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
+    # add in cell type info
+    data_summary['cell_type_id'] = celltype
+
+    # Save file
+    data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
+    with data_summary_path.open('w') as fp:
+        data_summary.to_parquet(fp, index=False)
 
 
 def prepare_genotype_info(keys_path, expression_path):
