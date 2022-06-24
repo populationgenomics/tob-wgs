@@ -151,12 +151,12 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
         q1, median_val, q3 = gene.quantile([0.25, 0.5, 0.75])
         iqr = q3 - q1
         # not sure what this value is doing here
-        iqr_min = q1 - 1.5 * (q3 - q1)
-        iqr_max = q3 + 1.5 * (q3 - q1)
+        iqr_outliers_min = q1 - (1.5 * iqr)
+        iqr_outliers_max = q3 + (1.5 * iqr)
         data_struct = {
             'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
             'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
-            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
+            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_outliers_min, 'iqr_max': iqr_outliers_max, 
             }
 
         return data_struct
