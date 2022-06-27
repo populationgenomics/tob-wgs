@@ -391,7 +391,7 @@ def run_spearman_correlation_scatter(
 
     # Get association effect data, to be used for violin plots for each genotype of each SNP
     gene_symbol = gene_info.gene_name
-    gene_expression = expression_df[['sampleid',gene_symbol]]
+    gene_expression = expression_df[['sampleid', gene_symbol]]
     # merge expression data with genotype info 
     gt_expr_data = genotype_df.merge(gene_expression, left_on='sampleid', right_on='sampleid')
     # group gt_expr_data by snpid and genotype
@@ -403,7 +403,7 @@ def run_spearman_correlation_scatter(
         min_val = group[gene].min()
         max_val = group[gene].max()
         mean_val = group[gene].mean()
-        q1, median_val, q3 = group[gene].quantile([0.25,0.5,0.75])
+        q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
         iqr = q3 - q1
         # not sure what this value is doing here
         iqr_min = q1 - 1.5 * (q3 - q1)
@@ -426,10 +426,10 @@ def run_spearman_correlation_scatter(
 
     # turn into hail table, then save as parquet
     snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
-    t = hl.Table.from_pandas(snp_gt_summary_data)
     # append data for each iteration
     file_path = AnyPath(output_prefix) / 'eqtl_effect.parquet'
-    t.to_spark().write.mode("append").parquet(file_path)
+    with file_path.open('ab') as fp:
+        snp_gt_summary_data.to_parquet(fp)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
