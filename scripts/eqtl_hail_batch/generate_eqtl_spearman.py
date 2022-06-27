@@ -287,6 +287,7 @@ def run_spearman_correlation_scatter(
     residuals_df,
     filtered_mt_path,
     celltype,
+    output_prefix
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
     
@@ -387,6 +388,48 @@ def run_spearman_correlation_scatter(
     # filter gene_snp_df to have the same snps after filtering SNPs that
     # don't have an alt_allele value 
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+
+    # Get association effect data, to be used for violin plots for each genotype of each SNP
+    gene_symbol = gene_info.gene_name
+    gene_expression = expression_df[['sampleid',gene_symbol]]
+    # merge expression data with genotype info 
+    gt_expr_data = genotype_df.merge(gene_expression, left_on='sampleid', right_on='sampleid')
+    # group gt_expr_data by snpid and genotype
+    grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
+
+    def create_struct(gene, group):
+        hist, bin_edges = np.histogram(group[gene], bins=10)
+        n_samples = group[gene].count()
+        min_val = group[gene].min()
+        max_val = group[gene].max()
+        mean_val = group[gene].mean()
+        q1, median_val, q3 = group[gene].quantile([0.25,0.5,0.75])
+        iqr = q3 - q1
+        # not sure what this value is doing here
+        iqr_min = q1 - 1.5 * (q3 - q1)
+        iqr_max = q3 + 1.5 * (q3 - q1)
+        data_struct = {
+            'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
+            'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
+            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
+            }
+
+        return data_struct
+
+    snp_gt_summary_data = []
+    for item in grouped_gt.groups:
+        snp_id = item[0]
+        genotype = item[1]
+        group = grouped_gt.get_group((snp_id, genotype))
+        gene_id = gene_info.gene_id
+        snp_gt_summary_data.append({'snp_id': snp_id, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene_symbol, 'cell_type_id': celltype, 'struct': create_struct(gene_symbol, group)})
+
+    # turn into hail table, then save as parquet
+    snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
+    t = hl.Table.from_pandas(snp_gt_summary_data)
+    # append data for each iteration
+    file_path = AnyPath(output_prefix) / 'eqtl_effect.parquet'
+    t.to_spark().write.mode("append").parquet(file_path)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -564,6 +607,7 @@ def main(
             residuals_df=residuals_df,
             filtered_mt_path=filtered_mt_path,
             celltype=celltype,
+            output_prefix=output_prefix,
         )
         spearman_dfs_from_scatter.append(result)
 
