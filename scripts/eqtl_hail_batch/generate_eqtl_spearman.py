@@ -462,6 +462,8 @@ def merge_df_and_convert_to_string(*df_list):
 
     merged_df: pd.DataFrame = pd.concat(df_list)
     pvalues = merged_df['p_value']
+    # Correct for multiple testing using Storey qvalues
+    # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_df = merged_df.assign(fdr=fdr_values)
@@ -567,6 +569,7 @@ def main(
 
     merge_job = batch.new_python_job(name='merge_scatters')
     merge_job.cpu(2)
+    # use a separate image for multipy, which is an extension of the hail driver image
     merge_job.image(MULTIPY_IMAGE)
     merge_job.memory('8Gi')
     merge_job.storage('2Gi')
