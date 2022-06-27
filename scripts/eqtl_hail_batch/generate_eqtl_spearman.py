@@ -426,10 +426,12 @@ def run_spearman_correlation_scatter(
 
     # turn into hail table, then save as parquet
     snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
+    t = hl.Table.from_pandas(snp_gt_summary_data)
     # append data for each iteration
-    file_path = AnyPath(output_prefix) / 'eqtl_effect.parquet'
-    with file_path.open('ab') as fp:
-        snp_gt_summary_data.to_parquet(fp)
+    # file_path = AnyPath(output_prefix) / 'eqtl_effect.parquet'
+    t.to_spark()
+    print(t.show())
+    #.write.mode('append').parquet(file_path)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
