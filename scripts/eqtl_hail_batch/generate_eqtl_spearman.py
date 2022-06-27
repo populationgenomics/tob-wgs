@@ -169,7 +169,8 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
-    data_summary.to_parquet(data_summary_path)
+    with data_summary_path.open('wb') as fp:
+        data_summary.to_parquet(fp)
 
 
 def prepare_genotype_info(keys_path, expression_path):
