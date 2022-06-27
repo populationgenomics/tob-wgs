@@ -23,7 +23,6 @@ import click
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
-assert MULTIPY_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
