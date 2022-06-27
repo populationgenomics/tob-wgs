@@ -371,6 +371,8 @@ def merge_significant_snps_dfs(*df_list):
     Merge list of list of sig_snps dataframes
     """
 
+    # This PythonJob is run in the multipy container, 
+    # do the import here so it's not run in the driver container
     from multipy.fdr import qvalue 
 
     merged_sig_snps = pd.concat(df_list)
