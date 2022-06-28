@@ -20,6 +20,7 @@ from cpg_utils.hail_batch import (
 )
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
+from analysis_runner import dataproc
 import click
 
 DEFAULT_DRIVER_MEMORY = '4G'
@@ -120,6 +121,7 @@ def get_log_expression(expression_df):
 
     return log_expression_df
 
+
 def calculate_log_cpm(expression_df):
     expression_df = filter_lowly_expressed_genes(expression_df)
     # remove sampleid column and get log expression
@@ -129,6 +131,7 @@ def calculate_log_cpm(expression_df):
     log_cpm = np.log(cpm_df + 1)
 
     return log_cpm
+
 
 def generate_log_cpm_output(expression_df, output_prefix, celltype):
     """Calculate log cpm for each cell type and chromosome
@@ -440,9 +443,9 @@ def run_spearman_correlation_scatter(
     association_effect_data = get_association_effect_data(gene)
 
     # Save file
-    file_path = AnyPath(output_prefix) / f'gene_expression_{gene}.parquet'
-    with file_path.open('wb') as fp:
-        association_effect_data.to_parquet(fp)
+    t = hl.Table.from_pandas(association_effect_data) 
+    file_path = AnyPath(output_prefix) / f'gene_expression.ht'
+    t.write(file_path)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -621,6 +624,13 @@ def main(
             output_prefix=output_prefix,
         )
         spearman_dfs_from_scatter.append(result)
+        cluster = dataproc.setup_dataproc(
+            batch,
+            max_age='1h',
+            init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
+            cluster_name='ht_to_parquet',
+        )
+        cluster.add_job('generate_parquet.py', job_name='generate_parquet')
 
     merge_job = batch.new_python_job(name='merge_scatters')
     merge_job.cpu(2)
