@@ -14,3 +14,4 @@ def query():
     # write to parquet
     filename = output_path('gene_expression.parquet')
     table.to_spark().write.mode('append').parquet(filename)
+    

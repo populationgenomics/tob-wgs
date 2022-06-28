@@ -444,7 +444,7 @@ def run_spearman_correlation_scatter(
 
     # Save file
     t = hl.Table.from_pandas(association_effect_data) 
-    file_path = AnyPath(output_prefix) / f'gene_expression.ht'
+    file_path = output_path('gene_expression.ht')
     t.write(file_path)
 
     # define spearman correlation function, then compute for each SNP
