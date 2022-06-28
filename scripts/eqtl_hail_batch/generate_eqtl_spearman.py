@@ -120,8 +120,17 @@ def get_log_expression(expression_df):
 
     return log_expression_df
 
+def calculate_log_cpm(expression_df):
+    expression_df = filter_lowly_expressed_genes(expression_df)
+    # remove sampleid column and get log expression
+    # this can only be done on integers
+    expression_df = expression_df.iloc[:, 1:]
+    cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
+    log_cpm = np.log(cpm_df + 1)
 
-def calculate_log_cpm(expression_df, output_prefix, celltype):
+    return log_cpm
+
+def generate_log_cpm_output(expression_df, output_prefix, celltype):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
@@ -133,12 +142,7 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
     Counts per million mapped reads
     """
 
-    expression_df = filter_lowly_expressed_genes(expression_df)
-    # remove sampleid column and get log expression
-    # this can only be done on integers
-    expression_df = expression_df.iloc[:, 1:]
-    cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
-    log_cpm = np.log(cpm_df + 1)
+    log_cpm = calculate_log_cpm(expression_df)
     # get gene expression distribution in the output
     # specified here https://github.com/populationgenomics/tob-wgs/issues/97
     
@@ -390,46 +394,55 @@ def run_spearman_correlation_scatter(
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
     # Get association effect data, to be used for violin plots for each genotype of each SNP
-    gene_symbol = gene_info.gene_name
-    gene_expression = expression_df[['sampleid', gene_symbol]]
-    # merge expression data with genotype info 
-    gt_expr_data = genotype_df.merge(gene_expression, left_on='sampleid', right_on='sampleid')
-    # group gt_expr_data by snpid and genotype
-    grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
+    def get_association_effect_data(gene):
+        sampleid = expression_df.sampleid
+        log_cpm = calculate_log_cpm(expression_df)
+        log_cpm['sampleid'] = sampleid
+        # reduce log_cpm matrix to gene of interest only
+        log_cpm = log_cpm[['sampleid', gene]]
+        # merge log_cpm data with genotype info 
+        gt_expr_data = genotype_df.merge(log_cpm, left_on='sampleid', right_on='sampleid')
+        # group gt_expr_data by snpid and genotype
+        grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
 
-    def create_struct(gene, group):
-        hist, bin_edges = np.histogram(group[gene], bins=10)
-        n_samples = group[gene].count()
-        min_val = group[gene].min()
-        max_val = group[gene].max()
-        mean_val = group[gene].mean()
-        q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
-        iqr = q3 - q1
-        # not sure what this value is doing here
-        iqr_min = q1 - 1.5 * (q3 - q1)
-        iqr_max = q3 + 1.5 * (q3 - q1)
-        data_struct = {
-            'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
-            'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
-            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
-            }
+        def create_struct(gene, group):
+            hist, bin_edges = np.histogram(group[gene], bins=10)
+            n_samples = group[gene].count()
+            min_val = group[gene].min()
+            max_val = group[gene].max()
+            mean_val = group[gene].mean()
+            q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
+            iqr = q3 - q1
+            # not sure what this value is doing here
+            iqr_min = q1 - 1.5 * (q3 - q1)
+            iqr_max = q3 + 1.5 * (q3 - q1)
+            data_struct = {
+                'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
+                'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
+                'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
+                }
 
-        return data_struct
+            return data_struct
 
-    snp_gt_summary_data = []
-    for item in grouped_gt.groups:
-        snp_id = item[0]
-        genotype = item[1]
-        group = grouped_gt.get_group((snp_id, genotype))
-        gene_id = gene_info.gene_id
-        snp_gt_summary_data.append({'snp_id': snp_id, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene_symbol, 'cell_type_id': celltype, 'struct': create_struct(gene_symbol, group)})
+        snp_gt_summary_data = []
+        for item in grouped_gt.groups:
+            snp_id = item[0]
+            genotype = item[1]
+            group = grouped_gt.get_group((snp_id, genotype))
+            gene_id = gene_info.gene_id
+            snp_gt_summary_data.append({'snp_id': snp_id, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene, 'cell_type_id': celltype, 'struct': create_struct(gene, group)})
 
-    # turn into hail table, then save as parquet
-    snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
+        snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
+        
+        return snp_gt_summary_data
+    
+    gene = gene_info.gene_name
+    association_effect_data = get_association_effect_data(gene)
+
     # Save file
-    file_path = AnyPath(output_prefix) / f'gene_expression_{gene_info.gene_name}.parquet'
+    file_path = AnyPath(output_prefix) / f'gene_expression_{gene}.parquet'
     with file_path.open('wb') as fp:
-        snp_gt_summary_data.to_parquet(fp)
+        association_effect_data.to_parquet(fp)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -482,13 +495,11 @@ def run_spearman_correlation_scatter(
     spearman_df['round'] = '1'
     # add celltype id
     celltype_id = celltype.lower()
-    print(f'celltype ID = {celltype_id}')
     spearman_df['cell_type_id'] = celltype_id
     # chromosome must be turned into a number solely
     # note, 'chr' + chromosome number was necessary in the previous step, 
     # as 'chr' indicates GrCh38 format
     spearman_df['chrom'] = spearman_df.chrom.str.split('chr', expand=True)[1]
-    print(f'Spearman df chrom is {spearman_df.chrom}')
     # add association ID annotation after adding in alleles, a1, and a2
     spearman_df['association_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
     spearman_df['variant_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
@@ -577,9 +588,9 @@ def main(
         output_prefix=output_prefix,
     )
     # calculate and save log cpm values
-    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
-    calculate_log_cpm_job.call(
-        calculate_log_cpm,
+    generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    generate_log_cpm_output_job.call(
+        generate_log_cpm_output,
         expression_df=expression_df_literal,
         output_prefix=output_prefix,
         celltype=celltype,
