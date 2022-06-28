@@ -9,8 +9,8 @@ def query():
 
     hl.init(default_reference='GRCh38')
 
-    # read in table
+    # read in table and export as 
     table = output_path('gene_expression.ht')
     # write to parquet
     filename = output_path('gene_expression.parquet')
-    table.write.mode('append').parquet(filename)
+    table.to_spark().write.mode('append').parquet(filename)
