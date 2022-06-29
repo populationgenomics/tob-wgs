@@ -462,8 +462,8 @@ def run_spearman_correlation_scatter(
         iqr_min=t.struct.iqr_min, 
         iqr_max=t.struct.iqr_max
     ) 
-    file_path = output_path('gene_expression.ht')
-    t.write(file_path)
+    file_path = output_path('eqtl_effect.ht')
+    t.write(file_path, overwrite=True)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):

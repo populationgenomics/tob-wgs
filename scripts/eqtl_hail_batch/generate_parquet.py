@@ -12,6 +12,5 @@ def query():
     # read in table and export as 
     table = output_path('gene_expression.ht')
     # write to parquet
-    filename = output_path('gene_expression.parquet')
+    filename = output_path('eqtl_effect.parquet')
     table.to_spark().write.mode('append').parquet(filename)
-    
