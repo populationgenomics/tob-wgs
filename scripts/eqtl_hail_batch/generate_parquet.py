@@ -17,3 +17,7 @@ def query(input_path):
     # write to parquet
     filename = f'{input_path}eqtl_effect.parquet'
     table.to_spark(flatten=False).write.mode('append').parquet(filename)
+
+
+if __name__ == '__main__':
+    query()  # pylint: disable=no-value-for-parameter
