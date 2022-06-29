@@ -367,7 +367,6 @@ def run_computation_in_scatter(
     adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
     adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
 
-
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
 
