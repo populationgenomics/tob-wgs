@@ -378,7 +378,8 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(t.alleles[0])
         + ':'
-        + hl.str(t.alleles[1])
+        + hl.str(t.alleles[1]), 
+        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position()
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
@@ -432,8 +433,9 @@ def run_spearman_correlation_scatter(
             snp_id = item[0]
             genotype = item[1]
             group = grouped_gt.get_group((snp_id, genotype))
+            global_bp = group.global_bp.iloc[0]
             gene_id = gene_info.gene_id
-            snp_gt_summary_data.append({'snp_id': snp_id, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene, 'cell_type_id': celltype, 'struct': create_struct(gene, group)})
+            snp_gt_summary_data.append({'snp_id': snp_id, 'global_bp': global_bp, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene, 'cell_type_id': celltype, 'struct': create_struct(gene, group)})
 
         snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
         
@@ -441,9 +443,25 @@ def run_spearman_correlation_scatter(
     
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
-
     # Save file
-    t = hl.Table.from_pandas(association_effect_data) 
+    t = hl.Table.from_pandas(association_effect_data)
+    # reassign columns
+    t\
+    .transmute(
+        bin_counts=t.struct.bin_counts, 
+        bin_edges=t.struct.bin_edges,
+        n_bins=t.struct.bin_counts[0],
+        n_samples=t.struct.n_samples, 
+        min=t.struct.min,
+        max=t.struct.max, 
+        mean=t.struct.mean, 
+        median=t.struct.median, 
+        q1=t.struct.q1, 
+        q3=t.struct.q3, 
+        iqr=t.struct.iqr, 
+        iqr_min=t.struct.iqr_min, 
+        iqr_max=t.struct.iqr_max
+    ) 
     file_path = output_path('gene_expression.ht')
     t.write(file_path)
 
