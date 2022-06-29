@@ -446,8 +446,7 @@ def run_spearman_correlation_scatter(
     # Save file
     t = hl.Table.from_pandas(association_effect_data)
     # reassign columns
-    t\
-    .transmute(
+    t.transmute(
         bin_counts=t.struct.bin_counts, 
         bin_edges=t.struct.bin_edges,
         n_bins=t.struct.bin_counts[0],

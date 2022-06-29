@@ -12,7 +12,8 @@ def query(input_path):
     hl.init(default_reference='GRCh38')
 
     # read in table and export as 
-    table = input_path('eqtl_effect.ht')
+    table_path = f'{input_path}eqtl_effect.ht'
+    table = hl.read_table(table_path)
     # write to parquet
-    filename = input_path('eqtl_effect.parquet')
-    table.to_spark().write.mode('append').parquet(filename)
+    filename = f'{input_path}eqtl_effect.parquet'
+    table.to_spark(flatten=False).write.mode('append').parquet(filename)
