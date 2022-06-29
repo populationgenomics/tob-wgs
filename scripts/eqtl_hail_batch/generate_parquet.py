@@ -21,3 +21,4 @@ def query(input_path):
 
 if __name__ == '__main__':
     query()  # pylint: disable=no-value-for-parameter
+    

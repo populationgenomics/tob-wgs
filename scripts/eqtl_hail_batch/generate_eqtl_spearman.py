@@ -181,7 +181,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
 
 
 def prepare_genotype_info(keys_path, expression_path):
-    """Calculate log cpm for each cell type and chromosome
+    """Filter hail matrix table
 
     Input:
     keys_path: path to a tsv file with information on
@@ -293,8 +293,7 @@ def run_spearman_correlation_scatter(
     geneloc,
     residuals_df,
     filtered_mt_path,
-    celltype,
-    output_prefix
+    celltype
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
     
@@ -638,7 +637,6 @@ def main(
             residuals_df=residuals_df,
             filtered_mt_path=filtered_mt_path,
             celltype=celltype,
-            output_prefix=output_prefix,
         )
         spearman_dfs_from_scatter.append(result)
         cluster = dataproc.setup_dataproc(

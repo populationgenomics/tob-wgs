@@ -55,7 +55,7 @@ def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.Da
 
 
 def prepare_genotype_info(keys_path):
-    """Calculate log cpm for each cell type and chromosome
+    """Filter hail matrix table
 
     Input:
     keys_path: path to a tsv file with information on
@@ -237,7 +237,9 @@ def run_computation_in_scatter(
     idx,
     residual_df,
     significant_snps_df,
-    filtered_mt_path
+    filtered_mt_path,
+    celltype,
+    output_prefix
 ):
     """Run genes in scatter
     
@@ -270,6 +272,10 @@ def run_computation_in_scatter(
         .first()
         .reset_index()
     )
+    # save esnp1 for front-end use on which SNPs have been conditioned on
+    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
+    with esnp1_path.open('w') as fp:
+        esnp1.to_csv(fp, index=False)
 
     # Remaning eSNPs to test
     esnps_to_test = (
@@ -334,7 +340,7 @@ def run_computation_in_scatter(
         chrom,
         bp,
     ]
-    adjusted_spearman_df['round'] = iteration
+    adjusted_spearman_df['round'] = str(iteration)
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
@@ -345,20 +351,22 @@ def run_computation_in_scatter(
         a1=mt.rows()[t.locus].alleles[0],
         a2=mt.rows()[t.locus].alleles[1],
     )
-    t = t.annotate(
-        id=hl.str(':').join(
-            [
-                hl.str(t.chrom),
-                hl.str(t.bp),
-                t.a1,
-                t.a2,
-                t.gene_symbol,
-                # result.db_key, # cell_type_id (eg nk, mononc)
-                hl.str(t.round),
-            ]
-        )
-    )
+    # turn back into pandas df and add additional information
+    # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
+    # add celltype id
+    celltype_id = celltype.lower()
+    adjusted_spearman_df['cell_type_id'] = celltype_id
+    adjusted_spearman_df['is_esnp'] = adjusted_spearman_df.snp_id.isin(esnp1.snpid)
+    # chromosome must be turned into a number solely
+    # note, 'chr' + chromosome number was necessary in the previous step, 
+    # as 'chr' indicates GrCh38 format
+    adjusted_spearman_df['chrom'] = adjusted_spearman_df.chrom.str.split('chr', expand=True)[1]
+    # add association ID annotation after adding in alleles, a1, and a2
+    adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
+    adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
+    adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
+
 
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
@@ -435,6 +443,9 @@ def main(
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
+    # get cell type to feed into run_computation_in_scatter
+    celltype = output_prefix.split('scrna-seq/')[-1].split('/')[0]
+
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(
         significant_snps), sep=' ', skipinitialspace=True
@@ -497,7 +508,9 @@ def main(
                 gene_idx,
                 previous_residual_result,
                 previous_sig_snps_result,
-                filtered_mt_path
+                filtered_mt_path,
+                celltype,
+                output_prefix
             )
             sig_snps_dfs.append(gene_result)
 
