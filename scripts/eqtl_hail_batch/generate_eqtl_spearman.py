@@ -648,7 +648,7 @@ def main(
             init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
             cluster_name='ht_to_parquet',
         )
-        cluster.add_job('generate_parquet.py', job_name='generate_parquet')
+        cluster.add_job('generate_parquet.py --input-path=gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v6/', job_name='generate_parquet')
 
     merge_job = batch.new_python_job(name='merge_scatters')
     merge_job.cpu(2)
