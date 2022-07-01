@@ -443,9 +443,8 @@ def run_spearman_correlation_scatter(
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
     # Save file
-    # tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
-    # path = AnyPath(tmp_dir) / 'eqtl_effect.csv'
-    path = output_path('eqtl_effect.csv', 'tmp')
+    tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
+    path = AnyPath(tmp_dir) / 'eqtl_effect.csv'
     with path.open('a') as fp:
         association_effect_data.to_csv(fp, index=False)
 
