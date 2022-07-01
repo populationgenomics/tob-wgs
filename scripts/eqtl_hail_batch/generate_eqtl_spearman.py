@@ -537,7 +537,7 @@ def calculate_ld(filtered_mt_path, result_second):
             ).global_position(),
         )
     # filter to significant SNPs only
-    t = hl.Table.from_pandas(significant_snps)
+    t = hl.Table.from_pandas(result_second)
     t = t.key_by('global_bp')
     significant_snps = mt.filter_rows(hl.is_defined(t[mt.global_bp]))
     # add row index to be able to remap
