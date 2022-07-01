@@ -293,7 +293,8 @@ def run_spearman_correlation_scatter(
     geneloc,
     residuals_df,
     filtered_mt_path,
-    celltype
+    celltype,
+    output_prefix
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
     
@@ -443,25 +444,9 @@ def run_spearman_correlation_scatter(
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
     # Save file
-    t = hl.Table.from_pandas(association_effect_data)
-    # reassign columns
-    t.transmute(
-        bin_counts=t.struct.bin_counts, 
-        bin_edges=t.struct.bin_edges,
-        n_bins=t.struct.bin_counts[0],
-        n_samples=t.struct.n_samples, 
-        min=t.struct.min,
-        max=t.struct.max, 
-        mean=t.struct.mean, 
-        median=t.struct.median, 
-        q1=t.struct.q1, 
-        q3=t.struct.q3, 
-        iqr=t.struct.iqr, 
-        iqr_min=t.struct.iqr_min, 
-        iqr_max=t.struct.iqr_max
-    ) 
-    file_path = output_path('eqtl_effect.ht')
-    t.write(file_path, overwrite=True)
+    path = AnyPath(output_prefix) / 'eqtl_effect.csv'
+    with path.open('a') as fp:
+        association_effect_data.to_csv(fp, index=False)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -637,16 +622,9 @@ def main(
             residuals_df=residuals_df,
             filtered_mt_path=filtered_mt_path,
             celltype=celltype,
+            output_prefix=output_prefix,
         )
         spearman_dfs_from_scatter.append(result)
-        cluster = dataproc.setup_dataproc(
-            batch,
-            max_age='1h',
-            init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
-            cluster_name='ht_to_parquet',
-            depends_on=[j],
-        )
-        cluster.add_job('generate_parquet.py --input-path=gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v6/', job_name='generate_parquet')
 
     merge_job = batch.new_python_job(name='merge_scatters')
     merge_job.cpu(2)
