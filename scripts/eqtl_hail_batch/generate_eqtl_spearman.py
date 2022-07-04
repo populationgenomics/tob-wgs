@@ -643,7 +643,7 @@ def main(
         max_age='1h',
         init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
         cluster_name='calculate_ld',
-        depends_on=[result_second],
+        depends_on=[merge_job],
     )
     cluster.add_job('calculate_ld.py --input-path=gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/', job_name='calculate_ld')
     batch.run(wait=False)
