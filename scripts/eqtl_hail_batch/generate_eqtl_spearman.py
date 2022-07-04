@@ -558,8 +558,9 @@ def calculate_ld(filtered_mt_path, result_second):
     table.write(ld_filename)
 
 
-def export_df_to_str(result_second):
-    return result_second.to_string()
+# def export_df_to_str(result_second):
+#     return result_second.to_string()
+
 
 # Create click command line to enter dependency files
 @click.command()
@@ -672,13 +673,13 @@ def main(
     calculate_ld_job.call(
         calculate_ld, filtered_mt_path=filtered_mt_path, result_second=result_second
     )
-    export_df_to_str_job = batch.new_python_job(name='convert_df_to_str')
-    copy_common_env(export_df_to_str_job)
-    export_df_to_str_job.call(
-        export_df_to_str, result_second=result_second
-    )
-    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
-    batch.write_output(export_df_to_str_job.as_str(), corr_result_output_path)
+    # export_df_to_str_job = batch.new_python_job(name='convert_df_to_str')
+    # copy_common_env(export_df_to_str_job)
+    # export_df_to_str_job.call(
+    #     export_df_to_str, result_second=result_second
+    # )
+    # corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+    # batch.write_output(export_df_to_str_job.as_str(), corr_result_output_path)
     batch.run(wait=False)
 
 
