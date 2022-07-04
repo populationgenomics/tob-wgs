@@ -530,6 +530,7 @@ def merge_df_and_convert_to_string(*df_list):
 
 
 def calculate_ld(filtered_mt_path, result_second):
+    init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     mt = mt.annotate_rows(
             global_position=hl.locus(
