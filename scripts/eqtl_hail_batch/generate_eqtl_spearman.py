@@ -533,15 +533,18 @@ def calculate_ld(filtered_mt_path, result_second):
     init_batch()
     mt = hl.read_matrix_table(filtered_mt_path)
     mt = mt.annotate_rows(
-            global_position=hl.locus(
+            global_bp=hl.locus(
                 mt.locus.contig, mt.locus.position
             ).global_position(),
         )
     # filter to significant SNPs only
     print(f'Printing mt: {mt.show()}')
     t = hl.Table.from_pandas(result_second)
+    # only keep rows whose FDR is < 0.05
+    # t = t.filter(t.fdr < 0.05)
     print(f'Printing table: {t.show()}')
     t = t.key_by('global_bp')
+    # filter mt to positions which are in significant_snps table
     significant_snps = mt.filter_rows(hl.is_defined(t[mt.global_bp]))
     # add row index to be able to remap
     significant_snps = significant_snps.add_row_index()
