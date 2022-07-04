@@ -21,6 +21,7 @@ from cpg_utils.hail_batch import (
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
+from analysis_runner import dataproc
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
@@ -512,7 +513,7 @@ def run_spearman_correlation_scatter(
     return spearman_df
 
 
-def merge_df(*df_list):
+def merge_df_and_convert_to_string(*df_list):
     """Merge all Spearman dfs and convert to string using .to_string() on df"""
     
     # import multipy here to avoid issues with driver image updates
@@ -526,7 +527,7 @@ def merge_df(*df_list):
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_df = merged_df.assign(fdr=fdr_values)
     merged_df['fdr'] = merged_df.fdr.astype(float)
-    return merged_df
+    return merged_df.to_string()
 
 
 def calculate_ld(filtered_mt_path, result_second):
@@ -559,10 +560,6 @@ def calculate_ld(filtered_mt_path, result_second):
     # save table
     ld_filename = output_path(f'ld_matrix.ht')
     table.write(ld_filename)
-
-
-# def export_df_to_str(result_second):
-#     return result_second.to_string()
 
 
 # Create click command line to enter dependency files
@@ -669,20 +666,23 @@ def main(
     merge_job.memory('8Gi')
     merge_job.storage('2Gi')
     result_second = merge_job.call(
-        merge_df, *spearman_dfs_from_scatter
+        merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
     calculate_ld_job = batch.new_python_job(name='calculate_ld')
     copy_common_env(calculate_ld_job)
     calculate_ld_job.call(
         calculate_ld, filtered_mt_path=filtered_mt_path, result_second=result_second
     )
-    # export_df_to_str_job = batch.new_python_job(name='convert_df_to_str')
-    # copy_common_env(export_df_to_str_job)
-    # export_df_to_str_job.call(
-    #     export_df_to_str, result_second=result_second
-    # )
-    # corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
-    # batch.write_output(export_df_to_str_job.as_str(), corr_result_output_path)
+    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+    batch.write_output(result_second.as_str(), corr_result_output_path)
+    cluster = dataproc.setup_dataproc(
+        batch,
+        max_age='1h',
+        init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
+        cluster_name='ht_to_parquet',
+        depends_on=[result_second],
+    )
+    cluster.add_job('calculate_ld.py --input-path=gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/', job_name='calculate_ld')
     batch.run(wait=False)
 
 
