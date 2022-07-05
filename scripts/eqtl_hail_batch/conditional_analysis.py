@@ -69,7 +69,7 @@ def prepare_genotype_info(keys_path):
     """
 
     init_batch()
-    filtered_mt_path = output_path('genotype_table.ht', 'tmp')
+    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         mt = hl.read_matrix_table(TOB_WGS)
         mt = hl.experimental.densify(mt)
