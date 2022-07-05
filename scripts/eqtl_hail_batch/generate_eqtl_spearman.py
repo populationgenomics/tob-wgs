@@ -636,7 +636,7 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
-    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.csv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
     cluster = dataproc.setup_dataproc(
         batch,
@@ -645,7 +645,7 @@ def main(
         cluster_name='calculate_ld',
         depends_on=[merge_job],
     )
-    cluster.add_job('calculate_ld.py --input-path=gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/', job_name='calculate_ld')
+    cluster.add_job(f'calculate_ld.py --input-path={output_prefix}', job_name='calculate_ld')
     batch.run(wait=False)
 
 
