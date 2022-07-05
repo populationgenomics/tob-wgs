@@ -4,6 +4,7 @@ import hail as hl
 import click
 import pandas as pd
 
+
 @click.command()
 @click.option('--input-path', help='A path prefix of where to input files are located')
 def query(input_path):
@@ -11,13 +12,15 @@ def query(input_path):
 
     hl.init(default_reference='GRCh38')
 
-    mt = hl.read_matrix_table('gs://cpg-tob-wgs-test-tmp/scrna-seq/plasma/chr22/v6/genotype_table.mt/')
+    tmp_dir = input_path.replace(input_path.split('/')[2], input_path.split('/')[2] + '-tmp')
+    mt_path = f'{tmp_dir}/genotype_table.mt/'
+    mt = hl.read_matrix_table(mt_path)
     mt = mt.annotate_rows(
             global_bp=hl.locus(
                 mt.locus.contig, mt.locus.position
             ).global_position(),
         )
-    significant_snps_path = f'{input_path}v6correlation_results.csv'
+    significant_snps_path = f'{input_path}correlation_results.csv'
     significant_snps_df = pd.read_csv(
         significant_snps_path, sep=' ', skipinitialspace=True
     )
