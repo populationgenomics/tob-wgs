@@ -116,7 +116,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
     each round/iteration of conditional analysis. The dataframe consists of genes as columns 
     and samples as rows. 
-    gene_snp_test_df: a dataframe with rows as SNPs and columns containing snpid, gene_symbol, and 
+    gene_snp_test_df: a dataframe with rows as SNPs and columns containing snp_id, gene_symbol, and 
     gene_id information. 
 
     Returns:
@@ -134,26 +134,26 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set(gene_snp_test_df.snpid)
+    snps_to_keep = set(gene_snp_test_df.snp_id)
     sorted_snps = sorted(snps_to_keep)
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    chromosome = gene_snp_test_df.snpid[0].split(':')[:1][0]
+    chromosome = 'chr' + gene_snp_test_df.snp_id[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
-    t = t.annotate(snpid=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
+    t = t.annotate(snp_id=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
     # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
+    t = t.filter(set_to_keep.contains(t['snp_id']))
     # only keep SNPs where all samples have an alt_allele value
-    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
+    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snp_id.collect())
     if len(snps_to_remove) > 0:
-        t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+        t = t.filter(~hl.literal(snps_to_remove).contains(t.snp_id))
 
     genotype_df = t.to_pandas(flatten=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
@@ -210,8 +210,8 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene]]
         # select SNP to add
-        snp = esnp1.snpid[esnp1.gene_symbol == gene].to_string(index=False)
-        snp_genotype = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        snp = esnp1.snp_id[esnp1.gene_symbol == gene].to_string(index=False)
+        snp_genotype = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         # Create a test df by adding covariates
         test_df = exprs_val.merge(snp_genotype, on='sampleid', how='right')
@@ -288,7 +288,7 @@ def run_computation_in_scatter(
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
-    gene_snp_test_df = esnps_to_test[['snpid', 'gene_symbol', 'gene_id']]
+    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
@@ -301,8 +301,8 @@ def run_computation_in_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
-        snp = df.snpid
-        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        snp = df.snp_id
+        gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
@@ -319,14 +319,14 @@ def run_computation_in_scatter(
     adjusted_spearman_df.columns = [
         'gene_symbol',
         'gene_id',
-        'snpid',
+        'snp_id',
         'spearmans_rho',
         'p_value',
     ]
     # remove any NA values. Remove this line when run on main dataset
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
     # add in global position and round
-    locus = adjusted_spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(
+    locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
     )
     chrom = locus.str.split(':', expand=True)[0]
@@ -357,7 +357,7 @@ def run_computation_in_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
-    adjusted_spearman_df['is_esnp'] = adjusted_spearman_df.snp_id.isin(esnp1.snpid)
+    adjusted_spearman_df['is_esnp'] = adjusted_spearman_df.snp_id.isin(esnp1.snp_id)
     # chromosome must be turned into a number solely
     # note, 'chr' + chromosome number was necessary in the previous step, 
     # as 'chr' indicates GrCh38 format
