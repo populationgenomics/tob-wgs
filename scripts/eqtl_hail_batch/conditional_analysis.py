@@ -134,7 +134,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set(gene_snp_test_df.snp_id)
+    snps_to_keep = set('chr' + gene_snp_test_df.snp_id)
     sorted_snps = sorted(snps_to_keep)
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
@@ -157,6 +157,11 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
 
     genotype_df = t.to_pandas(flatten=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
+    # chromosome must be turned into a number solely
+    # note, 'chr' + chromosome number was necessary in the previous step, 
+    # as 'chr' indicates GrCh38 format
+    genotype_df['contig'] = genotype_df.contig.str.split('chr', expand=True)[1]
+    genotype_df['snp_id'] = genotype_df.snp_id.str.split('chr', expand=True)[1]
 
     return genotype_df
 
