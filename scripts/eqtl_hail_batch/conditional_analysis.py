@@ -395,7 +395,7 @@ def merge_significant_snps_dfs(*df_list):
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
-    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    fdr_values = pd.DataFrame(list(qvals))
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
     merged_sig_snps.append(merged_sig_snps)
