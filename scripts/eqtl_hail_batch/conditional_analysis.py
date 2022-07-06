@@ -390,19 +390,14 @@ def merge_significant_snps_dfs(*df_list):
     from multipy.fdr import qvalue 
 
     merged_sig_snps: pd.DataFrame = pd.concat(df_list)
-    print(f'Printing merged_sig_snps: {merged_sig_snps}')
     pvalues = merged_sig_snps['p_value']
-    print(f'Printing pvalues: {pvalues}')
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
-    print(f'Printing qvalues: {qvals}')
     fdr_values = pd.DataFrame(list(qvals))
-    print(f'Printing fdr_values: {fdr_values}')
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
-    print(f'Printing merged_sig_snps, fdr: {merged_sig_snps.fdr}')
-    merged_sig_snps.append(merged_sig_snps)
+    # merged_sig_snps.append(merged_sig_snps)
 
     return merged_sig_snps
 
@@ -537,15 +532,15 @@ def main(
             merge_significant_snps_dfs, *sig_snps_dfs
         )
 
-        # convert sig snps to string for output
-        sig_snps_as_string = merge_job.call(
-            convert_dataframe_to_text, previous_sig_snps_result
-        )
-        # output sig snps for each iteration
-        sig_snps_output_path = os.path.join(
-            output_prefix, f'esnp_round{iteration}_table.csv'
-        )
-        batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
+        # # convert sig snps to string for output
+        # sig_snps_as_string = merge_job.call(
+        #     convert_dataframe_to_text, previous_sig_snps_result
+        # )
+        # # output sig snps for each iteration
+        # sig_snps_output_path = os.path.join(
+        #     output_prefix, f'esnp_round{iteration}_table.csv'
+        # )
+        # batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
 
     batch.run(wait=False)
 
