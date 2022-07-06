@@ -540,7 +540,7 @@ def main(
         sig_snps_output_path = os.path.join(
             output_prefix, f'esnp_round{iteration}_table.csv'
         )
-        # batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
+        batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
 
     batch.run(wait=False)
 
