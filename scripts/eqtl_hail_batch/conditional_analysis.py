@@ -376,6 +376,7 @@ def run_computation_in_scatter(
 
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
+    print(f'Printing sig snps df: {significant_snps_df}')
 
     return significant_snps_df
 
@@ -399,7 +400,7 @@ def merge_significant_snps_dfs(*df_list):
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
     merged_sig_snps.append(merged_sig_snps)
 
-    return merged_sig_snps.to_string()
+    return merged_sig_snps
 
 
 def convert_dataframe_to_text(dataframe):
