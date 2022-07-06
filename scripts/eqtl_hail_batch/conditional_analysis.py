@@ -536,10 +536,10 @@ def main(
         sig_snps_as_string = merge_job.call(
             convert_dataframe_to_text, previous_sig_snps_result
         )
-        # # output sig snps for each iteration
-        # sig_snps_output_path = os.path.join(
-        #     output_prefix, f'esnp_round{iteration}_table.csv'
-        # )
+        # output sig snps for each iteration
+        sig_snps_output_path = os.path.join(
+            output_prefix, f'esnp_round{iteration}_table.csv'
+        )
         # batch.write_output(sig_snps_as_string.as_str(), sig_snps_output_path)
 
     batch.run(wait=False)
