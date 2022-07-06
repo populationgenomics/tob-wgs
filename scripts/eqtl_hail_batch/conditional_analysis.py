@@ -330,7 +330,7 @@ def run_computation_in_scatter(
     ]
     # remove any NA values. Remove this line when run on main dataset
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
-    # add in global position and round
+    # add in locus and chromosome information to get global position in hail
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
     )
@@ -346,6 +346,7 @@ def run_computation_in_scatter(
         bp,
     ]
     adjusted_spearman_df['round'] = str(iteration)
+    # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
@@ -354,7 +355,9 @@ def run_computation_in_scatter(
     t = t.key_by('locus')
     t = t.annotate(
         a1=mt.rows()[t.locus].alleles[0],
-        a2=mt.rows()[t.locus].alleles[1],
+        a2=hl.if_else(
+            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
+        ),
     )
     # turn back into pandas df and add additional information
     # for front-end analysis
@@ -386,15 +389,17 @@ def merge_significant_snps_dfs(*df_list):
     # do the import here so it's not run in the driver container
     from multipy.fdr import qvalue 
 
-    merged_sig_snps = pd.concat(df_list)
+    merged_sig_snps: pd.DataFrame = pd.concat(df_list)
     pvalues = merged_sig_snps['p_value']
+    # Correct for multiple testing using Storey qvalues
+    # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
     merged_sig_snps.append(merged_sig_snps)
 
-    return merged_sig_snps
+    return merged_sig_snps.to_string()
 
 
 def convert_dataframe_to_text(dataframe):
@@ -518,8 +523,9 @@ def main(
             sig_snps_dfs.append(gene_result)
 
         merge_job = batch.new_python_job(name='merge_scatters')
-        merge_job.image(MULTIPY_IMAGE)
+        # use a separate image for multipy, which is an extension of the hail driver image
         merge_job.cpu(2)
+        merge_job.image(MULTIPY_IMAGE)
         merge_job.memory('8Gi')
         merge_job.storage('2Gi')
         previous_sig_snps_result = merge_job.call(
