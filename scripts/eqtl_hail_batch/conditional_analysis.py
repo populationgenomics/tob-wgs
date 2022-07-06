@@ -532,10 +532,10 @@ def main(
             merge_significant_snps_dfs, *sig_snps_dfs
         )
 
-        # # convert sig snps to string for output
-        # sig_snps_as_string = merge_job.call(
-        #     convert_dataframe_to_text, previous_sig_snps_result
-        # )
+        # convert sig snps to string for output
+        sig_snps_as_string = merge_job.call(
+            convert_dataframe_to_text, previous_sig_snps_result
+        )
         # # output sig snps for each iteration
         # sig_snps_output_path = os.path.join(
         #     output_prefix, f'esnp_round{iteration}_table.csv'
