@@ -376,7 +376,6 @@ def run_computation_in_scatter(
 
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
-    print(f'Printing sig snps df: {significant_snps_df}')
 
     return significant_snps_df
 
@@ -391,13 +390,18 @@ def merge_significant_snps_dfs(*df_list):
     from multipy.fdr import qvalue 
 
     merged_sig_snps: pd.DataFrame = pd.concat(df_list)
+    print(f'Printing merged_sig_snps: {merged_sig_snps}')
     pvalues = merged_sig_snps['p_value']
+    print(f'Printing pvalues: {pvalues}')
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
+    print(f'Printing qvalues: {qvals}')
     fdr_values = pd.DataFrame(list(qvals))
+    print(f'Printing fdr_values: {fdr_values}')
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
+    print(f'Printing merged_sig_snps, fdr: {merged_sig_snps.fdr}')
     merged_sig_snps.append(merged_sig_snps)
 
     return merged_sig_snps
