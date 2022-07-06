@@ -334,7 +334,7 @@ def run_computation_in_scatter(
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
     )
-    chrom = locus.str.split(':', expand=True)[0]
+    chrom = 'chr' + locus.str.split(':', expand=True)[0]
     bp = locus.str.split(':', expand=True)[1]
     (
         adjusted_spearman_df['locus'],
@@ -362,7 +362,6 @@ def run_computation_in_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
-    adjusted_spearman_df['is_esnp'] = adjusted_spearman_df.snp_id.isin(esnp1.snp_id)
     # chromosome must be turned into a number solely
     # note, 'chr' + chromosome number was necessary in the previous step, 
     # as 'chr' indicates GrCh38 format
@@ -501,7 +500,7 @@ def main(
 
         sig_snps_dfs = []
         for gene_idx in range(n_genes):
-            j = batch.new_python_job(name=f'process_iter_{iteration}_job_{gene_idx}')
+            j = batch.new_python_job(name=f'calculate_spearman_iter_{iteration}_job_{gene_idx}')
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
