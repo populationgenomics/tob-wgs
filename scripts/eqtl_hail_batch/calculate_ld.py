@@ -20,6 +20,9 @@ def query(input_path):
                 mt.locus.contig, mt.locus.position
             ).global_position(),
         )
+    # if running on entire genome, concatenate all significant
+    # correlation matrices together, then read in as one df
+    # example: https://stackoverflow.com/questions/20906474/import-multiple-csv-files-into-pandas-and-concatenate-into-one-dataframe
     significant_snps_path = f'{input_path}correlation_results.csv'
     significant_snps_df = pd.read_csv(
         significant_snps_path, sep=' ', skipinitialspace=True
@@ -30,20 +33,28 @@ def query(input_path):
     print(f'Printing table: {t.show()}')
     t = t.key_by('global_bp')
     # filter mt to positions which are in significant_snps table
-    significant_snps = mt.filter_rows(hl.is_defined(t[mt.global_bp]))
+    mt = mt.filter_rows(hl.is_defined(t[mt.global_bp]))
     # add row index to be able to remap
-    significant_snps = significant_snps.add_row_index()
+    mt = mt.add_row_index()
     # turn matrix into table and save, in order to reference row idx
-    significant_snps_path = f'{input_path}significant_snps.mt'
-    significant_snps.write(significant_snps_path)
+    mt_path = f'{input_path}significant_snps.mt'
+    mt.write(mt_path)
     # perform ld calculation
-    ld = hl.ld_matrix(significant_snps.GT.n_alt_alleles(), significant_snps.locus, radius=2e6)
+    ld = hl.ld_matrix(mt.GT.n_alt_alleles(), mt.locus, radius=2e6)
     table = ld.entries()
     # filter out entries with an LD score less than 0.2
     table = table.filter(table.entry > 0.2)
+    # replace row idx with global_bp
+    table = table.rename({'i': 'row_idx'}).key_by('row_idx')
+    table = table.annotate(i = mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    table = table.rename({'j': 'row_idx'}).key_by('row_idx')
+    table = table.annotate(j = mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    # export as pandas table and save as csv
+    table.to_pandas()
     # save table
     ld_filename = f'{input_path}ld_matrix.ht'
-    table.write(ld_filename)
+    # ld_filename = output_path(f'ld_matrix.csv', 'analysis')
+    ld.to_csv(ld_filename, index=False)
 
 
 if __name__ == '__main__':

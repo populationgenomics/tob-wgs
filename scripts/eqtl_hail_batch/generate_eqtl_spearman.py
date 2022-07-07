@@ -238,7 +238,7 @@ def prepare_genotype_info(keys_path, expression_path):
         print(f'Printing sampleid_keys: {sampleid_keys}')
         sampleid_keys = hl.Table.from_pandas(sampleid_keys)
         sampleid_keys = sampleid_keys.key_by('sampleid')
-        print(f'Printing table: {t.show()}')
+        print(f'Printing table: {mt.show()}')
         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
         # only keep samples that have rna-seq expression data
         samples_to_keep = set(log_expression_df.sampleid)
