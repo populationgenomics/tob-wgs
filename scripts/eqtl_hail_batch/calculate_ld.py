@@ -46,9 +46,9 @@ def query(input_path):
     table = table.filter(table.entry > 0.2)
     # replace row idx with global_bp
     table = table.rename({'i': 'row_idx'}).key_by('row_idx')
-    table = table.annotate(i = mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    table = table.annotate(i=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
     table = table.rename({'j': 'row_idx'}).key_by('row_idx')
-    table = table.annotate(j = mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    table = table.annotate(j=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
     # export as pandas table and save as csv
     table.to_pandas()
     # save table

@@ -21,7 +21,6 @@ from cpg_utils.hail_batch import (
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
-from analysis_runner import dataproc
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
@@ -30,6 +29,7 @@ assert MULTIPY_IMAGE
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 VEP_ANNOTATION = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt/')
+
 
 def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples
@@ -452,7 +452,7 @@ def run_spearman_correlation_scatter(
     association_effect_data = get_association_effect_data(gene)
     # Save file
     tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
-    path = AnyPath(tmp_dir) / 'eqtl_effect.csv'
+    path = AnyPath(tmp_dir) / 'eqtl_effect.csv.gz'
     with path.open('a') as fp:
         association_effect_data.to_csv(fp, index=False)
 
