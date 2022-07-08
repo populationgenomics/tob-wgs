@@ -397,7 +397,6 @@ def merge_significant_snps_dfs(*df_list):
     fdr_values = pd.DataFrame(list(qvals))
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
-    # merged_sig_snps.append(merged_sig_snps)
 
     return merged_sig_snps
 

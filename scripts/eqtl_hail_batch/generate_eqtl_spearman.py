@@ -29,7 +29,7 @@ assert MULTIPY_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
-
+VEP_ANNOTATION = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt/')
 
 def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples
@@ -200,11 +200,8 @@ def prepare_genotype_info(keys_path, expression_path):
     filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
-        print(f'Printing expression_df: {expression_df}')
         log_expression_df = get_log_expression(expression_df)
-        print(f'Printing log_expression_df: {log_expression_df}')
         mt = hl.read_matrix_table(TOB_WGS)
-        print(f'Printing mt: {mt.show()}')
         # mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
@@ -214,7 +211,6 @@ def prepare_genotype_info(keys_path, expression_path):
         mt = mt.filter_entries(mt.GQ <= 20, keep=False)
         # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
         n_samples = mt.count_cols()
-        print(f'Printing n_samples: {n_samples}')
         call_rate = 0.8
         mt = mt.filter_rows(
             hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
@@ -223,7 +219,13 @@ def prepare_genotype_info(keys_path, expression_path):
         ht = hl.read_table(FREQ_TABLE)
         mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-        print(f'Printing table after filtering rows: {mt.show()}')
+        # add in VEP annotation
+        vep = hl.read_matrix_table(VEP_ANNOTATION)
+        vep = vep.key_rows_by('locus')
+        mt = mt.key_rows_by('locus')
+        mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.locus].vep.regulatory_feature_consequences.biotype)
+        # change keys back to locus and alleles
+        mt = mt.key_rows_by('locus', 'alleles')
         # add OneK1K IDs to genotype mt
         sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
         genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -235,16 +237,13 @@ def prepare_genotype_info(keys_path, expression_path):
             right_on='InternalID',
         )
         sampleid_keys.fillna('', inplace=True)
-        print(f'Printing sampleid_keys: {sampleid_keys}')
         sampleid_keys = hl.Table.from_pandas(sampleid_keys)
         sampleid_keys = sampleid_keys.key_by('sampleid')
-        print(f'Printing table: {mt.show()}')
         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
         # only keep samples that have rna-seq expression data
         samples_to_keep = set(log_expression_df.sampleid)
         set_to_keep = hl.literal(samples_to_keep)
         mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
-        print(f'Printing final mt after filtering: {mt.show()}')
         mt.write(filtered_mt_path)
 
     return filtered_mt_path
@@ -502,6 +501,8 @@ def run_spearman_correlation_scatter(
             hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
         ),
     )
+    # add in vep annotation
+    t = t.annotate(functional_annotation=mt.rows()[t.locus].vep_functional_anno)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
@@ -644,16 +645,8 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
-    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.csv')
+    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.tsv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
-    cluster = dataproc.setup_dataproc(
-        batch,
-        max_age='1h',
-        init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
-        cluster_name='calculate_ld',
-        depends_on=[merge_job],
-    )
-    cluster.add_job(f'calculate_ld.py --input-path={output_prefix}', job_name='calculate_ld')
     batch.run(wait=False)
 
 
