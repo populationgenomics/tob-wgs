@@ -454,7 +454,10 @@ def run_spearman_correlation_scatter(
     tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
     path = AnyPath(tmp_dir) / 'eqtl_effect.csv.gz'
     with path.open('a') as fp:
-        association_effect_data.to_csv(fp, index=False)
+        if AnyPath(tmp_dir + '/eqtl_effect.csv.gz').exists():
+            association_effect_data.to_csv(fp, index=False, header=False)
+        else:
+            association_effect_data.to_csv(fp, index=False)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -645,7 +648,7 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
-    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.tsv')
+    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.csv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
     batch.run(wait=False)
 
