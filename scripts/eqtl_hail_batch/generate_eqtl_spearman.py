@@ -452,12 +452,12 @@ def run_spearman_correlation_scatter(
     association_effect_data = get_association_effect_data(gene)
     # Save file
     tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
-    path = AnyPath(tmp_dir) / 'eqtl_effect.csv.gz'
+    path = AnyPath(tmp_dir) / 'eqtl_effect.tsv.gz'
     with path.open('a') as fp:
-        if AnyPath(tmp_dir + '/eqtl_effect.csv.gz').exists():
-            association_effect_data.to_csv(fp, index=False, header=False)
+        if AnyPath(tmp_dir + '/eqtl_effect.tsv.gz').exists():
+            association_effect_data.to_csv(fp, index=False, header=False, compression="gzip", sep ='\t')
         else:
-            association_effect_data.to_csv(fp, index=False)
+            association_effect_data.to_csv(fp, index=False, compression="gzip", sep ='\t')
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
