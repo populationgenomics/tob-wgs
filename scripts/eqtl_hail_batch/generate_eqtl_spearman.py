@@ -21,7 +21,6 @@ from cpg_utils.hail_batch import (
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
 import click
-import gzip
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
@@ -455,7 +454,7 @@ def run_spearman_correlation_scatter(
     tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
     path = AnyPath(tmp_dir) / 'eqtl_effect.tsv.gz'
     write_header = not path.exists()
-    write_mode = "a" if path.exists() else "w"
+    write_mode = 'a' if path.exists() else 'w'
     association_effect_data.to_csv(path, index=False, header=write_header, mode=write_mode, compression='gzip', sep='\t')
 
     # define spearman correlation function, then compute for each SNP

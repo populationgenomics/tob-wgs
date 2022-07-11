@@ -41,20 +41,23 @@ def query(input_path):
     mt.write(mt_path)
     # perform ld calculation
     ld = hl.ld_matrix(mt.GT.n_alt_alleles(), mt.locus, radius=2e6)
+    # only calculate the upper triangle 
+    ld = ld.sparsify_triangle()
     table = ld.entries()
     # filter out entries with an LD score less than 0.2
     table = table.filter(table.entry > 0.2)
     # replace row idx with global_bp
     table = table.rename({'i': 'row_idx'}).key_by('row_idx')
+    mt = mt.key_rows_by('row_idx')
     table = table.annotate(i=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
     table = table.rename({'j': 'row_idx'}).key_by('row_idx')
     table = table.annotate(j=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
     # export as pandas table and save as csv
-    table.to_pandas()
+    table = table.to_pandas()
     # save table
     ld_filename = f'{input_path}ld_matrix.ht'
     # ld_filename = output_path(f'ld_matrix.csv', 'analysis')
-    ld.to_csv(ld_filename, index=False)
+    table.to_csv(ld_filename, index=False)
 
 
 if __name__ == '__main__':
