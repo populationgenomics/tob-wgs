@@ -203,7 +203,7 @@ def prepare_genotype_info(keys_path, expression_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
         log_expression_df = get_log_expression(expression_df)
         mt = hl.read_matrix_table(TOB_WGS)
-        # mt = hl.experimental.densify(mt)
+        mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
         # filter out variants that didn't pass the VQSR filter
