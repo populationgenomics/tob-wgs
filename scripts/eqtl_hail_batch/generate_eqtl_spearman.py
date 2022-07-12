@@ -540,7 +540,7 @@ def merge_df_and_convert_to_string(*df_list):
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_df = merged_df.assign(fdr=fdr_values)
     merged_df['fdr'] = merged_df.fdr.astype(float)
-    return merged_df.to_string()
+    return merged_df.to_csv(index=False, sep='\t')
 
 
 # Create click command line to enter dependency files
