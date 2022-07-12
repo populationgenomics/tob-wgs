@@ -286,7 +286,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
     residual_df.columns = gene_ids
     residual_df = residual_df.assign(sampleid=list(sample_ids))
-    residual_path = AnyPath(output_prefix) / 'log_residuals.tsv'
+    residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
     with residual_path.open('w') as fp:
         residual_df.to_csv(fp, index=False)
 
