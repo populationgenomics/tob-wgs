@@ -411,7 +411,7 @@ def convert_dataframe_to_text(dataframe):
 # Create click command line to enter dependency files
 @click.command()
 @click.option(
-    '--significant-snps', required=True, help='A space separated list of SNPs (as rows), \
+    '--significant-snps', required=True, help='A TSV of SNPs (as rows), \
         and significance levels, spearmans rho, and gene information as columns.'
 )
 @click.option('--residuals', required=True, help='A CSV of gene residuals, with genes \
@@ -455,7 +455,7 @@ def main(
 
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(
-        significant_snps), sep=' ', skipinitialspace=True
+        significant_snps), sep='\t'
     )
     
     if test_subset_genes:
