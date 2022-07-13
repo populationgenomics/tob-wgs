@@ -579,11 +579,12 @@ def main(
     """
     Creates a Hail Batch pipeline for calculating EQTLs
     """
-    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
-    # get cell type to feed into run_spearman_correlation_scatter
+    # get cell type info
     celltype = expression.split('/')[-1].split('_expression')[0]
+
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
+    batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     # load in files to get number of scatters and residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
