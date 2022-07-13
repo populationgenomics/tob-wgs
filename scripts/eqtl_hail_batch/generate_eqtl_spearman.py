@@ -202,7 +202,7 @@ def prepare_genotype_info(keys_path, expression_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
         log_expression_df = get_log_expression(expression_df)
         mt = hl.read_matrix_table(TOB_WGS)
-        # mt = hl.experimental.densify(mt)
+        mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
         # filter out variants that didn't pass the VQSR filter
@@ -424,13 +424,10 @@ def run_spearman_correlation_scatter(
             mean_val = group[gene].mean()
             q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
             iqr = q3 - q1
-            # not sure what this value is doing here
-            iqr_min = q1 - 1.5 * (q3 - q1)
-            iqr_max = q3 + 1.5 * (q3 - q1)
             data_struct = {
                 'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
                 'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
-                'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_min, 'iqr_max': iqr_max, 
+                'q1': q1, 'q3': q3, 'iqr': iqr, 
                 }
 
             return data_struct

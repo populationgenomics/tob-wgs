@@ -29,7 +29,7 @@ def query(input_path):
     )
     t = hl.Table.from_pandas(significant_snps_df)
     # only keep rows whose FDR is < 0.05
-    # t = t.filter(t.fdr < 0.05)
+    t = t.filter(t.fdr < 0.05)
     print(f'Printing table: {t.show()}')
     t = t.key_by('global_bp')
     # filter mt to positions which are in significant_snps table
@@ -39,7 +39,8 @@ def query(input_path):
     # turn matrix into table and save, in order to reference row idx
     mt_path = f'{input_path}significant_snps.mt'
     mt.write(mt_path)
-    # perform ld calculation
+    # perform ld calculation between all pairs of variants 
+    # within two megabases (1 megabase on either side)
     ld = hl.ld_matrix(mt.GT.n_alt_alleles(), mt.locus, radius=2e6)
     # only calculate the upper triangle 
     ld = ld.sparsify_triangle()
