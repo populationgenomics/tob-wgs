@@ -67,5 +67,5 @@ For the conditional analysis (rounds 2-5), execute the following command:
 ```sh
 python3 launch_conditional_analysis.py \
 --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" \
---output-dir 'gs://cpg-tob-wgs-test/eqtl_output' --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/eqtl_output/'
+--output-dir 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output' --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/'
 ```

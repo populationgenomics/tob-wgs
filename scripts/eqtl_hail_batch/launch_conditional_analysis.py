@@ -105,12 +105,12 @@ def submit_eqtl_jobs(
     for cell_type in cell_types:
         for chromosome in chromosomes:
             residuals = os.path.join(
-                first_round_path, f'{cell_type}', f'chr{chromosome}', f'log_residuals.tsv'
+                first_round_path, f'{cell_type}', f'chr{chromosome}', f'log_residuals.csv'
             )
             significant_snps = os.path.join(
                 first_round_path,
                 f'{cell_type}',
-                f'chr{chromosome}correlation_results.csv',
+                f'chr{chromosome}correlation_results.tsv',
             )
 
             if dry_run:
