@@ -134,12 +134,12 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set('chr' + gene_snp_test_df.snp_id)
+    snps_to_keep = set(gene_snp_test_df.snp_id)
     sorted_snps = sorted(snps_to_keep)
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    chromosome = 'chr' + gene_snp_test_df.snp_id[0].split(':')[:1][0]
+    chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
@@ -157,11 +157,6 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
 
     genotype_df = t.to_pandas(flatten=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-    # chromosome must be turned into a number solely
-    # note, 'chr' + chromosome number was necessary in the previous step, 
-    # as 'chr' indicates GrCh38 format
-    genotype_df['contig'] = genotype_df.contig.str.split('chr', expand=True)[1]
-    genotype_df['snp_id'] = genotype_df.snp_id.str.split('chr', expand=True)[1]
 
     return genotype_df
 
@@ -334,7 +329,7 @@ def run_computation_in_scatter(
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
     )
-    chrom = 'chr' + locus.str.split(':', expand=True)[0]
+    chrom = locus.str.split(':', expand=True)[0]
     bp = locus.str.split(':', expand=True)[1]
     (
         adjusted_spearman_df['locus'],
@@ -365,10 +360,6 @@ def run_computation_in_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
-    # chromosome must be turned into a number solely
-    # note, 'chr' + chromosome number was necessary in the previous step, 
-    # as 'chr' indicates GrCh38 format
-    adjusted_spearman_df['chrom'] = adjusted_spearman_df.chrom.str.split('chr', expand=True)[1]
     # add association ID annotation after adding in alleles, a1, and a2
     adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
     adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
