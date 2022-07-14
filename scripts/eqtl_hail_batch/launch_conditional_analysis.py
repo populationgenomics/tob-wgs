@@ -110,7 +110,7 @@ def submit_eqtl_jobs(
             significant_snps = os.path.join(
                 first_round_path,
                 f'{cell_type}',
-                f'chr{chromosome}correlation_results.tsv',
+                f'chr{chromosome}', 'correlation_results.tsv',
             )
 
             if dry_run:
