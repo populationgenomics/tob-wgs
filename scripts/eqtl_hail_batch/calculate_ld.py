@@ -45,8 +45,6 @@ def query(input_path):
     # only calculate the upper triangle 
     ld = ld.sparsify_triangle()
     table = ld.entries()
-    # filter out entries with an LD score less than 0.2
-    table = table.filter(table.entry > 0.2)
     # replace row idx with global_bp
     table = table.rename({'i': 'row_idx'}).key_by('row_idx')
     mt = mt.key_rows_by('row_idx')
