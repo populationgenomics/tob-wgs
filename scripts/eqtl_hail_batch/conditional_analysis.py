@@ -55,7 +55,7 @@ def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.Da
 
 
 def prepare_genotype_info(keys_path):
-    """Calculate log cpm for each cell type and chromosome
+    """Filter hail matrix table
 
     Input:
     keys_path: path to a tsv file with information on
@@ -69,7 +69,7 @@ def prepare_genotype_info(keys_path):
     """
 
     init_batch()
-    filtered_mt_path = output_path('genotype_table.ht', 'tmp')
+    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         mt = hl.read_matrix_table(TOB_WGS)
         mt = hl.experimental.densify(mt)
@@ -116,7 +116,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
     each round/iteration of conditional analysis. The dataframe consists of genes as columns 
     and samples as rows. 
-    gene_snp_test_df: a dataframe with rows as SNPs and columns containing snpid, gene_symbol, and 
+    gene_snp_test_df: a dataframe with rows as SNPs and columns containing snp_id, gene_symbol, and 
     gene_id information. 
 
     Returns:
@@ -134,26 +134,26 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set(gene_snp_test_df.snpid)
+    snps_to_keep = set(gene_snp_test_df.snp_id)
     sorted_snps = sorted(snps_to_keep)
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    chromosome = gene_snp_test_df.snpid[0].split(':')[:1][0]
+    chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
-    t = t.annotate(snpid=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
+    t = t.annotate(snp_id=hl.str(':').join(list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))))
     # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
+    t = t.filter(set_to_keep.contains(t['snp_id']))
     # only keep SNPs where all samples have an alt_allele value
-    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
+    snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snp_id.collect())
     if len(snps_to_remove) > 0:
-        t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+        t = t.filter(~hl.literal(snps_to_remove).contains(t.snp_id))
 
     genotype_df = t.to_pandas(flatten=True)
     genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
@@ -210,8 +210,8 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene]]
         # select SNP to add
-        snp = esnp1.snpid[esnp1.gene_symbol == gene].to_string(index=False)
-        snp_genotype = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        snp = esnp1.snp_id[esnp1.gene_symbol == gene].to_string(index=False)
+        snp_genotype = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         # Create a test df by adding covariates
         test_df = exprs_val.merge(snp_genotype, on='sampleid', how='right')
@@ -237,7 +237,9 @@ def run_computation_in_scatter(
     idx,
     residual_df,
     significant_snps_df,
-    filtered_mt_path
+    filtered_mt_path,
+    celltype,
+    output_prefix
 ):
     """Run genes in scatter
     
@@ -270,6 +272,10 @@ def run_computation_in_scatter(
         .first()
         .reset_index()
     )
+    # save esnp1 for front-end use on which SNPs have been conditioned on
+    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
+    with esnp1_path.open('w') as fp:
+        esnp1.to_csv(fp, index=False)
 
     # Remaning eSNPs to test
     esnps_to_test = (
@@ -282,7 +288,7 @@ def run_computation_in_scatter(
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
-    gene_snp_test_df = esnps_to_test[['snpid', 'gene_symbol', 'gene_id']]
+    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
@@ -295,8 +301,8 @@ def run_computation_in_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
-        snp = df.snpid
-        gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
+        snp = df.snp_id
+        gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
@@ -313,14 +319,14 @@ def run_computation_in_scatter(
     adjusted_spearman_df.columns = [
         'gene_symbol',
         'gene_id',
-        'snpid',
+        'snp_id',
         'spearmans_rho',
         'p_value',
     ]
     # remove any NA values. Remove this line when run on main dataset
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
-    # add in global position and round
-    locus = adjusted_spearman_df.snpid.str.split(':', expand=True)[[0, 1]].agg(
+    # add in locus and chromosome information to get global position in hail
+    locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
     )
     chrom = locus.str.split(':', expand=True)[0]
@@ -334,7 +340,8 @@ def run_computation_in_scatter(
         chrom,
         bp,
     ]
-    adjusted_spearman_df['round'] = iteration
+    adjusted_spearman_df['round'] = str(iteration)
+    # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
@@ -343,22 +350,20 @@ def run_computation_in_scatter(
     t = t.key_by('locus')
     t = t.annotate(
         a1=mt.rows()[t.locus].alleles[0],
-        a2=mt.rows()[t.locus].alleles[1],
+        a2=hl.if_else(
+            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
+        ),
     )
-    t = t.annotate(
-        id=hl.str(':').join(
-            [
-                hl.str(t.chrom),
-                hl.str(t.bp),
-                t.a1,
-                t.a2,
-                t.gene_symbol,
-                # result.db_key, # cell_type_id (eg nk, mononc)
-                hl.str(t.round),
-            ]
-        )
-    )
+    # turn back into pandas df and add additional information
+    # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
+    # add celltype id
+    celltype_id = celltype.lower()
+    adjusted_spearman_df['cell_type_id'] = celltype_id
+    # add association ID annotation after adding in alleles, a1, and a2
+    adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
+    adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
+    adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
 
     # set variables for next iteration of loop
     significant_snps_df = adjusted_spearman_df
@@ -375,13 +380,14 @@ def merge_significant_snps_dfs(*df_list):
     # do the import here so it's not run in the driver container
     from multipy.fdr import qvalue 
 
-    merged_sig_snps = pd.concat(df_list)
+    merged_sig_snps: pd.DataFrame = pd.concat(df_list)
     pvalues = merged_sig_snps['p_value']
+    # Correct for multiple testing using Storey qvalues
+    # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     _, qvals = qvalue(pvalues)
-    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    fdr_values = pd.DataFrame(list(qvals))
     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
-    merged_sig_snps.append(merged_sig_snps)
 
     return merged_sig_snps
 
@@ -396,7 +402,7 @@ def convert_dataframe_to_text(dataframe):
 # Create click command line to enter dependency files
 @click.command()
 @click.option(
-    '--significant-snps', required=True, help='A space separated list of SNPs (as rows), \
+    '--significant-snps', required=True, help='A TSV of SNPs (as rows), \
         and significance levels, spearmans rho, and gene information as columns.'
 )
 @click.option('--residuals', required=True, help='A CSV of gene residuals, with genes \
@@ -435,9 +441,12 @@ def main(
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
+    # get cell type to feed into run_computation_in_scatter
+    celltype = output_prefix.split('scrna-seq/')[-1].split('/')[0]
+
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(
-        significant_snps), sep=' ', skipinitialspace=True
+        significant_snps), sep='\t'
     )
     
     if test_subset_genes:
@@ -486,7 +495,7 @@ def main(
 
         sig_snps_dfs = []
         for gene_idx in range(n_genes):
-            j = batch.new_python_job(name=f'process_iter_{iteration}_job_{gene_idx}')
+            j = batch.new_python_job(name=f'calculate_spearman_iter_{iteration}_job_{gene_idx}')
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
@@ -497,13 +506,16 @@ def main(
                 gene_idx,
                 previous_residual_result,
                 previous_sig_snps_result,
-                filtered_mt_path
+                filtered_mt_path,
+                celltype,
+                output_prefix
             )
             sig_snps_dfs.append(gene_result)
 
         merge_job = batch.new_python_job(name='merge_scatters')
-        merge_job.image(MULTIPY_IMAGE)
+        # use a separate image for multipy, which is an extension of the hail driver image
         merge_job.cpu(2)
+        merge_job.image(MULTIPY_IMAGE)
         merge_job.memory('8Gi')
         merge_job.storage('2Gi')
         previous_sig_snps_result = merge_job.call(

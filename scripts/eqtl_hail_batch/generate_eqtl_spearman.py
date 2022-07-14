@@ -28,6 +28,7 @@ assert MULTIPY_IMAGE
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
+VEP_ANNOTATION = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt/')
 
 
 def filter_lowly_expressed_genes(expression_df):
@@ -121,7 +122,18 @@ def get_log_expression(expression_df):
     return log_expression_df
 
 
-def calculate_log_cpm(expression_df, output_prefix, celltype):
+def calculate_log_cpm(expression_df):
+    expression_df = filter_lowly_expressed_genes(expression_df)
+    # remove sampleid column and get log expression
+    # this can only be done on integers
+    expression_df = expression_df.iloc[:, 1:]
+    cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
+    log_cpm = np.log(cpm_df + 1)
+
+    return log_cpm
+
+
+def generate_log_cpm_output(expression_df, output_prefix, celltype):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
@@ -133,12 +145,7 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
     Counts per million mapped reads
     """
 
-    expression_df = filter_lowly_expressed_genes(expression_df)
-    # remove sampleid column and get log expression
-    # this can only be done on integers
-    expression_df = expression_df.iloc[:, 1:]
-    cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
-    log_cpm = np.log(cpm_df + 1)
+    log_cpm = calculate_log_cpm(expression_df)
     # get gene expression distribution in the output
     # specified here https://github.com/populationgenomics/tob-wgs/issues/97
     
@@ -174,7 +181,7 @@ def calculate_log_cpm(expression_df, output_prefix, celltype):
 
 
 def prepare_genotype_info(keys_path, expression_path):
-    """Calculate log cpm for each cell type and chromosome
+    """Filter hail matrix table
 
     Input:
     keys_path: path to a tsv file with information on
@@ -212,6 +219,13 @@ def prepare_genotype_info(keys_path, expression_path):
         ht = hl.read_table(FREQ_TABLE)
         mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
         mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
+        # add in VEP annotation
+        vep = hl.read_matrix_table(VEP_ANNOTATION)
+        vep = vep.key_rows_by('locus')
+        mt = mt.key_rows_by('locus')
+        mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.locus].vep.regulatory_feature_consequences.biotype)
+        # change keys back to locus and alleles
+        mt = mt.key_rows_by('locus', 'alleles')
         # add OneK1K IDs to genotype mt
         sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
         genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -272,7 +286,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
     residual_df.columns = gene_ids
     residual_df = residual_df.assign(sampleid=list(sample_ids))
-    residual_path = AnyPath(output_prefix) / 'log_residuals.tsv'
+    residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
     with residual_path.open('w') as fp:
         residual_df.to_csv(fp, index=False)
 
@@ -287,6 +301,7 @@ def run_spearman_correlation_scatter(
     residuals_df,
     filtered_mt_path,
     celltype,
+    output_prefix
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
     
@@ -370,7 +385,8 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(t.alleles[0])
         + ':'
-        + hl.str(t.alleles[1])
+        + hl.str(t.alleles[1]), 
+        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position()
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
@@ -387,6 +403,59 @@ def run_spearman_correlation_scatter(
     # filter gene_snp_df to have the same snps after filtering SNPs that
     # don't have an alt_allele value 
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
+
+    # Get association effect data, to be used for violin plots for each genotype of each SNP
+    def get_association_effect_data(gene):
+        sampleid = expression_df.sampleid
+        log_cpm = calculate_log_cpm(expression_df)
+        log_cpm['sampleid'] = sampleid
+        # reduce log_cpm matrix to gene of interest only
+        log_cpm = log_cpm[['sampleid', gene]]
+        # merge log_cpm data with genotype info 
+        gt_expr_data = genotype_df.merge(log_cpm, left_on='sampleid', right_on='sampleid')
+        # group gt_expr_data by snpid and genotype
+        grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
+
+        def create_struct(gene, group):
+            hist, bin_edges = np.histogram(group[gene], bins=10)
+            n_samples = group[gene].count()
+            min_val = group[gene].min()
+            max_val = group[gene].max()
+            mean_val = group[gene].mean()
+            q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
+            iqr = q3 - q1
+            data_struct = {
+                'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
+                'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
+                'q1': q1, 'q3': q3, 'iqr': iqr, 
+                }
+
+            return data_struct
+
+        snp_gt_summary_data = []
+        for item in grouped_gt.groups:
+            snp_id = item[0]
+            genotype = item[1]
+            group = grouped_gt.get_group((snp_id, genotype))
+            global_bp = group.global_bp.iloc[0]
+            gene_id = gene_info.gene_id
+            snp_gt_summary_data.append({'snp_id': snp_id, 'global_bp': global_bp, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene, 'cell_type_id': celltype, 'struct': create_struct(gene, group)})
+
+        snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
+        
+        return snp_gt_summary_data
+    
+    gene = gene_info.gene_name
+    association_effect_data = get_association_effect_data(gene)
+    # Save file
+    tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
+    path = AnyPath(tmp_dir) / 'eqtl_effect.tsv.gz'
+    if path.exists():
+        with path.open('ab') as fp:
+            association_effect_data.to_csv(fp, index=False, compression='gzip', header=False, sep='\t')
+    else:
+        with path.open('ab') as fp:
+            association_effect_data.to_csv(fp, index=False, compression='gzip', header=True, sep='\t')
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -433,19 +502,15 @@ def run_spearman_correlation_scatter(
             hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
         ),
     )
+    # add in vep annotation
+    t = t.annotate(functional_annotation=mt.rows()[t.locus].vep_functional_anno)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
     # add celltype id
     celltype_id = celltype.lower()
-    print(f'celltype ID = {celltype_id}')
     spearman_df['cell_type_id'] = celltype_id
-    # chromosome must be turned into a number solely
-    # note, 'chr' + chromosome number was necessary in the previous step, 
-    # as 'chr' indicates GrCh38 format
-    spearman_df['chrom'] = spearman_df.chrom.str.split('chr', expand=True)[1]
-    print(f'Spearman df chrom is {spearman_df.chrom}')
     # add association ID annotation after adding in alleles, a1, and a2
     spearman_df['association_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
     spearman_df['variant_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
@@ -468,7 +533,7 @@ def merge_df_and_convert_to_string(*df_list):
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     merged_df = merged_df.assign(fdr=fdr_values)
     merged_df['fdr'] = merged_df.fdr.astype(float)
-    return merged_df.to_string()
+    return merged_df.to_csv(index=False, sep='\t')
 
 
 # Create click command line to enter dependency files
@@ -510,11 +575,12 @@ def main(
     """
     Creates a Hail Batch pipeline for calculating EQTLs
     """
-    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
-    # get cell type to feed into run_spearman_correlation_scatter
+    # get cell type info
     celltype = expression.split('/')[-1].split('_expression')[0]
+
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
+    batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     # load in files to get number of scatters and residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
@@ -534,9 +600,9 @@ def main(
         output_prefix=output_prefix,
     )
     # calculate and save log cpm values
-    calculate_log_cpm_job = batch.new_python_job('calculate-log-cpm')
-    calculate_log_cpm_job.call(
-        calculate_log_cpm,
+    generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    generate_log_cpm_output_job.call(
+        generate_log_cpm_output,
         expression_df=expression_df_literal,
         output_prefix=output_prefix,
         celltype=celltype,
@@ -564,6 +630,7 @@ def main(
             residuals_df=residuals_df,
             filtered_mt_path=filtered_mt_path,
             celltype=celltype,
+            output_prefix=output_prefix,
         )
         spearman_dfs_from_scatter.append(result)
 
@@ -576,7 +643,7 @@ def main(
     result_second = merge_job.call(
         merge_df_and_convert_to_string, *spearman_dfs_from_scatter
     )
-    corr_result_output_path = os.path.join(output_prefix + 'correlation_results.csv')
+    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.tsv')
     batch.write_output(result_second.as_str(), corr_result_output_path)
     batch.run(wait=False)
 
