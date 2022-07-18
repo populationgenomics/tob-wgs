@@ -80,6 +80,8 @@ def prepare_genotype_info(keys_path):
         # VQSR does not filter out low quality genotypes. Filter these out
         mt = mt.filter_entries(mt.GQ <= 20, keep=False)
         # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+        # checkpoint the mt so that it isn't evaluated multiple times
+        mt = mt.checkpoint(output_path('genotype_table_checkpoint.mt', 'tmp'))
         n_samples = mt.count_cols()
         call_rate = 0.8
         mt = mt.filter_rows(
@@ -103,6 +105,8 @@ def prepare_genotype_info(keys_path):
         sampleid_keys = hl.Table.from_pandas(sampleid_keys)
         sampleid_keys = sampleid_keys.key_by('sampleid')
         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
+        # repartition to save overhead cost
+        mt = mt.naive_coalesce(100)
         mt.write(filtered_mt_path)
 
     return filtered_mt_path
@@ -142,6 +146,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
+    mt = mt.naive_coalesce(10)
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
