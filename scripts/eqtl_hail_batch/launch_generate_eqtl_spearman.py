@@ -129,6 +129,8 @@ def submit_eqtl_jobs(
                 analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
                 # get access level from bucket, rather than manual input
                 access_level = bucket_name.split('-')[-1]
+                if access_level == 'main':
+                    access_level = 'standard'
                 run_analysis_runner(
                     description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
                     dataset='tob-wgs',
