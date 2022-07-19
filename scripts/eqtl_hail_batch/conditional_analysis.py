@@ -11,7 +11,6 @@ from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
-    output_path,
     copy_common_env,
     init_batch,
     remote_tmpdir,
@@ -81,7 +80,7 @@ def prepare_genotype_info(keys_path):
         mt = mt.filter_entries(mt.GQ <= 20, keep=False)
         # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
         # checkpoint the mt so that it isn't evaluated multiple times
-        mt = mt.checkpoint(output_path('genotype_table_checkpoint.mt', 'tmp'))
+        mt = mt.checkpoint(dataset_path('scrna-seq/genotype_table_checkpoint.mt', 'tmp'))
         n_samples = mt.count_cols()
         call_rate = 0.8
         mt = mt.filter_rows(
