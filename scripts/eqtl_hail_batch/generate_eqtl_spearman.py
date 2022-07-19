@@ -202,6 +202,7 @@ def prepare_genotype_info(keys_path, expression_path):
         expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
         log_expression_df = get_log_expression(expression_df)
         mt = hl.read_matrix_table(TOB_WGS)
+        mt = mt.naive_coalesce(10000)
         mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
@@ -359,7 +360,6 @@ def run_spearman_correlation_scatter(
     # computational time
     first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
-    mt = mt.naive_coalesce(10)
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
@@ -623,6 +623,7 @@ def main(
 
     for idx in range(n_genes_in_scatter):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
+        j.depends_on(filter_mt_job)
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')

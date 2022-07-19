@@ -72,6 +72,7 @@ def prepare_genotype_info(keys_path):
     filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         mt = hl.read_matrix_table(TOB_WGS)
+        mt = mt.naive_coalesce(10000)
         mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
@@ -146,7 +147,6 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
     first_and_last_snp = chromosome + ':' + str(sorted_snp_positions[0]) + '-' + str(sorted_snp_positions[-1]+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
-    mt = mt.naive_coalesce(10)
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
@@ -477,6 +477,7 @@ def main(
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration}'
         )
+        calc_resid_df_job.depends_on(filter_mt_job)
         calc_resid_df_job.cpu(2)
         calc_resid_df_job.memory('8Gi')
         calc_resid_df_job.storage('2Gi')
