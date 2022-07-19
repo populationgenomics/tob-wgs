@@ -11,7 +11,6 @@ from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
-    output_path,
     copy_common_env,
     init_batch,
     remote_tmpdir,
@@ -26,6 +25,7 @@ MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
+FILTERED_MT = dataset_path('scrna-seq/genotype_table.mt', 'tmp')
 
 
 def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame) -> int:
@@ -54,65 +54,9 @@ def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.Da
     return len(gene_ids)
 
 
-def prepare_genotype_info(keys_path):
-    """Filter hail matrix table
-
-    Input:
-    keys_path: path to a tsv file with information on
-    OneK1K amd CPG IDs (columns) for each sample (rows).
-
-    Returns:
-    Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
-    1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01. Columns (samples) are filtered
-    on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
-    """
-
-    init_batch()
-    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
-    if not hl.hadoop_exists(filtered_mt_path):
-        mt = hl.read_matrix_table(TOB_WGS)
-        mt = hl.experimental.densify(mt)
-        # filter to biallelic loci only
-        mt = mt.filter_rows(hl.len(mt.alleles) == 2)
-        # filter out variants that didn't pass the VQSR filter
-        mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-        # VQSR does not filter out low quality genotypes. Filter these out
-        mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-        # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-        n_samples = mt.count_cols()
-        call_rate = 0.8
-        mt = mt.filter_rows(
-            hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
-        )
-        # filter out variants with MAF <= 0.01
-        ht = hl.read_table(FREQ_TABLE)
-        mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-        mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-        # add OneK1K IDs to genotype mt
-        sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-        genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
-        sampleid_keys = pd.merge(
-            genotype_samples,
-            sampleid_keys,
-            how='left',
-            left_on='sampleid',
-            right_on='InternalID',
-        )
-        sampleid_keys.fillna('', inplace=True)
-        sampleid_keys = hl.Table.from_pandas(sampleid_keys)
-        sampleid_keys = sampleid_keys.key_by('sampleid')
-        mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
-        mt.write(filtered_mt_path)
-
-    return filtered_mt_path
-
-
-def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
+def get_genotype_df(residual_df, gene_snp_test_df):
     """load genotype df and filter
     Input:
-    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
-    (and filtering requirements outlined in the same function).
     residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
     each round/iteration of conditional analysis. The dataframe consists of genes as columns 
     and samples as rows. 
@@ -125,7 +69,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     """
 
     init_batch()
-    mt = hl.read_matrix_table(filtered_mt_path)
+    mt = hl.read_matrix_table(FILTERED_MT)
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
@@ -161,7 +105,7 @@ def get_genotype_df(filtered_mt_path, residual_df, gene_snp_test_df):
     return genotype_df
 
 
-def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
+def calculate_residual_df(residual_df, significant_snps_df):
     """calculate residuals for gene list
 
     Input:
@@ -170,8 +114,6 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
     significant_snps_df: a dataframe with significance results (p-value and FDR) from the Spearman rank 
     correlation calculated in `conditional_analysis.py`. Each row contains information for a SNP, 
     and columns contain information on significance levels, spearmans rho, and gene information.
-    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
-    (and filtering requirements outlined in the same function).
 
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows, which have been conditioned on the lead eSNP. 
@@ -201,7 +143,7 @@ def calculate_residual_df(residual_df, significant_snps_df, filtered_mt_path):
 
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
-        filtered_mt_path, residual_df, esnp1
+        residual_df, esnp1
     )
 
     # Find residuals after adjustment of lead SNP
@@ -237,7 +179,6 @@ def run_computation_in_scatter(
     idx,
     residual_df,
     significant_snps_df,
-    filtered_mt_path,
     celltype,
     output_prefix
 ):
@@ -250,8 +191,6 @@ def run_computation_in_scatter(
     up and downstream of each gene.
     residual_df: residual dataframe, calculated in calculate_residual_df(). This is run for
     each round/iteration of conditional analysis. 
-    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
-    (and filtering requirements outlined in the same function).
 
     Returns:
     A dataframe with significance results (p-value and FDR) from the Spearman rank correlation. Each
@@ -294,7 +233,7 @@ def run_computation_in_scatter(
     ]
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
-        filtered_mt_path, residual_df, gene_snp_test_df
+        residual_df, gene_snp_test_df
     )
 
     def spearman_correlation(df):
@@ -346,7 +285,7 @@ def run_computation_in_scatter(
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     # get alleles
-    mt = hl.read_matrix_table(filtered_mt_path).key_rows_by('locus')
+    mt = hl.read_matrix_table(FILTERED_MT).key_rows_by('locus')
     t = t.key_by('locus')
     t = t.annotate(
         a1=mt.rows()[t.locus].alleles[0],
@@ -456,12 +395,6 @@ def main(
             residual_df, significant_snps_df
         )
 
-    filter_mt_job = batch.new_python_job('filter_mt')
-    copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(
-        prepare_genotype_info, keys_path=keys
-    )
-
     previous_sig_snps_result = significant_snps_df  # pylint: disable=invalid-name
     previous_residual_result = residual_df  # pylint: disable=invalid-name
     # Perform conditional analysis for n iterations (specified in click interface)
@@ -480,7 +413,6 @@ def main(
             calculate_residual_df,
             previous_residual_result,
             previous_sig_snps_result,
-            filtered_mt_path
         )
 
         # convert residual df to string for output
@@ -506,7 +438,6 @@ def main(
                 gene_idx,
                 previous_residual_result,
                 previous_sig_snps_result,
-                filtered_mt_path,
                 celltype,
                 output_prefix
             )

@@ -13,7 +13,6 @@ from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
-    output_path,
     copy_common_env,
     init_batch,
     remote_tmpdir,
@@ -180,28 +179,24 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
         data_summary.to_parquet(fp)
 
 
-def prepare_genotype_info(keys_path, expression_path):
+def prepare_genotype_info(keys_path):
     """Filter hail matrix table
 
     Input:
     keys_path: path to a tsv file with information on
     OneK1K amd CPG IDs (columns) for each sample (rows).
-    expression_path: path to a tsv file of expression values (in transcripts per million)
-    with genes as columns and samples as rows.
 
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01. Columns (samples) are filtered
-    on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
+    4) call rate of 0.8, and 5) variants with MAF <= 0.01. 
     """
 
     init_batch()
-    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
+    filtered_mt_path = dataset_path('scrna-seq/genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
-        expression_df = pd.read_csv(AnyPath(expression_path), sep='\t')
-        log_expression_df = get_log_expression(expression_df)
         mt = hl.read_matrix_table(TOB_WGS)
+        mt = mt.naive_coalesce(10000)
         mt = hl.experimental.densify(mt)
         # filter to biallelic loci only
         mt = mt.filter_rows(hl.len(mt.alleles) == 2)
@@ -210,6 +205,8 @@ def prepare_genotype_info(keys_path, expression_path):
         # VQSR does not filter out low quality genotypes. Filter these out
         mt = mt.filter_entries(mt.GQ <= 20, keep=False)
         # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
+        # checkpoint the mt so that it isn't evaluated multiple times
+        mt = mt.checkpoint(dataset_path('scrna-seq/genotype_table_checkpoint.mt', 'tmp'))
         n_samples = mt.count_cols()
         call_rate = 0.8
         mt = mt.filter_rows(
@@ -240,10 +237,8 @@ def prepare_genotype_info(keys_path, expression_path):
         sampleid_keys = hl.Table.from_pandas(sampleid_keys)
         sampleid_keys = sampleid_keys.key_by('sampleid')
         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
-        # only keep samples that have rna-seq expression data
-        samples_to_keep = set(log_expression_df.sampleid)
-        set_to_keep = hl.literal(samples_to_keep)
-        mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+        # repartition to save overhead cost
+        mt = mt.naive_coalesce(1000)
         mt.write(filtered_mt_path)
 
     return filtered_mt_path
@@ -613,11 +608,12 @@ def main(
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
     filtered_mt_path = filter_mt_job.call(
-        prepare_genotype_info, keys_path=keys, expression_path=expression
+        prepare_genotype_info, keys_path=keys
     )
 
     for idx in range(n_genes_in_scatter):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
+        j.depends_on(filter_mt_job)
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
