@@ -64,12 +64,11 @@ def prepare_genotype_info(keys_path):
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01. Columns (samples) are filtered
-    on the basis of having rna-seq expression data, i.e., within the filtered log_expression_df
+    4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
 
     init_batch()
-    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
+    filtered_mt_path = dataset_path('scrna-seq/genotype_table.mt', 'tmp')
     if not hl.hadoop_exists(filtered_mt_path):
         mt = hl.read_matrix_table(TOB_WGS)
         mt = mt.naive_coalesce(10000)
@@ -107,7 +106,7 @@ def prepare_genotype_info(keys_path):
         sampleid_keys = sampleid_keys.key_by('sampleid')
         mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
         # repartition to save overhead cost
-        mt = mt.naive_coalesce(100)
+        mt = mt.naive_coalesce(1000)
         mt.write(filtered_mt_path)
 
     return filtered_mt_path
