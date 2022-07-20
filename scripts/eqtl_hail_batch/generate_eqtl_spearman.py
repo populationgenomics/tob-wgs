@@ -220,11 +220,7 @@ def prepare_genotype_info(keys_path):
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
     vep = hl.read_matrix_table(VEP_ANNOTATION)
-    vep = vep.key_rows_by('locus')
-    mt = mt.key_rows_by('locus')
-    mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.locus].vep.regulatory_feature_consequences.biotype)
-    # change keys back to locus and alleles
-    mt = mt.key_rows_by('locus', 'alleles')
+    mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.row_key].vep.regulatory_feature_consequences.biotype)
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -393,6 +389,11 @@ def run_spearman_correlation_scatter(
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
+    # filter out all entries where there are no alt alleles to test whether this solves the
+    # input array is constant warning
+    snps_to_keep = set(t.filter(t.n_alt_alleles == 0, keep=False).snpid.collect())
+    set_to_keep = hl.literal(snps_to_keep)
+    t = t.filter(set_to_keep.contains(t['snpid']))
     
     genotype_df = t.to_pandas(flatten=True)
     # filter gene_snp_df to have the same snps after filtering SNPs that
