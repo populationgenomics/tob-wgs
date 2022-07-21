@@ -458,20 +458,23 @@ def run_spearman_correlation_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
+        alleles = df.alleles
         snp = df.snpid
+        print(f'Printing SNP: {snp}')
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        return (gene_symbol, gene_id, snp, coef, p)
+        return (gene_symbol, gene_id, alleles, snp, coef, p)
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
+        'alleles'
         'snp_id',
         'spearmans_rho',
         'p_value',
@@ -489,17 +492,9 @@ def run_spearman_correlation_scatter(
     t = hl.Table.from_pandas(spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    # get alleles
-    mt = mt.key_rows_by('locus')
-    t = t.key_by('locus')
-    t = t.annotate(
-        a1=mt.rows()[t.locus].alleles[0],
-        a2=hl.if_else(
-            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
-        ),
-    )
     # add in vep annotation
-    t = t.annotate(functional_annotation=mt.rows()[t.locus].vep_functional_anno)
+    t = t.key_by('locus', 'alleles')
+    t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
