@@ -243,7 +243,6 @@ def run_computation_in_scatter(
         a1 = df.a1
         a2 = df.a2
         snp = df.snp_id
-        print(snp)
         gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         res_val = residual_df[['sampleid', gene_symbol]]

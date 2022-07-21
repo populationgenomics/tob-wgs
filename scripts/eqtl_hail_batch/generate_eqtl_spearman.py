@@ -457,7 +457,6 @@ def run_spearman_correlation_scatter(
         snp = df.snpid
         alleles = df.alleles
         snp = df.snpid
-        print(f'Printing SNP: {snp}')
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
