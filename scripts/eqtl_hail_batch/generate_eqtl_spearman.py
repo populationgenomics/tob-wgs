@@ -346,6 +346,8 @@ def run_spearman_correlation_scatter(
     # computational time
     first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
+    # only keep SNPs that have variance
+    mt = mt.filter_rows(hl.agg.all((mt.GT.n_alt_alleles == 0) | (mt.GT.n_alt_alleles == 1) | (mt.GT.n_alt_alleles == 2)), keep=False)
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
@@ -388,11 +390,6 @@ def run_spearman_correlation_scatter(
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-    # filter out all entries where there are no alt alleles to test whether this solves the
-    # input array is constant warning
-    snps_with_variance = hl.literal(set(t.filter((t.n_alt_alleles == 0) | (t.n_alt_alleles == 2), keep=False).snpid.collect()))
-    # set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(snps_with_variance.contains(t['snpid']))
     
     genotype_df = t.to_pandas(flatten=True)
     # filter gene_snp_df to have the same snps after filtering SNPs that
@@ -457,6 +454,7 @@ def run_spearman_correlation_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
+        snp = df.snpid
         alleles = df.alleles
         snp = df.snpid
         print(f'Printing SNP: {snp}')
