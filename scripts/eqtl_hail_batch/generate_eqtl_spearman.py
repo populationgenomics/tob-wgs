@@ -381,9 +381,8 @@ def run_spearman_correlation_scatter(
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set(gene_snp_df.snpid)
-    set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
+    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
+    t = t.filter(snps_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     # (argument must be a string, a bytes-like object or a number)
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
@@ -391,9 +390,9 @@ def run_spearman_correlation_scatter(
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
     # filter out all entries where there are no alt alleles to test whether this solves the
     # input array is constant warning
-    snps_to_keep = set(t.filter(t.n_alt_alleles == 0, keep=False).snpid.collect())
-    set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
+    snps_with_variance = hl.literal(set(t.filter((t.n_alt_alleles == 0) | (t.n_alt_alleles == 2), keep=False).snpid.collect()))
+    # set_to_keep = hl.literal(snps_to_keep)
+    t = t.filter(snps_with_variance.contains(t['snpid']))
     
     genotype_df = t.to_pandas(flatten=True)
     # filter gene_snp_df to have the same snps after filtering SNPs that
@@ -474,7 +473,7 @@ def run_spearman_correlation_scatter(
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
-        'alleles'
+        'alleles',
         'snp_id',
         'spearmans_rho',
         'p_value',
@@ -499,6 +498,8 @@ def run_spearman_correlation_scatter(
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
+    spearman_df['a1'] = spearman_df['alleles'].str[0]
+    spearman_df['a2'] = spearman_df['alleles'].str[1]
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
