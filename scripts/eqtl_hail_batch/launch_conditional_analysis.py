@@ -16,7 +16,7 @@ import click
 
 from analysis_runner.cli_analysisrunner import run_analysis_runner
 from google.cloud import storage
-from cpg_utils.hail_batch import get_config
+from cpg_utils.config import get_config
 
 
 @click.command()
