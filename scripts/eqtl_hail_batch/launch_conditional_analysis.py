@@ -16,6 +16,7 @@ import click
 
 from analysis_runner.cli_analysisrunner import run_analysis_runner
 from google.cloud import storage
+from cpg_utils.hail_batch import get_config
 
 
 @click.command()
@@ -30,8 +31,7 @@ from google.cloud import storage
 @click.option(
     '--chromosomes',
     required=True,
-    help='List of chromosome numbers to run eQTL analysis on. \
-        Space separated, as one argument',
+    help='List of chromosome numbers to run eQTL analysis on. Space separated, as one argument',  # noqa: E501; pylint: disable=line-too-long
 )
 @click.option(
     '--input-path',
@@ -132,8 +132,7 @@ def submit_eqtl_jobs(
                 # The analysis-runner output path doesn't want the BUCKET specified,
                 # so let's remove it from the output_prefix
                 analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
-                # get access level from bucket, rather than manual input
-                access_level = bucket_name.split('-')[-1]
+                access_level = get_config()['workflow']['access_level']
                 run_analysis_runner(
                     description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
                     dataset='tob-wgs',
