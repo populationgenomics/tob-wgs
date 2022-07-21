@@ -346,8 +346,8 @@ def run_spearman_correlation_scatter(
     # computational time
     first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
-    # only keep SNPs that have variance
-    mt = mt.filter_rows(hl.agg.all((mt.GT.n_alt_alleles == 0) | (mt.GT.n_alt_alleles == 1) | (mt.GT.n_alt_alleles == 2)), keep=False)
+    # remove SNPs with no variance
+    mt = mt.filter_rows((hl.agg.all(mt.GT.n_alt_alleles() == 0)) | (hl.agg.all(mt.GT.n_alt_alleles() == 1)) | (hl.agg.all(mt.GT.n_alt_alleles() == 2)), keep=False)
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
