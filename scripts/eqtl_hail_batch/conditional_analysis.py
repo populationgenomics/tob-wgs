@@ -227,7 +227,7 @@ def run_computation_in_scatter(
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
-    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id']]
+    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
@@ -240,8 +240,10 @@ def run_computation_in_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
-        alleles = df.alleles
+        a1 = df.a1
+        a2 = df.a2
         snp = df.snp_id
+        print(snp)
         gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
         res_val = residual_df[['sampleid', gene_symbol]]
@@ -250,7 +252,7 @@ def run_computation_in_scatter(
         spearmans_rho, p = spearmanr(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
-        return (gene_symbol, gene_id, alleles, snp, spearmans_rho, p)
+        return (gene_symbol, gene_id, a1, a2, snp, spearmans_rho, p)
 
     # calculate spearman correlation
     adjusted_spearman_df = pd.DataFrame(
@@ -259,7 +261,8 @@ def run_computation_in_scatter(
     adjusted_spearman_df.columns = [
         'gene_symbol',
         'gene_id',
-        'alleles',
+        'a1',
+        'a2',
         'snp_id',
         'spearmans_rho',
         'p_value',

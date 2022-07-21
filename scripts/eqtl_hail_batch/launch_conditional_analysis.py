@@ -127,8 +127,6 @@ def submit_eqtl_jobs(
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                # add in sampleid keys
-                keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
                 # The analysis-runner output path doesn't want the BUCKET specified,
                 # so let's remove it from the output_prefix
                 analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
@@ -149,7 +147,6 @@ def submit_eqtl_jobs(
                             if test_subset_genes
                             else []
                         ),
-                        *('--keys', keys),
                     ],
                 )
 
