@@ -13,16 +13,17 @@ For example:
 import logging
 import os
 import click
-import subprocess
-# import hailtop.batch as hb
-# from analysis_runner.cli_analysisrunner import run_analysis_runner
+# import hail as hl
+import hailtop.batch as hb
+from cpg_utils.hail_batch import copy_common_env, remote_tmpdir
+from cpg_utils.git import (
+    get_git_commit_ref_of_current_repository,
+    get_organisation_name_from_current_directory,
+    get_repo_name_from_current_directory,
+    prepare_git_job,
+)
+from cpg_utils.config import get_config
 from google.cloud import storage
-# from cpg_utils.git import (
-#   get_git_commit_ref_of_current_repository,
-#   get_organisation_name_from_current_directory,
-#   get_repo_name_from_current_directory,
-#   prepare_git_job,
-# )
 
 
 @click.command()
@@ -85,11 +86,17 @@ def submit_eqtl_jobs(
         ending = '_expression.tsv'
 
         cell_types = [
-            os.path.basename(b.name)[:-len(ending)]
+            os.path.basename(b.name)[: -len(ending)]
             for b in blobs
             if b.name.endswith('_expression.tsv')
         ]
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+
+    backend = hb.ServiceBackend(
+        billing_project=get_config()['hail']['billing_project'],
+        remote_tmpdir=remote_tmpdir(),
+    )
+    batch = hb.Batch(name='eqtl_spearman', backend=backend)
 
     for cell_type in cell_types:
         expression = os.path.join(
@@ -122,31 +129,31 @@ def submit_eqtl_jobs(
                     logging.error(f'File {file} is missing')
             else:
 
-                # batch = hb.Batch('run-eqtl-analysis')
-                # job = batch.new_job('checkout_repo')
-
-                # # check out a git repository at the current commit
-                # prepare_git_job(
-                #     job=job,
-                #     organisation=get_organisation_name_from_current_directory(),
-                #     repo_name=get_repo_name_from_current_directory(),
-                #     commit=get_git_commit_ref_of_current_repository(),
-                # )
+                job = batch.new_job('checkout_repo')
+                copy_common_env(job)
+                
+                # check out a git repository at the current commit
+                prepare_git_job(
+                    job=job,
+                    organisation=get_organisation_name_from_current_directory(),
+                    repo_name=get_repo_name_from_current_directory(),
+                    commit=get_git_commit_ref_of_current_repository(),
+                )
 
                 keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                subprocess.check_output(
-                    ['python3',
-                     'generate_eqtl_spearman.py',
-                     *('--expression', expression),
-                     *('--covariates', covariates),
-                     *('--geneloc', geneloc),
-                     *('--keys', keys),
-                     *('--output-prefix', output_prefix),
-                     ]
-                     )
+                job.command(
+                    f'python3 scripts/eqtl_hail_batch/generate_eqtl_spearman.py '
+                    f'--expression {expression} '
+                    f'--covariates {covariates} '
+                    f'--geneloc {geneloc} '
+                    f'--keys {keys} '
+                    f'--output-prefix {output_prefix}'
+                )
+
+    batch.run(wait=False)
 
 
 if __name__ == '__main__':
