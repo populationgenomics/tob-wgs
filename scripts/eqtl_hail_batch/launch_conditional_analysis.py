@@ -31,6 +31,7 @@ from cpg_utils.config import get_config
 @click.option(
     '--chromosomes',
     required=True,
+    multiple=True,
     help='List of chromosome numbers to run eQTL analysis on. Space separated, as one argument',  # noqa: E501; pylint: disable=line-too-long
 )
 @click.option(
@@ -95,9 +96,10 @@ def submit_eqtl_jobs(
         path_to_expression_files = os.path.join(bucket_path, 'expression_files')
         logging.info(f'Going to fetch cell types from {path_to_expression_files}')
         blobs = bucket.list_blobs(prefix=path_to_expression_files + '/', delimiter='/')
+        ending = '_expression.tsv'
 
         cell_types = [
-            os.path.basename(b.name)[:-15]
+            os.path.basename(b.name)[:-len(ending)]
             for b in blobs
             if b.name.endswith('_expression.tsv')
         ]
