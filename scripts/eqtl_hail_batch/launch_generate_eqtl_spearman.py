@@ -146,10 +146,10 @@ def submit_eqtl_jobs(
 
                 job.command(
                     f'python3 scripts/eqtl_hail_batch/generate_eqtl_spearman.py '
-                    f'--expression {expression}'
-                    f'--covariates {covariates}'
-                    f'--geneloc {geneloc}'
-                    f'--keys {keys}'
+                    f'--expression {expression} '
+                    f'--covariates {covariates} '
+                    f'--geneloc {geneloc} '
+                    f'--keys {keys} '
                     f'--output-prefix {output_prefix}'
                 )
 
