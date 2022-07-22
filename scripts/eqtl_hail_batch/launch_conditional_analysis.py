@@ -13,10 +13,8 @@ For example:
 import logging
 import os
 import click
-
-from analysis_runner.cli_analysisrunner import run_analysis_runner
+import subprocess
 from google.cloud import storage
-from cpg_utils.config import get_config
 
 
 @click.command()
@@ -128,28 +126,19 @@ def submit_eqtl_jobs(
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                # The analysis-runner output path doesn't want the BUCKET specified,
-                # so let's remove it from the output_prefix
-                analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
-                access_level = get_config()['workflow']['access_level']
-                run_analysis_runner(
-                    description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
-                    dataset='tob-wgs',
-                    access_level=access_level,
-                    output_dir=analysis_runner_output_path,
-                    # commit, sha and cwd can be inferred automatically
-                    script=[
-                        'conditional_analysis.py',
-                        *('--residuals', residuals),
-                        *('--significant-snps', significant_snps),
-                        *('--output-prefix', output_prefix),
-                        *(
+                subprocess.check_output(
+                        ['python3',
+                         'conditional_analysis.py',
+                         *('--residuals', residuals),
+                         *('--significant-snps', significant_snps),
+                         *('--output-prefix', output_prefix),
+                         *(
                             ['--test-subset-genes', str(test_subset_genes)]
                             if test_subset_genes
                             else []
-                        ),
-                    ],
-                )
+                            )
+                        ]
+                        )
 
 
 if __name__ == '__main__':
