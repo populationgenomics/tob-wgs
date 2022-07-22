@@ -13,8 +13,8 @@ For example:
 import logging
 import os
 import click
-
-from analysis_runner.cli_analysisrunner import run_analysis_runner
+import subprocess
+# from analysis_runner.cli_analysisrunner import run_analysis_runner
 from google.cloud import storage
 # from cpg_utils.config import get_config
 
@@ -123,23 +123,16 @@ def submit_eqtl_jobs(
                 keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
                 # The analysis-runner output path doesn't want the BUCKET specified,
                 # so let's remove it from the output_prefix
-                analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
-                access_level = 'test'
-                run_analysis_runner(
-                    description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
-                    dataset='tob-wgs',
-                    access_level=access_level,
-                    output_dir=analysis_runner_output_path,
-                    # commit, sha and cwd can be inferred automatically
-                    script=[
+                # analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
+                # access_level = 'test'
+                subprocess.check_output([
                         'generate_eqtl_spearman.py',
                         *('--expression', expression),
                         *('--covariates', covariates),
                         *('--geneloc', geneloc),
                         *('--keys', keys),
                         *('--output-prefix', output_prefix),
-                    ],
-                )
+                ])
 
 
 if __name__ == '__main__':
