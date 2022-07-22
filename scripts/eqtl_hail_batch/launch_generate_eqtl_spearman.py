@@ -153,6 +153,8 @@ def submit_eqtl_jobs(
                     f'--output-prefix {output_prefix}'
                 )
 
+    batch.run(wait=False)
+
 
 if __name__ == '__main__':
     submit_eqtl_jobs()  # pylint: disable=no-value-for-parameter
