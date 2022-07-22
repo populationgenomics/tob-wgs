@@ -14,9 +14,15 @@ import logging
 import os
 import click
 import subprocess
+import hailtop.batch as hb
 # from analysis_runner.cli_analysisrunner import run_analysis_runner
 from google.cloud import storage
-# from cpg_utils.config import get_config
+from cpg_utils.git import (
+  get_git_commit_ref_of_current_repository,
+  get_organisation_name_from_current_directory,
+  get_repo_name_from_current_directory,
+  prepare_git_job,
+)
 
 
 @click.command()
@@ -116,23 +122,31 @@ def submit_eqtl_jobs(
                     logging.error(f'File {file} is missing')
             else:
 
+                batch = hb.Batch('run-eqtl-analysis')
+                job = batch.new_job('checkout_repo')
+
+                # check out a git repository at the current commit
+                prepare_git_job(
+                    job=job,
+                    organisation=get_organisation_name_from_current_directory(),
+                    repo_name=get_repo_name_from_current_directory(),
+                    commit=get_git_commit_ref_of_current_repository(),
+                )
+
+                keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                # add in sampleid keys
-                keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
-                # The analysis-runner output path doesn't want the BUCKET specified,
-                # so let's remove it from the output_prefix
-                # analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
-                # access_level = 'test'
-                subprocess.check_output([
-                        'generate_eqtl_spearman.py',
-                        *('--expression', expression),
-                        *('--covariates', covariates),
-                        *('--geneloc', geneloc),
-                        *('--keys', keys),
-                        *('--output-prefix', output_prefix),
-                ])
+                subprocess.check_output(
+                    ['python3',
+                     'generate_eqtl_spearman.py',
+                     *('--expression', expression),
+                     *('--covariates', covariates),
+                     *('--geneloc', geneloc),
+                     *('--keys', keys),
+                     *('--output-prefix', output_prefix),
+                     ]
+                     )
 
 
 if __name__ == '__main__':
