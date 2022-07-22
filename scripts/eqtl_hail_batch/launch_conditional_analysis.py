@@ -31,7 +31,6 @@ from cpg_utils.config import get_config
 @click.option(
     '--chromosomes',
     required=True,
-    multiple=True,
     help='List of chromosome numbers to run eQTL analysis on. Space separated, as one argument',  # noqa: E501; pylint: disable=line-too-long
 )
 @click.option(

@@ -582,6 +582,7 @@ def main(
         raise ValueError('No genes in get_number_of_scatters()')
 
     calculate_residuals_job = batch.new_python_job('calculate-residuals')
+    copy_common_env(calculate_residuals_job)
     residuals_df = calculate_residuals_job.call(
         calculate_residuals,
         expression_df=expression_df_literal,
@@ -590,6 +591,7 @@ def main(
     )
     # calculate and save log cpm values
     generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    copy_common_env(generate_log_cpm_output_job)
     generate_log_cpm_output_job.call(
         generate_log_cpm_output,
         expression_df=expression_df_literal,
@@ -625,6 +627,7 @@ def main(
         spearman_dfs_from_scatter.append(result)
 
     merge_job = batch.new_python_job(name='merge_scatters')
+    copy_common_env(merge_job)
     merge_job.cpu(2)
     # use a separate image for multipy, which is an extension of the hail driver image
     merge_job.image(MULTIPY_IMAGE)
