@@ -95,6 +95,7 @@ def submit_eqtl_jobs(
 
         path_to_expression_files = os.path.join(bucket_path, 'expression_files')
         logging.info(f'Going to fetch cell types from {path_to_expression_files}')
+        print(f'Going to fetch cell types from {path_to_expression_files}')
         blobs = bucket.list_blobs(prefix=path_to_expression_files + '/', delimiter='/')
         ending = '_expression.tsv'
 
@@ -104,6 +105,7 @@ def submit_eqtl_jobs(
             if b.name.endswith('_expression.tsv')
         ]
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+        print(f'Found {len(cell_types)} cell types: {cell_types}')
 
     backend = hb.ServiceBackend(
         billing_project=get_config()['hail']['billing_project'],
