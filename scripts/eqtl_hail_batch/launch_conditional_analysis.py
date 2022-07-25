@@ -13,7 +13,16 @@ For example:
 import logging
 import os
 import click
-import subprocess
+# import hail as hl
+import hailtop.batch as hb
+from cpg_utils.hail_batch import copy_common_env, remote_tmpdir
+from cpg_utils.git import (
+    get_git_commit_ref_of_current_repository,
+    get_organisation_name_from_current_directory,
+    get_repo_name_from_current_directory,
+    prepare_git_job,
+)
+from cpg_utils.config import get_config
 from google.cloud import storage
 
 
@@ -96,11 +105,17 @@ def submit_eqtl_jobs(
         ending = '_expression.tsv'
 
         cell_types = [
-            os.path.basename(b.name)[:-len(ending)]
+            os.path.basename(b.name)[: -len(ending)]
             for b in blobs
             if b.name.endswith('_expression.tsv')
         ]
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+
+    backend = hb.ServiceBackend(
+        billing_project=get_config()['hail']['billing_project'],
+        remote_tmpdir=remote_tmpdir(),
+    )
+    batch = hb.Batch(name='eqtl_spearman', backend=backend)
 
     for cell_type in cell_types:
         for chromosome in chromosomes:
@@ -122,23 +137,34 @@ def submit_eqtl_jobs(
                 for file in files_that_are_missing:
                     logging.error(f'File {file} is missing')
             else:
+                
+                job = batch.new_job(f'{cell_type}-chr{chromosome}')
+                copy_common_env(job)
+                job.image(get_config()['workflow']['driver_image'])
+                
+                # check out a git repository at the current commit
+                prepare_git_job(
+                    job=job,
+                    organisation=get_organisation_name_from_current_directory(),
+                    repo_name=get_repo_name_from_current_directory(),
+                    commit=get_git_commit_ref_of_current_repository(),
+                )
 
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                subprocess.check_output(
-                        ['python3',
-                         'conditional_analysis.py',
-                         *('--residuals', residuals),
-                         *('--significant-snps', significant_snps),
-                         *('--output-prefix', output_prefix),
-                         *(
-                            ['--test-subset-genes', str(test_subset_genes)]
-                            if test_subset_genes
-                            else []
-                            )
-                        ]
-                        )
+                job.command(
+                    f'python3 scripts/eqtl_hail_batch/conditional_analysis.py '
+                    f'--residuals {residuals} '
+                    f'--significant-snps {significant_snps} '
+                    f'--output-prefix {output_prefix} '
+                    f'[--test-subset-genes {str(test_subset_genes)}]'
+                    (
+                        f'--test-subset-genes {str(test_subset_genes)}'
+                        if test_subset_genes
+                        else []
+                    )
+                )
 
 
 if __name__ == '__main__':
