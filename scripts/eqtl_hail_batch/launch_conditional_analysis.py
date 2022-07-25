@@ -152,14 +152,12 @@ def submit_eqtl_jobs(
                     f'--residuals {residuals} '
                     f'--significant-snps {significant_snps} '
                     f'--output-prefix {output_prefix} '
-                    f'--test-subset-genes {str(test_subset_genes)}'
+                    (
+                        f'--test-subset-genes {test_subset_genes}'
+                        if test_subset_genes
+                        else ''
+                    )
                 )
-                #     (
-                #         f'--test-subset-genes {str(test_subset_genes)}'
-                #         if test_subset_genes
-                #         else []
-                #     )
-                # )
     
     batch.run(wait=False)
 
