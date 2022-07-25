@@ -165,6 +165,8 @@ def submit_eqtl_jobs(
                         else []
                     )
                 )
+    
+    batch.run(wait=False)
 
 
 if __name__ == '__main__':
