@@ -87,7 +87,7 @@ def submit_eqtl_jobs(
     bucket = cs_client.get_bucket(bucket_name)
     bucket_path = input_path.split(f'gs://{bucket_name}/')[-1]
 
-    if cell_types is None or len(cell_types) == 0:
+    if cell_types is None:
         # not provided (ie: use all cell types)
         # we can infer the cell types from the 'expression_files'
         # subdirectory of the input_path
