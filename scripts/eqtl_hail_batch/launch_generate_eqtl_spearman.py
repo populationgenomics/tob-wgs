@@ -96,7 +96,7 @@ def submit_eqtl_jobs(
         billing_project=get_config()['hail']['billing_project'],
         remote_tmpdir=remote_tmpdir(),
     )
-    batch = hb.Batch(name='eqtl_spearman', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
+    batch = hb.Batch(name='eqtl_spearman', backend=backend)
 
     for cell_type in cell_types:
         expression = os.path.join(
@@ -131,6 +131,7 @@ def submit_eqtl_jobs(
 
                 job = batch.new_job(f'{cell_type}-chr{chromosome}')
                 copy_common_env(job)
+                job.image(get_config()['workflow']['driver_image'])
                 
                 # check out a git repository at the current commit
                 prepare_git_job(
