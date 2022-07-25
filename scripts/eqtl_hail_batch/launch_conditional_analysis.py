@@ -155,7 +155,7 @@ def submit_eqtl_jobs(
                     (
                         f'--test-subset-genes {test_subset_genes}'
                         if test_subset_genes
-                        else ''
+                        else None
                     )
                 )
     
