@@ -146,7 +146,7 @@ def submit_eqtl_jobs(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
                 job.command(
-                    f'python3 generate_eqtl_spearman.py '
+                    f'python3 scripts/eqtl_hail_batch/generate_eqtl_spearman.py '
                     f'--expression {expression} '
                     f'--covariates {covariates} '
                     f'--geneloc {geneloc} '
