@@ -30,7 +30,6 @@ from google.cloud import storage
 @click.option(
     '--cell-types',
     default=None,
-    multiple=True,
     help='List of cell types to test. All available cell types can \
         be found in \
         `gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
