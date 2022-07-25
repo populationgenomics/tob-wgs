@@ -13,7 +13,7 @@ For example:
 import logging
 import os
 import click
-# import hail as hl
+import hail as hl
 import hailtop.batch as hb
 from cpg_utils.hail_batch import copy_common_env, remote_tmpdir
 from cpg_utils.git import (
@@ -87,12 +87,6 @@ def submit_eqtl_jobs(
     bucket = cs_client.get_bucket(bucket_name)
     bucket_path = input_path.split(f'gs://{bucket_name}/')[-1]
 
-    def file_exists(files):
-        file_status = storage.Blob(
-            bucket=bucket, name=files.split(bucket_name)[-1].strip('/')
-        ).exists(cs_client)
-        return file_status
-
     if cell_types is None:
         # not provided (ie: use all cell types)
         # we can infer the cell types from the 'expression_files'
@@ -132,7 +126,7 @@ def submit_eqtl_jobs(
                 # check all files exist before running
                 files_to_check = [residuals]
                 files_that_are_missing = filter(
-                    lambda x: not file_exists(x), files_to_check
+                    lambda x: not hl.hadoop_exists(x), files_to_check
                 )
                 for file in files_that_are_missing:
                     logging.error(f'File {file} is missing')
@@ -158,12 +152,7 @@ def submit_eqtl_jobs(
                     f'--residuals {residuals} '
                     f'--significant-snps {significant_snps} '
                     f'--output-prefix {output_prefix} '
-                    f'[--test-subset-genes {str(test_subset_genes)}]'
-                    (
-                        f'--test-subset-genes {str(test_subset_genes)}'
-                        if test_subset_genes
-                        else []
-                    )
+                    f'--test-subset-genes {str(test_subset_genes)}'
                 )
     
     batch.run(wait=False)
