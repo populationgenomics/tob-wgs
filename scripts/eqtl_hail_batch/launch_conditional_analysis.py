@@ -79,6 +79,7 @@ def submit_eqtl_jobs(
 
     assert output_dir.startswith('gs://') and input_path.startswith('gs://')
     chromosomes = chromosomes.split(' ')
+    print(chromosomes)
     assert isinstance(chromosomes, list)
 
     cs_client = storage.Client()
@@ -107,13 +108,14 @@ def submit_eqtl_jobs(
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
         print(f'Found {len(cell_types)} cell types: {cell_types}')
 
-    backend = hb.ServiceBackend(
-        billing_project=get_config()['hail']['billing_project'],
-        remote_tmpdir=remote_tmpdir(),
-    )
-    batch = hb.Batch(name='eqtl_spearman', backend=backend)
+    # backend = hb.ServiceBackend(
+    #     billing_project=get_config()['hail']['billing_project'],
+    #     remote_tmpdir=remote_tmpdir(),
+    # )
+    # batch = hb.Batch(name='eqtl_spearman', backend=backend)
 
     for cell_type in cell_types:
+        print(cell_type)
         for chromosome in chromosomes:
             residuals = os.path.join(
                 first_round_path, f'{cell_type}', f'chr{chromosome}', f'log_residuals.csv'
@@ -124,40 +126,40 @@ def submit_eqtl_jobs(
                 f'chr{chromosome}', 'correlation_results.tsv',
             )
 
-            if dry_run:
-                # check all files exist before running
-                files_to_check = [residuals]
-                files_that_are_missing = filter(
-                    lambda x: not hl.hadoop_exists(x), files_to_check
-                )
-                for file in files_that_are_missing:
-                    logging.error(f'File {file} is missing')
-            else:
+            # if dry_run:
+            #     # check all files exist before running
+            #     files_to_check = [residuals]
+            #     files_that_are_missing = filter(
+            #         lambda x: not hl.hadoop_exists(x), files_to_check
+            #     )
+            #     for file in files_that_are_missing:
+            #         logging.error(f'File {file} is missing')
+            # else:
                 
-                job = batch.new_job(f'{cell_type}-chr{chromosome}')
-                copy_common_env(job)
-                job.image(get_config()['workflow']['driver_image'])
+            #     job = batch.new_job(f'{cell_type}-chr{chromosome}')
+            #     copy_common_env(job)
+            #     job.image(get_config()['workflow']['driver_image'])
                 
-                # check out a git repository at the current commit
-                prepare_git_job(
-                    job=job,
-                    organisation=get_organisation_name_from_current_directory(),
-                    repo_name=get_repo_name_from_current_directory(),
-                    commit=get_git_commit_ref_of_current_repository(),
-                )
+            #     # check out a git repository at the current commit
+            #     prepare_git_job(
+            #         job=job,
+            #         organisation=get_organisation_name_from_current_directory(),
+            #         repo_name=get_repo_name_from_current_directory(),
+            #         commit=get_git_commit_ref_of_current_repository(),
+            #     )
 
-                output_prefix = os.path.join(
-                    output_dir, f'{cell_type}', f'chr{chromosome}'
-                )
-                job.command(
-                    f'python3 scripts/eqtl_hail_batch/conditional_analysis.py '
-                    f'--residuals {residuals} '
-                    f'--significant-snps {significant_snps} '
-                    f'--output-prefix {output_prefix} '
-                    f'--test-subset-genes {str(test_subset_genes)}'
-                )
+            #     output_prefix = os.path.join(
+            #         output_dir, f'{cell_type}', f'chr{chromosome}'
+            #     )
+            #     job.command(
+            #         f'python3 scripts/eqtl_hail_batch/conditional_analysis.py '
+            #         f'--residuals {residuals} '
+            #         f'--significant-snps {significant_snps} '
+            #         f'--output-prefix {output_prefix} '
+            #         f'--test-subset-genes {str(test_subset_genes)}'
+            #     )
     
-    batch.run(wait=False)
+    # batch.run(wait=False)
 
 
 if __name__ == '__main__':
