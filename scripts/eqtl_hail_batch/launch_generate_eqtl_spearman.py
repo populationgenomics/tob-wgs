@@ -96,7 +96,7 @@ def submit_eqtl_jobs(
         billing_project=get_config()['hail']['billing_project'],
         remote_tmpdir=remote_tmpdir(),
     )
-    batch = hb.Batch(name='eqtl_spearman', backend=backend)
+    batch = hb.Batch(name='eqtl_spearman', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     for cell_type in cell_types:
         expression = os.path.join(
@@ -129,7 +129,7 @@ def submit_eqtl_jobs(
                     logging.error(f'File {file} is missing')
             else:
 
-                job = batch.new_job('checkout_repo')
+                job = batch.new_job(f'{cell_type}-chr{chromosome}')
                 copy_common_env(job)
                 
                 # check out a git repository at the current commit
