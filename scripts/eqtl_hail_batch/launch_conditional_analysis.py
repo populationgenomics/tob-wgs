@@ -30,6 +30,7 @@ from google.cloud import storage
 @click.option(
     '--cell-types',
     default=None,
+    multiple=True,
     help='List of cell types to test. All available cell types can \
         be found in \
         `gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
@@ -86,7 +87,7 @@ def submit_eqtl_jobs(
     bucket = cs_client.get_bucket(bucket_name)
     bucket_path = input_path.split(f'gs://{bucket_name}/')[-1]
 
-    if cell_types is None:
+    if cell_types is None or len(cell_types) == 0:
         # not provided (ie: use all cell types)
         # we can infer the cell types from the 'expression_files'
         # subdirectory of the input_path
@@ -151,7 +152,11 @@ def submit_eqtl_jobs(
                     f'--residuals {residuals} '
                     f'--significant-snps {significant_snps} '
                     f'--output-prefix {output_prefix} '
-                    f'--test-subset-genes {str(test_subset_genes)}'
+                    (
+                        f'--test-subset-genes {str(test_subset_genes)}'
+                        if test_subset_genes
+                        else []
+                    )
                 )
     
     batch.run(wait=False)

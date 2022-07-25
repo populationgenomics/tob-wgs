@@ -365,11 +365,12 @@ def main(
     Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
     scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
     """
-    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
-    # get cell type to feed into run_computation_in_scatter
+    # get cell type info
     celltype = output_prefix.split('scrna-seq/')[-1].split('/')[0]
+
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
+    batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(
