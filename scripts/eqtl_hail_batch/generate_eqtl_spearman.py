@@ -220,11 +220,7 @@ def prepare_genotype_info(keys_path):
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
     vep = hl.read_matrix_table(VEP_ANNOTATION)
-    vep = vep.key_rows_by('locus')
-    mt = mt.key_rows_by('locus')
-    mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.locus].vep.regulatory_feature_consequences.biotype)
-    # change keys back to locus and alleles
-    mt = mt.key_rows_by('locus', 'alleles')
+    mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.row_key].vep.regulatory_feature_consequences.biotype)
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -350,6 +346,8 @@ def run_spearman_correlation_scatter(
     # computational time
     first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
+    # remove SNPs with no variance
+    mt = mt.filter_rows((hl.agg.all(mt.GT.n_alt_alleles() == 0)) | (hl.agg.all(mt.GT.n_alt_alleles() == 1)) | (hl.agg.all(mt.GT.n_alt_alleles() == 2)), keep=False)
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
@@ -385,9 +383,8 @@ def run_spearman_correlation_scatter(
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
-    snps_to_keep = set(gene_snp_df.snpid)
-    set_to_keep = hl.literal(snps_to_keep)
-    t = t.filter(set_to_keep.contains(t['snpid']))
+    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
+    t = t.filter(snps_to_keep.contains(t['snpid']))
     # only keep SNPs where all samples have an alt_allele value
     # (argument must be a string, a bytes-like object or a number)
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
@@ -458,19 +455,22 @@ def run_spearman_correlation_scatter(
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         snp = df.snpid
+        alleles = df.alleles
+        snp = df.snpid
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
         res_val = residuals_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # set spearmanr calculation to perform the calculation ignoring nan values
         coef, p = spearmanr(test_df['SNP'], test_df['residual'], nan_policy='omit')
-        return (gene_symbol, gene_id, snp, coef, p)
+        return (gene_symbol, gene_id, alleles, snp, coef, p)
 
     # run spearman correlation function
     spearman_df = pd.DataFrame(list(gene_snp_df.apply(spearman_correlation, axis=1)))
     spearman_df.columns = [
         'gene_symbol',
         'gene_id',
+        'alleles',
         'snp_id',
         'spearmans_rho',
         'p_value',
@@ -488,21 +488,15 @@ def run_spearman_correlation_scatter(
     t = hl.Table.from_pandas(spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    # get alleles
-    mt = mt.key_rows_by('locus')
-    t = t.key_by('locus')
-    t = t.annotate(
-        a1=mt.rows()[t.locus].alleles[0],
-        a2=hl.if_else(
-            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
-        ),
-    )
     # add in vep annotation
-    t = t.annotate(functional_annotation=mt.rows()[t.locus].vep_functional_anno)
+    t = t.key_by('locus', 'alleles')
+    t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
+    spearman_df['a1'] = spearman_df['alleles'].str[0]
+    spearman_df['a2'] = spearman_df['alleles'].str[1]
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
@@ -588,6 +582,7 @@ def main(
         raise ValueError('No genes in get_number_of_scatters()')
 
     calculate_residuals_job = batch.new_python_job('calculate-residuals')
+    copy_common_env(calculate_residuals_job)
     residuals_df = calculate_residuals_job.call(
         calculate_residuals,
         expression_df=expression_df_literal,
@@ -596,6 +591,7 @@ def main(
     )
     # calculate and save log cpm values
     generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    copy_common_env(generate_log_cpm_output_job)
     generate_log_cpm_output_job.call(
         generate_log_cpm_output,
         expression_df=expression_df_literal,
@@ -631,6 +627,7 @@ def main(
         spearman_dfs_from_scatter.append(result)
 
     merge_job = batch.new_python_job(name='merge_scatters')
+    copy_common_env(merge_job)
     merge_job.cpu(2)
     # use a separate image for multipy, which is an extension of the hail driver image
     merge_job.image(MULTIPY_IMAGE)

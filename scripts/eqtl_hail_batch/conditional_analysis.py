@@ -227,7 +227,7 @@ def run_computation_in_scatter(
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
-    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id']]
+    gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
@@ -240,6 +240,8 @@ def run_computation_in_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
+        a1 = df.a1
+        a2 = df.a2
         snp = df.snp_id
         gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
@@ -249,7 +251,7 @@ def run_computation_in_scatter(
         spearmans_rho, p = spearmanr(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
-        return (gene_symbol, gene_id, snp, spearmans_rho, p)
+        return (gene_symbol, gene_id, a1, a2, snp, spearmans_rho, p)
 
     # calculate spearman correlation
     adjusted_spearman_df = pd.DataFrame(
@@ -258,6 +260,8 @@ def run_computation_in_scatter(
     adjusted_spearman_df.columns = [
         'gene_symbol',
         'gene_id',
+        'a1',
+        'a2',
         'snp_id',
         'spearmans_rho',
         'p_value',
@@ -284,15 +288,6 @@ def run_computation_in_scatter(
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    # get alleles
-    mt = hl.read_matrix_table(FILTERED_MT).key_rows_by('locus')
-    t = t.key_by('locus')
-    t = t.annotate(
-        a1=mt.rows()[t.locus].alleles[0],
-        a2=hl.if_else(
-            hl.len(mt.rows()[t.locus].alleles) == 2, mt.rows()[t.locus].alleles[1], 'NA'
-        ),
-    )
     # turn back into pandas df and add additional information
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
@@ -347,12 +342,6 @@ def convert_dataframe_to_text(dataframe):
 @click.option('--residuals', required=True, help='A CSV of gene residuals, with genes \
     as columns and samples as rows.')
 @click.option(
-    '--keys',
-    required=True,
-    help='A TSV of sample ids to convert external to internal IDs. Rows contain \
-        sample ids, while columns contain OneK1K IDs and CPG IDs.',
-) 
-@click.option(
     '--output-prefix',
     required=True,
     help='A path prefix of where to output files, eg: gs://MyBucket/output-folder/',
@@ -368,7 +357,6 @@ def convert_dataframe_to_text(dataframe):
 def main(
     significant_snps: str,
     residuals,
-    keys,
     output_prefix: str,
     iterations=4,
     test_subset_genes=None,
@@ -377,11 +365,12 @@ def main(
     Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
     scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
     """
-    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name='eQTL', backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
-    # get cell type to feed into run_computation_in_scatter
+    # get cell type info
     celltype = output_prefix.split('scrna-seq/')[-1].split('/')[0]
+
+    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
+    batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     residual_df = pd.read_csv(AnyPath(residuals))
     significant_snps_df = pd.read_csv(AnyPath(

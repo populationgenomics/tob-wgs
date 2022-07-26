@@ -13,8 +13,16 @@ For example:
 import logging
 import os
 import click
-
-from analysis_runner.cli_analysisrunner import run_analysis_runner
+import hail as hl
+import hailtop.batch as hb
+from cpg_utils.hail_batch import copy_common_env, remote_tmpdir
+from cpg_utils.git import (
+    get_git_commit_ref_of_current_repository,
+    get_organisation_name_from_current_directory,
+    get_repo_name_from_current_directory,
+    prepare_git_job,
+)
+from cpg_utils.config import get_config
 from google.cloud import storage
 
 
@@ -30,8 +38,7 @@ from google.cloud import storage
 @click.option(
     '--chromosomes',
     required=True,
-    help='List of chromosome numbers to run eQTL analysis on. \
-        Space separated, as one argument',
+    help='List of chromosome numbers to run eQTL analysis on. Space separated, as one argument',  # noqa: E501; pylint: disable=line-too-long
 )
 @click.option(
     '--input-path',
@@ -80,13 +87,7 @@ def submit_eqtl_jobs(
     bucket = cs_client.get_bucket(bucket_name)
     bucket_path = input_path.split(f'gs://{bucket_name}/')[-1]
 
-    def file_exists(files):
-        file_status = storage.Blob(
-            bucket=bucket, name=files.split(bucket_name)[-1].strip('/')
-        ).exists(cs_client)
-        return file_status
-
-    if cell_types is None:
+    if cell_types is None or len(cell_types) == 0:
         # not provided (ie: use all cell types)
         # we can infer the cell types from the 'expression_files'
         # subdirectory of the input_path
@@ -95,13 +96,20 @@ def submit_eqtl_jobs(
         path_to_expression_files = os.path.join(bucket_path, 'expression_files')
         logging.info(f'Going to fetch cell types from {path_to_expression_files}')
         blobs = bucket.list_blobs(prefix=path_to_expression_files + '/', delimiter='/')
+        ending = '_expression.tsv'
 
         cell_types = [
-            os.path.basename(b.name)[:-15]
+            os.path.basename(b.name)[: -len(ending)]
             for b in blobs
             if b.name.endswith('_expression.tsv')
         ]
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+
+    backend = hb.ServiceBackend(
+        billing_project=get_config()['hail']['billing_project'],
+        remote_tmpdir=remote_tmpdir(),
+    )
+    batch = hb.Batch(name='eqtl_spearman', backend=backend)
 
     for cell_type in cell_types:
         for chromosome in chromosomes:
@@ -118,41 +126,37 @@ def submit_eqtl_jobs(
                 # check all files exist before running
                 files_to_check = [residuals]
                 files_that_are_missing = filter(
-                    lambda x: not file_exists(x), files_to_check
+                    lambda x: not hl.hadoop_exists(x), files_to_check
                 )
                 for file in files_that_are_missing:
                     logging.error(f'File {file} is missing')
             else:
+                
+                job = batch.new_job(f'{cell_type}-chr{chromosome}')
+                copy_common_env(job)
+                job.image(get_config()['workflow']['driver_image'])
+                
+                # check out a git repository at the current commit
+                prepare_git_job(
+                    job=job,
+                    organisation=get_organisation_name_from_current_directory(),
+                    repo_name=get_repo_name_from_current_directory(),
+                    commit=get_git_commit_ref_of_current_repository(),
+                )
 
                 output_prefix = os.path.join(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
-                # add in sampleid keys
-                keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
-                # The analysis-runner output path doesn't want the BUCKET specified,
-                # so let's remove it from the output_prefix
-                analysis_runner_output_path = output_prefix[5:].partition('/')[-1]
-                # get access level from bucket, rather than manual input
-                access_level = bucket_name.split('-')[-1]
-                run_analysis_runner(
-                    description=f'eqtl_spearman_{cell_type}_chr{chromosome}',
-                    dataset='tob-wgs',
-                    access_level=access_level,
-                    output_dir=analysis_runner_output_path,
-                    # commit, sha and cwd can be inferred automatically
-                    script=[
-                        'conditional_analysis.py',
-                        *('--residuals', residuals),
-                        *('--significant-snps', significant_snps),
-                        *('--output-prefix', output_prefix),
-                        *(
-                            ['--test-subset-genes', str(test_subset_genes)]
-                            if test_subset_genes
-                            else []
-                        ),
-                        *('--keys', keys),
-                    ],
-                )
+                job.command(
+                    f"""python3 scripts/eqtl_hail_batch/conditional_analysis.py \
+                    --residuals {residuals} \
+                    --significant-snps {significant_snps} \
+                    --output-prefix {output_prefix} \
+                    {f'--test-subset-genes {test_subset_genes}' if test_subset_genes else ''}
+                    """
+                    )
+    
+    batch.run(wait=False)
 
 
 if __name__ == '__main__':

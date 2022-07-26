@@ -50,7 +50,6 @@ analysis-runner --dataset tob-wgs \
         --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0' \
         --residuals 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0/log_residuals.csv' \
         --significant-snps 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0/correlation_results.tsv' \
-        --keys 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv' \
         --test-subset-genes 5 # test with 5 genes only
 ```
 
