@@ -44,13 +44,13 @@ from google.cloud import storage
     '--input-path',
     required=True,
     help=(
-        'A path prefix of where input files are located, eg: gs://MyBucket/folder/. '
+        'A path prefix of where input files are located. Version number must be included on the end. eg: gs://MyBucket/folder/v0. '
     ),
 )
 @click.option(
     '--output-dir',
     required=True,
-    help='A path of where to output files. Version number must be included on the end. eg: gs://MyBucket/output-folder/v0',
+    help='A path of where to output files. eg: gs://MyBucket/output-folder/',
 )
 @click.option('--dry-run', is_flag=True, help='Just check if files exist')
 def submit_eqtl_jobs(
