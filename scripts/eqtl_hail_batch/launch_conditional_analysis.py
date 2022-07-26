@@ -153,7 +153,7 @@ def submit_eqtl_jobs(
                     --significant-snps {significant_snps} \\
                     --output-prefix {output_prefix} \\
                     {f'--test-subset-genes {test_subset_genes}' if test_subset_genes else ''}
-                    """.strip()
+                    """
                     )
     
     batch.run(wait=False)
