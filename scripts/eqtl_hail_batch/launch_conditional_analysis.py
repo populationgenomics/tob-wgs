@@ -148,16 +148,13 @@ def submit_eqtl_jobs(
                     output_dir, f'{cell_type}', f'chr{chromosome}'
                 )
                 job.command(
-                    f'python3 scripts/eqtl_hail_batch/conditional_analysis.py '
-                    f'--residuals {residuals} '
-                    f'--significant-snps {significant_snps} '
-                    f'--output-prefix {output_prefix} '
-                    (
-                        f'--test-subset-genes {test_subset_genes}'
-                        if test_subset_genes
-                        else None
+                    f"""python3 scripts/eqtl_hail_batch/conditional_analysis.py \\
+                    --residuals {residuals} \\
+                    --significant-snps {significant_snps} \\
+                    --output-prefix {output_prefix} \\
+                    {f'--test-subset-genes {test_subset_genes}' if test_subset_genes else ''}
+                    """.strip()
                     )
-                )
     
     batch.run(wait=False)
 
