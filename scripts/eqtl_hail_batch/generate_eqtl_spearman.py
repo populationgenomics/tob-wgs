@@ -85,10 +85,6 @@ def get_number_of_scatters(expression_df, geneloc_df):
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = list(expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-    # subset genes to 10 test genes
-    # remove this when running on entire dataset
-    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
     return len(geneloc_df.index)
 
@@ -110,10 +106,6 @@ def get_log_expression(expression_df):
     sample_ids = expression_df.iloc[:, 0]
     to_log = expression_df.iloc[:, 1:].columns
     log_expression_df = expression_df[to_log].applymap(lambda x: np.log(x + 1))
-    # subset genes to 10 test genes
-    # remove this when running on entire dataset
-    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
-    log_expression_df = log_expression_df[log_expression_df.columns.intersection(genes_to_test)]
     log_expression_df.insert(loc=0, column='sampleid', value=sample_ids)
     # remove sc outlier samples
     log_expression_df = remove_sc_outliers(log_expression_df)
@@ -324,10 +316,6 @@ def run_spearman_correlation_scatter(
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
     geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
-    # subset genes to 10 test genes
-    # remove this when running on entire dataset
-    genes_to_test = ['ERAP2', 'LAMB1', 'POLR2J2', 'GBP7', 'GSTM3', 'CCDC163P', 'CTLA4', 'AIF1', 'BRCA1', 'IL7', 'HDHD5']
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(genes_to_test)]
 
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
