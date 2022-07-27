@@ -599,8 +599,7 @@ def main(
         prepare_genotype_info, keys_path=keys
     )
 
-    # for idx in range(n_genes_in_scatter):
-    for idx in range(5):
+    for idx in range(n_genes_in_scatter):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
         j.depends_on(filter_mt_job, calculate_residuals_job)
         j.cpu(2)
