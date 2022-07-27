@@ -322,7 +322,7 @@ def run_spearman_correlation_scatter(
     gene_info = geneloc_df.iloc[idx]
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
-    init_batch(driver_cores=8)
+    init_batch(driver_cores=8, worker_cores=4)
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     # this is important, since not all individuals have expression/residual
