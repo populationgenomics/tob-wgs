@@ -13,6 +13,7 @@ from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
+    output_path,
     copy_common_env,
     init_batch,
     remote_tmpdir,
@@ -171,7 +172,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
         data_summary.to_parquet(fp)
 
 
-def prepare_genotype_info(version, keys_path):
+def prepare_genotype_info(keys_path):
     """Filter hail matrix table
 
     Input:
@@ -185,7 +186,7 @@ def prepare_genotype_info(version, keys_path):
     """
 
     init_batch()
-    filtered_mt_path = dataset_path(f'scrna-seq/{version}/genotype_table.mt', 'tmp')
+    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if hl.hadoop_exists(filtered_mt_path):
         return filtered_mt_path
     
@@ -200,7 +201,7 @@ def prepare_genotype_info(version, keys_path):
     mt = mt.filter_entries(mt.GQ <= 20, keep=False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
     # checkpoint the mt so that it isn't evaluated multiple times
-    mt = mt.checkpoint(dataset_path(f'scrna-seq/{version}/genotype_table_checkpoint.mt', 'tmp'))
+    mt = mt.checkpoint(output_path('genotype_table_checkpoint.mt', 'tmp'))
     n_samples = mt.count_cols()
     call_rate = 0.8
     mt = mt.filter_rows(
@@ -553,11 +554,11 @@ def main(
     Creates a Hail Batch pipeline for calculating EQTLs
     """
 
-    # get cell type info
+    # get cell type info and chromosome info
     celltype = expression.split('/')[-1].split('_expression')[0]
-
-    # get version info
-    version = output_prefix.split('/')[-1]
+    chromosome = geneloc.split('_')[-1].removesuffix('.tsv')
+    # rename output prefix to have chromosome and cell type
+    output_prefix = os.path.join(output_prefix, f'{celltype}', f'{chromosome}')
 
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
@@ -595,7 +596,7 @@ def main(
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
     filtered_mt_path = filter_mt_job.call(
-        prepare_genotype_info, version=version, keys_path=keys
+        prepare_genotype_info, keys_path=keys
     )
 
     for idx in range(n_genes_in_scatter):

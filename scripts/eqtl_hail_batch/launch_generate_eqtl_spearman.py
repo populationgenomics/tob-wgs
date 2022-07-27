@@ -44,13 +44,13 @@ from google.cloud import storage
     '--input-path',
     required=True,
     help=(
-        'A path prefix of where input files are located. Version number must be included on the end. eg: gs://MyBucket/folder/v0. '
+        'A path prefix of where input files are located. eg: gs://MyBucket/folder. '
     ),
 )
 @click.option(
     '--output-dir',
     required=True,
-    help='A path of where to output files. eg: gs://MyBucket/output-folder/',
+    help='A path of where to output files. Version number must be included on the end. eg: gs://MyBucket/output-folder/v0',
 )
 @click.option('--dry-run', is_flag=True, help='Just check if files exist')
 def submit_eqtl_jobs(
@@ -136,18 +136,13 @@ def submit_eqtl_jobs(
                 )
 
                 keys = os.path.join(input_path, 'OneK1K_CPG_IDs.tsv')
-                version = output_dir.split('/')[-1]
-                # put version number at end of output path
-                output_prefix = os.path.join(
-                    output_dir.strip(version), f'{cell_type}', f'chr{chromosome}', f'{version}'
-                )
                 job.command(
                     f'python3 scripts/eqtl_hail_batch/generate_eqtl_spearman.py '
                     f'--expression {expression} '
                     f'--covariates {covariates} '
                     f'--geneloc {geneloc} '
                     f'--keys {keys} '
-                    f'--output-prefix {output_prefix}'
+                    f'--output-prefix {output_dir}'
                 )
 
     batch.run(wait=False)
