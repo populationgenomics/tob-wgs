@@ -602,7 +602,7 @@ def main(
     # for idx in range(n_genes_in_scatter):
     for idx in range(5):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
-        j.depends_on(filter_mt_job)
+        j.depends_on(filter_mt_job, calculate_residuals_job)
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
