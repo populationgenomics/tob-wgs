@@ -333,7 +333,9 @@ def run_spearman_correlation_scatter(
 
     # Do this only on SNPs contained within 1Mb gene region to save on
     # computational time
-    first_and_last_snp = chromosome + ':' + str(gene_info.left) + '-' + str(gene_info.right+1)
+    right_boundary = min(gene_info.right+1, hl.get_reference('GRCh38').lengths[chromosome])
+    left_boundary = max(1, gene_info.left)
+    first_and_last_snp = f'{chromosome}:{left_boundary}-{right_boundary}'
     mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
     # remove SNPs with no variance
     mt = mt.filter_rows((hl.agg.all(mt.GT.n_alt_alleles() == 0)) | (hl.agg.all(mt.GT.n_alt_alleles() == 1)) | (hl.agg.all(mt.GT.n_alt_alleles() == 2)), keep=False)
