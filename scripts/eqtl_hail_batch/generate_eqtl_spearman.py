@@ -307,6 +307,9 @@ def run_spearman_correlation_scatter(
     spearmans rho, and gene information.
     """
 
+    # import multipy here to avoid issues with driver image updates
+    from multipy.fdr import qvalue 
+
     # calculate log expression values
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
     log_expression_df = get_log_expression(expression_df)
@@ -491,25 +494,17 @@ def run_spearman_correlation_scatter(
     spearman_df['association_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
     spearman_df['variant_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
     spearman_df['snp_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
-    
-    return spearman_df
-
-
-def merge_df_and_convert_to_string(*df_list):
-    """Merge all Spearman dfs and convert to string using .to_string() on df"""
-    
-    # import multipy here to avoid issues with driver image updates
-    from multipy.fdr import qvalue 
-
-    merged_df: pd.DataFrame = pd.concat(df_list)
-    pvalues = merged_df['p_value']
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
+    pvalues = spearman_df['p_value']
     _, qvals = qvalue(pvalues)
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
-    merged_df = merged_df.assign(fdr=fdr_values)
-    merged_df['fdr'] = merged_df.fdr.astype(float)
-    return merged_df.to_csv(index=False, sep='\t')
+    spearman_df = spearman_df.assign(fdr=fdr_values)
+    spearman_df['fdr'] = spearman_df.fdr.astype(float)
+    # Save file
+    spearman_df_path = AnyPath(output_prefix) / 'parquet/correlation_results_{gene}.parquet'
+    with spearman_df_path.open('wb') as fp:
+        spearman_df.to_parquet(fp)
 
 
 # Create click command line to enter dependency files
@@ -603,6 +598,7 @@ def main(
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
+        j.image(MULTIPY_IMAGE)
         copy_common_env(j)
         result: hb.resource.PythonResult = j.call(
             run_spearman_correlation_scatter,
@@ -616,18 +612,6 @@ def main(
         )
         spearman_dfs_from_scatter.append(result)
 
-    merge_job = batch.new_python_job(name='merge_scatters')
-    copy_common_env(merge_job)
-    merge_job.cpu(2)
-    # use a separate image for multipy, which is an extension of the hail driver image
-    merge_job.image(MULTIPY_IMAGE)
-    merge_job.memory('8Gi')
-    merge_job.storage('2Gi')
-    result_second = merge_job.call(
-        merge_df_and_convert_to_string, *spearman_dfs_from_scatter
-    )
-    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.tsv')
-    batch.write_output(result_second.as_str(), corr_result_output_path)
     batch.run(wait=False)
 
 
