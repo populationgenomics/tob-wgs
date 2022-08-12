@@ -4,9 +4,9 @@ import pandas as pd
 
 # get OneK1K sample ID as an argument using click
 @click.command()
-@click.option("--onek1k-id", required=True)
-@click.option("--gene-name", required=True)
-@click.option("--chrom", required=True)
+@click.option('--onek1k-id', required=True)
+@click.option('--gene-name', required=True)
+@click.option('--chrom', required=True)
 
 # for a given individual,
 # and gene(s?) for which that individual is an expression outlier
@@ -37,7 +37,7 @@ def main(
     print(cpg_id) # 'CPG9951' 
 
     # define output filename and check if it already exists
-    output_filename = cpg_id + "-" + gene_name + ".csv"
+    output_filename = cpg_id + '-' + gene_name + '.csv'
 
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
@@ -53,7 +53,7 @@ def main(
     interval_end = float(gene_df[gene_df['gene_name'] == gene_name]['end'])+10000
 
     # get gene-specific genomic interval
-    gene_interval = "chr"+chrom+":"+str(interval_start)+"-"+str(interval_end) # 'chr22:23219960-23348287'
+    gene_interval = 'chr'+chrom+':'+str(interval_start)+'-'+str(interval_end) # 'chr22:23219960-23348287'
     print(gene_interval) # switch print to log
     donor_mt = hl.filter_intervals(donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')])
 
@@ -77,14 +77,15 @@ def main(
     cadd_list = donor_mt.cadd.PHRED.collect()
 
     results_data = {
-        "onek1k_id": onek1k_id, 
-        "cpg_id": cpg_id,
-        "gene_id": gene_id,
-        "variant_id": donor_mt.row_key[0].collect(),
-        "cadd": cadd_list
+        'onek1k_id': onek1k_id, 
+        'cpg_id': cpg_id,
+        'gene_name': gene_name,
+        'variant_id': donor_mt.row_key[0].collect(),
+        'cadd': cadd_list
         }
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(results_data)
     df.to_csv(output_filename)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
