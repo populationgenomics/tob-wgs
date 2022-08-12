@@ -89,12 +89,23 @@ def main(
     # get CADD scores
     cadd_list = donor_mt.cadd.PHRED.collect()
 
+
+
+    # get MAF within sample 
+    # by selecting the appropriate rows in the full object
+    relevant_loci = donor_mt.row_key.collect()
+    mt = mt.filter_rows(hl.set(relevant_loci).contains(mt.row_key))
+    # calculating their variant QC
+    mt = hl.variant_qc(mt)
+    maf_sample_list = mt.AF[0].collect()
+
     results_data = {
         'onek1k_id': onek1k_id,
         'cpg_id': cpg_id,
         'gene_name': gene_name,
         'variant_id': donor_mt.row_key[0].collect(),
         'cadd': cadd_list,
+        'maf (OneK1K)': maf_sample_list,
     }
     df = pd.DataFrame(results_data)
     df.to_csv(output_filename)
