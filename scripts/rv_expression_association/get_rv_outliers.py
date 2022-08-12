@@ -1,5 +1,5 @@
-import hl as hail
-import pandas as pandas
+import hail as hl
+import pandas as pd
 
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 
@@ -27,7 +27,7 @@ donor_mt = donor_mt.annotate_rows(cadd=ref_ht[donor_mt.row_key].cadd)
 cadd_list = donor_mt.cadd.PHRED.collect()
 
 # plot histogram of CADD scores
-dp_hist = donor_mt_noref.aggregate_entries(hl.expr.aggregators.hist(donor_mt.cadd.PHRED, 0, 30, 30))
+dp_hist = donor_mt.aggregate_entries(hl.expr.aggregators.hist(donor_mt.cadd.PHRED, 0, 30, 30))
 p = hl.plot.histogram(dp_hist, legend='CADD score', title='CADD score Histogram')
 
 # figure out how / and if I can save that list
