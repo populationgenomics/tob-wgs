@@ -1,5 +1,17 @@
 import hail as hl
 
+# for a given individual,
+# get genes for which that individual is an expression outlier
+# get all variants within a window, and annotate with the following:
+# CADD score
+# MAF within OneK1K
+# MAF in gnomad
+# regulatory information from VEP
+# other?
+
+# create the following table:
+# donor ID | gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | ..
+
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 
 # 'CPG9951' (943_944) is an expression outlier for gene: 'IGLL5'
