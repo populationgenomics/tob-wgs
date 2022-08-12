@@ -92,7 +92,7 @@ def main(
 
     # get gnomad MAF (both popmax and nfe)
 
-    # get MAF within sample 
+    # get MAF within sample
     # by selecting the appropriate rows in the full object
     relevant_loci = donor_mt.row_key.collect()
     mt = mt.filter_rows(hl.set(relevant_loci).contains(mt.row_key))
