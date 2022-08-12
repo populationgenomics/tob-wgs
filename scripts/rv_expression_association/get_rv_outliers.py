@@ -48,6 +48,7 @@ def main(
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
+    # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
     # include variants up to 10kb up- and downstream
     gene_file = (
@@ -89,7 +90,7 @@ def main(
     # get CADD scores
     cadd_list = donor_mt.cadd.PHRED.collect()
 
-
+    # get gnomad MAF (both popmax and nfe)
 
     # get MAF within sample 
     # by selecting the appropriate rows in the full object
@@ -98,6 +99,8 @@ def main(
     # calculating their variant QC
     mt = hl.variant_qc(mt)
     maf_sample_list = mt.AF[0].collect()
+
+    # get relevant regulatory info from VEP (enough?)
 
     results_data = {
         'onek1k_id': onek1k_id,
