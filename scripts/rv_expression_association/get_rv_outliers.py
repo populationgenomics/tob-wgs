@@ -1,5 +1,4 @@
 import hail as hl
-import pandas as pd
 
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 
