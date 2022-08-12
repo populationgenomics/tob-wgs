@@ -20,7 +20,10 @@ donor_mt = donor_mt.filter_rows(donor_mt.variant_qc.n_non_ref > 0)
 
 # annotate variants with CADD scores etc
 ref_ht = hl.read_table('gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht')
-donor_mt = donor_mt.annotate_rows(cadd=ref_ht[donor_mt.row_key].cadd)
+donor_mt = donor_mt.annotate_rows(
+    cadd=ref_ht[donor_mt.row_key].cadd,
+    gnomad_genomes=ht[donor_mt.row_key].gnomad_genomes
+)
 
 # get CADD scores
 cadd_list = donor_mt.cadd.PHRED.collect()
