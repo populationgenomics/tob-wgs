@@ -37,7 +37,7 @@ def main(
     print(cpg_id) # 'CPG9951' 
 
     # define output filename and check if it already exists
-    output_filename = cpg_id + "-" gene_name + ".csv"
+    output_filename = cpg_id + "-" + gene_name + ".csv"
 
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
@@ -45,12 +45,8 @@ def main(
     # select matrix down to that one donor 
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
-    # from this file on Garvan HPC: /share/ScratchGeneral/anncuo/OneK1K/GeneLocations.tsv
-    # the row corresponding to IGLL5 looks like this:
-    # gene_name  gene_id          seqid  start     end       strand
-    # IGLL5      ENSG00000254709  22     23229960  23238287  +
-    # so adding 10kb upstream and downstream, 
-    # i get the interval: 23,229,960 - 10,000 : 23,238,287 + 10,000: 22:23219960-23348287
+    # get gene body position (start and end) and build interval
+    # include variants up to 10kb up- and downstream
     gene_file = 'gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr'+chrom+'.tsv'
     gene_df = pd.read_csv(gene_file, sep='\t', index_col=0)
     interval_start = float(gene_df[gene_df['gene_name'] == gene_name]['start'])-10000
@@ -70,7 +66,7 @@ def main(
     # filter for biallelic only
     donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)
 
-    # annotate variants with CADD scores etc
+    # annotate variants with CADD scores, gnomad etc
     ref_ht = hl.read_table('gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht')
     donor_mt = donor_mt.annotate_rows(
         cadd=ref_ht[donor_mt.row_key].cadd,
@@ -84,7 +80,9 @@ def main(
         "onek1k_id": onek1k_id, 
         "cpg_id": cpg_id,
         "gene_id": gene_id,
-        "variant_id": }
+        "variant_id": donor_mt.row_key[0].collect(),
+        "cadd": cadd_list
+        }
     df = pd.DataFrame(data)
     df.to_csv(output_filename)
 
