@@ -16,7 +16,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 @click.option('--chrom', required=True)
 @click.option('--output_folder', required=True)
 
-""" for a given individual,
+"""for a given individual,
 # and gene for which that individual is an expression outlier
 # get all variants within a window,
 ####
