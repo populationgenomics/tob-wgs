@@ -10,12 +10,10 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
-
 @click.option('--onek1k-id', required=True)
 @click.option('--gene-name', required=True)
 @click.option('--chrom', required=True)
 @click.option('--output_folder', required=True)
-
 def main(
     onek1k_id: str,
     gene_name: str,
@@ -39,7 +37,7 @@ def main(
     create the following table:
     donor ID | gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | ..
     """
-    
+
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
     sample_key_filename = (
         'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
