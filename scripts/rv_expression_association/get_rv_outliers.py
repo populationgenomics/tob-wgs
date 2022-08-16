@@ -17,7 +17,7 @@ logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
 # for a given individual,
 # and gene for which that individual is an expression outlier
-# get all variants within a window, 
+# get all variants within a window,
 
 # then filter for variants that:
 # are alt (0/1 or 1/1) for that individual
@@ -49,11 +49,11 @@ def main(
     sample_key_df = pd.read_csv(sample_key_filename, sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df['OneK1K_ID'] == onek1k_id]['InternalID']
-    logging.info("CPG ID: {}".format(cpg_id)) # e.g., 'CPG9951'
+    logging.info("CPG ID: {}".format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
     output_filename = os.path.join(output_folder, cpg_id, '-', gene_name, '.csv')
-    logging.info("Output file: {}".format(output_filename)) 
+    logging.info("Output file: {}".format(output_filename))
 
     # skip if file already exists
     if os.path.exists(output_filename):
@@ -93,17 +93,29 @@ def main(
     # remove variants for which this individual is 0/0
     donor_mt = hl.variant_qc(donor_mt)
     donor_mt = donor_mt.filter_rows(donor_mt.variant_qc.n_non_ref > 0)
-    logging.info("Number of non-ref variants for this indvidual: {}".format(donor_mt.count()[0]))
+    logging.info(
+        "Number of non-ref variants for this indvidual: {}".format(donor_mt.count()[0])
+    )
 
     # focus on SNVs for now
     donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
     donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)
-    logging.info("Number of variants after filtering for biallelic SNVs: {}".format(donor_mt.count()[0]))
+    logging.info(
+        "Number of variants after filtering for biallelic SNVs: {}".format(
+            donor_mt.count()[0]
+        )
+    )
 
     # filter to only variants with some regulatory consequences
-    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.vep.regulatory_feature_consequences) > 0)
-    logging.info("Number of variants after filtering for variants with regulatory consequences: {}".format(donor_mt.count()[0]))
+    donor_mt = donor_mt.filter_rows(
+        hl.len(donor_mt.vep.regulatory_feature_consequences) > 0
+    )
+    logging.info(
+        "Number of variants after filtering for variants with regulatory consequences: {}".format(
+            donor_mt.count()[0]
+        )
+    )
 
     # annotate variants with CADD scores, gnomad etc
     ref_ht = hl.read_table(
@@ -129,7 +141,9 @@ def main(
     maf_sample_list = mt.variant_qc.AF[0].collect()
 
     # get relevant regulatory info from VEP (biotype)
-    regulatory_consequences = donor_mt.vep.regulatory_feature_consequences['biotype'].collect()
+    regulatory_consequences = donor_mt.vep.regulatory_feature_consequences[
+        'biotype'
+    ].collect()
 
     results_data = {
         'onek1k_id': onek1k_id,
@@ -147,5 +161,3 @@ def main(
 
 if __name__ == '__main__':
     main()
-
-
