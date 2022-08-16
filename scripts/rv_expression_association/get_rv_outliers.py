@@ -6,7 +6,7 @@ import hail as hl
 import pandas as pd
 
 # use logging to print statements, display at info level
-logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
@@ -39,9 +39,6 @@ def main(
     chrom: str,
     output_folder: str,
 ):
-
-    # 'CPG9951' (943_944) is an expression outlier for gene: 'IGLL5'
-
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
     sample_key_filename = (
         'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
@@ -49,15 +46,15 @@ def main(
     sample_key_df = pd.read_csv(sample_key_filename, sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df['OneK1K_ID'] == onek1k_id]['InternalID']
-    logging.info("CPG ID: {}".format(cpg_id))  # e.g., 'CPG9951'
+    logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
     output_filename = os.path.join(output_folder, cpg_id, '-', gene_name, '.csv')
-    logging.info("Output file: {}".format(output_filename))
+    logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
     if os.path.exists(output_filename):
-        logging.info("File already exists, exiting")
+        logging.info('File already exists, exiting')
         sys.exit()
 
     # get VEP-annotated WGS object (hail matrix table)
@@ -66,7 +63,7 @@ def main(
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
-    logging.info("Number of total variants: {}".format(donor_mt.count()[0]))
+    logging.info('Number of total variants: {}'.format(donor_mt.count()[0]))
 
     # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
@@ -88,13 +85,13 @@ def main(
     donor_mt = hl.filter_intervals(
         donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
     )
-    logging.info("Number of variants within interval: {}".format(donor_mt.count()[0]))
+    logging.info('Number of variants within interval: {}'.format(donor_mt.count()[0]))
 
     # remove variants for which this individual is 0/0
     donor_mt = hl.variant_qc(donor_mt)
     donor_mt = donor_mt.filter_rows(donor_mt.variant_qc.n_non_ref > 0)
     logging.info(
-        "Number of non-ref variants for this indvidual: {}".format(donor_mt.count()[0])
+        'Number of non-ref variants for this indvidual: {}'.format(donor_mt.count()[0])
     )
 
     # focus on SNVs for now
@@ -102,7 +99,7 @@ def main(
     # filter for biallelic only
     donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)
     logging.info(
-        "Number of variants after filtering for biallelic SNVs: {}".format(
+        'Number of variants after filtering for biallelic SNVs: {}'.format(
             donor_mt.count()[0]
         )
     )
@@ -112,7 +109,7 @@ def main(
         hl.len(donor_mt.vep.regulatory_feature_consequences) > 0
     )
     logging.info(
-        "Number of variants after filtering for variants with regulatory consequences: {}".format(
+        'Number of variants after filtering for variants with regulatory consequences: {}'.format(
             donor_mt.count()[0]
         )
     )
@@ -144,6 +141,8 @@ def main(
     regulatory_consequences = donor_mt.vep.regulatory_feature_consequences[
         'biotype'
     ].collect()
+
+    # get gene info
 
     results_data = {
         'onek1k_id': onek1k_id,
