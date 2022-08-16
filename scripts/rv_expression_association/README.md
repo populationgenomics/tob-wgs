@@ -19,3 +19,11 @@ In order to test for associations between a gene's expression and a set of varia
 
 #### Run association 
 TO DO
+
+## Systematic analysis
+
+For all genes (with some criterion, e.g. min expression) create a similar file as above, this time without donor annotations (and therefore without filter for variants with alt allele for that one specific individual:
+
+```gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | regulatory consequences (VEP) | ...```
+
+Then generate input files (including converting to plink etc) for whatever association tool we have established as optimal.
