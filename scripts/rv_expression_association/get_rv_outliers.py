@@ -18,20 +18,19 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 # for a given individual,
 # and gene for which that individual is an expression outlier
 # get all variants within a window,
-
+####
 # then filter for variants that:
 # are alt (0/1 or 1/1) for that individual
 # are biallelic SNVs
 # have regulatory consequences based on VEP annotations
-
+####
 # also annotate variants with the following:
 # CADD score
 # MAF within the OneK1K sample
 # MAF in gnomad
-
+####
 # create the following table:
 # donor ID | gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | ..
-
 
 def main(
     onek1k_id: str,
