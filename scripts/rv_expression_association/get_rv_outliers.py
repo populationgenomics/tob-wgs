@@ -8,6 +8,7 @@ import pandas as pd
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
 @click.option('--onek1k-id', required=True)
