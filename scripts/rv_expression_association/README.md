@@ -15,7 +15,8 @@ CADD scores and MAF are annotated but not filtered for.
 #### Convert genotypes to plink format
 In order to test for associations between a gene's expression and a set of variants (using CellRegMap, or SAIGE-GENE), the specific sets of variants need (for now?) to be converted back to plink format files (bed, bim, fam).
 
-[This script]() does that for a specific gene using the file generated above.
+[This future script]() does that for a specific gene using the file generated above.
+TO DO
 
 #### Run association 
 TO DO
