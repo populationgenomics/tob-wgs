@@ -501,10 +501,10 @@ def run_spearman_correlation_scatter(
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
     spearman_df = spearman_df.assign(fdr=fdr_values)
     spearman_df['fdr'] = spearman_df.fdr.astype(float)
-    # # Save file
-    # spearman_df_path = AnyPath(output_prefix) / 'parquet/correlation_results_{gene}.parquet'
-    # with spearman_df_path.open('wb') as fp:
-    #     spearman_df.to_parquet(fp)
+    # Save file
+    spearman_df_path = AnyPath(output_prefix) / 'parquet/correlation_results_{gene}.parquet'
+    with spearman_df_path.open('wb') as fp:
+        spearman_df.to_parquet(fp)
 
 
 # Create click command line to enter dependency files
