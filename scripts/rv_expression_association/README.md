@@ -10,5 +10,12 @@ The first step for this analysis is to construct a set of "true associations" by
 Variants are only included if they are also annotated to have regulatory consequences (from VEP).
 CADD scores and MAF are annotated but not filtered for.
 
-### Convert to plink format
-In order to test for associations between a gene's expression and a set of variants (using CellRegMap, or SAIGE-GENE), the specific set of variants needs to be converted back to plink format files (bed, bim, fam).
+### Test them for association
+
+#### Convert genotypes to plink format
+In order to test for associations between a gene's expression and a set of variants (using CellRegMap, or SAIGE-GENE), the specific sets of variants need (for now?) to be converted back to plink format files (bed, bim, fam).
+
+[This script]() does that for a specific gene using the file generated above.
+
+#### Run association 
+TO DO
