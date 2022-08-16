@@ -143,6 +143,9 @@ def main(
     ].collect()
 
     # get gene info
+    gene_start = gene_df[gene_df['gene_name'] == gene_name]['start']
+    gene_end = gene_df[gene_df['gene_name'] == gene_name]['end']
+    ensembl_gene_id = gene_df[gene_df['gene_name'] == gene_name].index[0]
 
     results_data = {
         'onek1k_id': onek1k_id,
@@ -153,6 +156,10 @@ def main(
         'maf_onek1k': maf_sample_list,
         'maf_gnomad_popmax': maf_popmax,
         'regulatory_consequences': regulatory_consequences,
+        'ensembl_gene_id': ensembl_gene_id,
+        'chrom': chrom,
+        'gene_start': int(gene_start),
+        'gene_end': int(gene_end),
     }
     df = pd.DataFrame(results_data)
     df.to_csv(output_filename)
