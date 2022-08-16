@@ -10,12 +10,13 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
+
 @click.option('--onek1k-id', required=True)
 @click.option('--gene-name', required=True)
 @click.option('--chrom', required=True)
 @click.option('--output_folder', required=True)
 
-# for a given individual,
+""" for a given individual,
 # and gene for which that individual is an expression outlier
 # get all variants within a window,
 ####
@@ -31,6 +32,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 ####
 # create the following table:
 # donor ID | gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | ..
+"""
 
 def main(
     onek1k_id: str,
