@@ -12,7 +12,12 @@ CADD scores and MAF are annotated but not filtered for.
 
 To run this script using the analysis runner, run:
 ```
-analysis-runner --dataset "tob-wgs" --description "get set of variants for given outlier" --access-level "test" -o tob_wgs_rv/expression_outliers get_rv_outliers.py --onek1k-id "943_944" --gene-name "IGLL5" --chrom "22" --output-folder "tob_wgs_rv/expression_outliers"
+analysis-runner --dataset "tob-wgs" \
+    --description "get set of variants for given outlier" \
+    --access-level "test" \
+    --output-dir "tob_wgs_rv/expression_outliers" \
+    get_rv_outliers.py --onek1k-id "943_944" --gene-name "IGLL5" --chrom "22" \
+    --output-folder "tob_wgs_rv/expression_outliers"
 ```
 
 ### Test them for association
