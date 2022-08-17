@@ -50,7 +50,7 @@ def main(
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
-    output_filename = output_path(f'{cpg_id}_{gene_name}.csv)
+    output_filename = output_path(f'{cpg_id}_{gene_name}.csv')
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
