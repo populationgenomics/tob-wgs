@@ -1,5 +1,3 @@
-import os
-import sys
 import click
 import logging
 import hail as hl
@@ -53,9 +51,8 @@ def main(
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
-    if os.path.exists(output_filename):
-        logging.info('File already exists, exiting')
-        sys.exit()
+    if output_file.exists():
+        raise Exception(f'File {output_filename} already exists, exiting')
 
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
