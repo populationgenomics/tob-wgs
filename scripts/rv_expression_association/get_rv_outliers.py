@@ -4,6 +4,7 @@ import click
 import logging
 import hail as hl
 import pandas as pd
+from cpg_utils.hail_batch import output_path
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -49,7 +50,7 @@ def main(
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
-    output_filename = os.path.join(output_folder, cpg_id, '-', gene_name, '.csv')
+    output_filename = output_path(f'{cpg_id}_{gene_name}.csv)
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
@@ -69,7 +70,7 @@ def main(
     # get gene body position (start and end) and build interval
     # include variants up to 10kb up- and downstream
     gene_file = (
-        'gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr'
+        'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr'
         + chrom
         + '.tsv'
     )
