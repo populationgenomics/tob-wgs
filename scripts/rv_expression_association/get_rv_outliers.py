@@ -5,6 +5,7 @@ import logging
 import hail as hl
 import pandas as pd
 from cpg_utils.hail_batch import output_path
+from cloudpathlib import AnyPath
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
