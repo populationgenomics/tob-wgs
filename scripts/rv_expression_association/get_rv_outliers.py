@@ -49,7 +49,7 @@ def main(
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
-    output_file = AnyPath(output_path(f'{cpg_id}_{gene_name}.csv'))
+    output_filename = AnyPath(output_path(f'{cpg_id}_{gene_name}.csv'))
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
@@ -162,7 +162,7 @@ def main(
         'gene_end': int(gene_end),
     }
     df = pd.DataFrame(results_data)
-    df.to_csv(output_file.open())
+    df.to_csv(output_filename.open())
 
 
 if __name__ == '__main__':
