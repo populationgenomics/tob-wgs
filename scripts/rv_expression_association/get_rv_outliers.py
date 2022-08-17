@@ -15,12 +15,10 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 @click.option('--onek1k-id', required=True)
 @click.option('--gene-name', required=True)
 @click.option('--chrom', required=True)
-@click.option('--output_folder', required=True)
 def main(
     onek1k_id: str,
     gene_name: str,
     chrom: str,
-    output_folder: str,
 ):
     """for a given individual,
     and gene for which that individual is an expression outlier
