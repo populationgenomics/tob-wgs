@@ -51,7 +51,7 @@ def main(
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
-    if output_file.exists():
+    if output_filename.exists():
         raise Exception(f'File {output_filename} already exists, exiting')
 
     # get VEP-annotated WGS object (hail matrix table)
