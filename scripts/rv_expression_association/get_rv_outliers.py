@@ -95,9 +95,6 @@ def main(
         'Number of non-ref variants for this indvidual: {}'.format(donor_mt.count()[0])
     )
 
-    # retain info about het variants
-    is_het_list = donor_mt.variant_qc.n_het.collect()
-
     # focus on SNVs for now
     donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
@@ -117,6 +114,9 @@ def main(
             donor_mt.count()[0]
         )
     )
+
+    # retain info about het variants
+    is_het_list = donor_mt.variant_qc.n_het.collect()
 
     # annotate variants with CADD scores, gnomad etc
     logging.info('Annotate variants with CADD scores and gnomad AF')
