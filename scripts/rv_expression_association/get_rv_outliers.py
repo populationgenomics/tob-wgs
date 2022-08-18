@@ -80,8 +80,8 @@ def main(
     # get gene-specific genomic interval
     gene_interval = (
         'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
-    )  # 'chr22:23219960-23348287'
-    print(gene_interval)  # switch print to log
+    )  
+    logging.info('Interval considered: {}'.format(gene_interval)) # 'chr22:23219960-23348287'
     donor_mt = hl.filter_intervals(
         donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
     )
@@ -93,6 +93,9 @@ def main(
     logging.info(
         'Number of non-ref variants for this indvidual: {}'.format(donor_mt.count()[0])
     )
+
+    # retain info about het variants
+    is_het_list = donor_mt.variant_qc.n_het.collect()
 
     # focus on SNVs for now
     donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
@@ -152,6 +155,7 @@ def main(
         'cpg_id': cpg_id,
         'gene_name': gene_name,
         'variant_id': donor_mt.row_key[0].collect(),
+        'is_het': is_het_list,
         'cadd': cadd_list,
         'maf_onek1k': maf_sample_list,
         'maf_gnomad_popmax': maf_popmax,
