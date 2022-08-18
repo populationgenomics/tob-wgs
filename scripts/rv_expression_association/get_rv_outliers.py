@@ -162,7 +162,7 @@ def main(
         'gene_end': int(gene_end),
     }
     df = pd.DataFrame(results_data)
-    df.to_csv(output_filename.open())
+    df.to_csv(output_filename.open('w'))
 
 
 if __name__ == '__main__':
