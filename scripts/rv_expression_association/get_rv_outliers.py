@@ -1,3 +1,5 @@
+"#!/usr/bin/env python3"
+
 import click
 import logging
 import hail as hl
