@@ -74,8 +74,8 @@ def main(
         + '.tsv'
     )
     gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
-    interval_start = float(gene_df[gene_df['gene_name'] == gene_name]['start']) - 10000
-    interval_end = float(gene_df[gene_df['gene_name'] == gene_name]['end']) + 10000
+    interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - 10000
+    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + 10000
 
     # get gene-specific genomic interval
     gene_interval = (
