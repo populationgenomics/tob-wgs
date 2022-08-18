@@ -139,7 +139,7 @@ def main(
     mt = mt.filter_rows(hl.set(relevant_loci).contains(mt.row_key))
     # calculating their variant QC
     mt = hl.variant_qc(mt)
-    maf_sample_list = mt.variant_qc.AF[0].collect()
+    maf_sample_list = mt.variant_qc.AF[1].collect()
 
     # get relevant regulatory info from VEP (biotype)
     regulatory_consequences = donor_mt.vep.regulatory_feature_consequences[
