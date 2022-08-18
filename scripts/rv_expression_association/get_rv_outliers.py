@@ -45,7 +45,7 @@ def main(
     )
     sample_key_df = pd.read_csv(AnyPath(sample_key_filename), sep='\t', index_col=0)
 
-    cpg_id = sample_key_df[sample_key_df['OneK1K_ID'] == onek1k_id]['InternalID']
+    cpg_id = sample_key_df[sample_key_df.index == onek1k_id]['InternalID'].values
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
