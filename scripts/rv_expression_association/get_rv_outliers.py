@@ -4,7 +4,7 @@ import click
 import logging
 import hail as hl
 import pandas as pd
-from cpg_utils.hail_batch import output_path
+from cpg_utils.hail_batch import output_path, init_batch
 from cloudpathlib import AnyPath
 
 # use logging to print statements, display at info level
@@ -56,6 +56,7 @@ def main(
     if output_filename.exists():
         raise Exception(f'File {output_filename} already exists, exiting')
 
+    init_batch()
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 
