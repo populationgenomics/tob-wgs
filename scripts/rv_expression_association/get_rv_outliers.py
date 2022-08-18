@@ -119,6 +119,7 @@ def main(
     )
 
     # annotate variants with CADD scores, gnomad etc
+    logging.info('Annotate variants with CADD scores and gnomad AF')
     ref_ht = hl.read_table(
         'gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht'
     )
@@ -151,6 +152,7 @@ def main(
     gene_end = gene_df[gene_df['gene_name'] == gene_name]['end']
     ensembl_gene_id = gene_df[gene_df['gene_name'] == gene_name].index[0]
 
+    logging.info('Preparing results data')
     results_data = {
         'onek1k_id': onek1k_id,
         'cpg_id': cpg_id,
