@@ -66,10 +66,14 @@ def main(
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 
+    # filter out low QC variants
+    mt = mt.filter_rows(hl.len(mt.filters) == 0)
+    logging.info('Number of total variants: {}'.format(donor_mt.count()[0]))
+
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
-    logging.info('Number of total variants: {}'.format(donor_mt.count()[0]))
+    logging.info('Number of QC-passing variants: {}'.format(donor_mt.count()[0]))
 
     # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
@@ -80,10 +84,12 @@ def main(
         + '.tsv'
     )
     gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
-    interval_start = (
-        int(gene_df[gene_df['gene_name'] == gene_name]['start']) - window_size
+    interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(
+        window_size
     )
-    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + window_size
+    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(
+        window_size
+    )
 
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
