@@ -68,7 +68,7 @@ def main(
 
     # filter out low QC variants
     mt = mt.filter_rows(hl.len(mt.filters) == 0)
-    logging.info('Number of total variants: {}'.format(donor_mt.count()[0]))
+    logging.info('Number of total variants: {}'.format(mt.count()[0]))
 
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
