@@ -134,6 +134,7 @@ def main(
     # get gnomad MAF (popmax now, need NFE too?)
     maf_popmax = donor_mt.gnomad_genomes.AF_POPMAX_OR_GLOBAL.collect()
 
+    logging.info('Get AF within OneK1K sample')
     # get MAF within sample
     # by selecting the appropriate rows in the full object
     relevant_loci = donor_mt.row_key.collect()
