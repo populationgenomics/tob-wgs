@@ -78,10 +78,11 @@ def main(
     interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + 10000
 
     # get gene-specific genomic interval
-    gene_interval = (
-        'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
-    )  
-    logging.info('Interval considered: {}'.format(gene_interval)) # 'chr22:23219960-23348287'
+    gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
+    logging.info(
+        'Interval considered: {}'.format(gene_interval)
+    )  # 'chr22:23219960-23348287'
+
     donor_mt = hl.filter_intervals(
         donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
     )
