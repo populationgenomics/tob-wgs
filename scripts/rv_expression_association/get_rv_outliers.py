@@ -43,7 +43,7 @@ def main(
     sample_key_filename = (
         'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
     )
-    sample_key_df = pd.read_csv(sample_key_filename, sep='\t', index_col=0)
+    sample_key_df = pd.read_csv(AnyPath(sample_key_filename), sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df['OneK1K_ID'] == onek1k_id]['InternalID']
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
@@ -72,7 +72,7 @@ def main(
         + chrom
         + '.tsv'
     )
-    gene_df = pd.read_csv(gene_file, sep='\t', index_col=0)
+    gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
     interval_start = float(gene_df[gene_df['gene_name'] == gene_name]['start']) - 10000
     interval_end = float(gene_df[gene_df['gene_name'] == gene_name]['end']) + 10000
 
