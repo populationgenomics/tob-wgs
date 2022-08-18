@@ -16,14 +16,20 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 @click.option('--onek1k-id', required=True)
 @click.option('--gene-name', required=True)
 @click.option('--chrom', required=True)
+@click.option(
+    '--window-size',
+    required=True,
+    help='the size of the flanking region, to be added twice, on either side of the gene body',
+)
 def main(
     onek1k_id: str,
     gene_name: str,
     chrom: str,
+    window_size: int,
 ):
     """for a given individual,
     and gene for which that individual is an expression outlier
-    get all variants within a window,
+    get all variants within a given window,
 
     then filter for variants that:
     - are alt (0/1 or 1/1) for that individual
@@ -49,7 +55,7 @@ def main(
     logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
-    output_filename = AnyPath(output_path(f'{cpg_id}_{gene_name}.csv'))
+    output_filename = AnyPath(output_path(f'{cpg_id}_{gene_name}_{window_size}.csv'))
     logging.info('Output file: {}'.format(output_filename))
 
     # skip if file already exists
@@ -74,8 +80,10 @@ def main(
         + '.tsv'
     )
     gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
-    interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - 10000
-    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + 10000
+    interval_start = (
+        int(gene_df[gene_df['gene_name'] == gene_name]['start']) - window_size
+    )
+    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + window_size
 
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
