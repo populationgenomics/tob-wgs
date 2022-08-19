@@ -2,6 +2,7 @@
 
 import hail as hl
 from bokeh.io import show
+from bokeh.io.export import get_screenshot_as_png
 from analysis_runner import output_path
 
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
@@ -17,7 +18,7 @@ p1_filename = output_path(f'histogram_maf_pre_filer.png', 'web')
 with hl.hadoop_open(p1_filename, 'wb') as f:
     get_screenshot_as_png(p1).save(f, format='PNG')
 
-sample = "CPG18"
+sample = 'CPG18'
 donor_mt = mt.filter_cols(mt.s == sample)
 donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
 mt = mt.semi_join_rows(donor_mt.rows())
