@@ -5,6 +5,7 @@ import hail as hl
 from bokeh.io.export import get_screenshot_as_png
 from cpg_utils.hail_batch import output_path
 
+init_batch()
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 mt = hl.experimental.densify(mt)
 mt = hl.variant_qc(mt)
