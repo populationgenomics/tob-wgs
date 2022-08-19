@@ -53,11 +53,11 @@ def main(
     sample_key_df = pd.read_csv(AnyPath(sample_key_filename), sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df.index == onek1k_id]['InternalID'].values[0]
-    logging.info('CPG ID: {}'.format(cpg_id))  # e.g., 'CPG9951'
+    logging.info(f'CPG ID: {cpg_id}')  # e.g., 'CPG9951'
 
     # define output filename and check if it already exists
     output_filename = AnyPath(output_path(f'{cpg_id}_{gene_name}_{window_size}.csv'))
-    logging.info('Output file: {}'.format(output_filename))
+    logging.info(f'Output file: {output_filename}')
 
     # skip if file already exists
     if output_filename.exists():
@@ -66,7 +66,7 @@ def main(
     init_batch()
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
-    logging.info('Number of total variants: {}'.format(mt.count()[0]))
+    logging.info(f'Number of total variants: {mt.count()[0]}')
 
     # filter out low QC variants
     mt = mt.filter_rows(hl.len(mt.filters) == 0)
@@ -74,7 +74,7 @@ def main(
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
-    logging.info('Number of QC-passing variants: {}'.format(donor_mt.count()[0]))
+    logging.info(f'Number of QC-passing variants: {donor_mt.count()[0]}')
 
     # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
@@ -95,19 +95,19 @@ def main(
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
     logging.info(
-        'Interval considered: {}'.format(gene_interval)
+        f'Interval considered: {gene_interval}'
     )  # 'chr22:23219960-23348287'
 
     donor_mt = hl.filter_intervals(
         donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
     )
-    logging.info('Number of variants within interval: {}'.format(donor_mt.count()[0]))
+    logging.info(f'Number of variants within interval: {donor_mt.count()[0]}')
 
     # remove variants for which this individual is 0/0
     donor_mt = hl.variant_qc(donor_mt)
     donor_mt = donor_mt.filter_rows(donor_mt.variant_qc.n_non_ref > 0)
     logging.info(
-        'Number of non-ref variants for this indvidual: {}'.format(donor_mt.count()[0])
+        f'Number of non-ref variants for this indvidual: {donor_mt.count()[0]}'
     )
 
     # focus on SNVs for now
@@ -115,9 +115,7 @@ def main(
     # filter for biallelic only
     donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)
     logging.info(
-        'Number of variants after filtering for biallelic SNVs: {}'.format(
-            donor_mt.count()[0]
-        )
+        f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
     )
 
     # filter to only variants with some regulatory consequences
@@ -125,8 +123,7 @@ def main(
         hl.len(donor_mt.vep.regulatory_feature_consequences) > 0
     )
     logging.info(
-        'Number of variants after filtering for variants with regulatory consequences: {}'.format(
-            donor_mt.count()[0]
+        f'Number of variants after filtering for variants with regulatory consequences: {donor_mt.count()[0]}'
         )
     )
 
