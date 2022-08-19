@@ -94,9 +94,7 @@ def main(
 
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
-    logging.info(
-        f'Interval considered: {gene_interval}'
-    )  # 'chr22:23219960-23348287'
+    logging.info(f'Interval considered: {gene_interval}')  # 'chr22:23219960-23348287'
 
     donor_mt = hl.filter_intervals(
         donor_mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
@@ -124,7 +122,6 @@ def main(
     )
     logging.info(
         f'Number of variants after filtering for variants with regulatory consequences: {donor_mt.count()[0]}'
-        )
     )
 
     # retain info about het variants
