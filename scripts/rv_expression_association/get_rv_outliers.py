@@ -16,7 +16,8 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 @click.command()
 @click.option('--onek1k-id', required=True)
 @click.option('--gene-name', required=True)
-@click.option('--chrom', required=True)
+@click.option('--sample-mapping-file', required=True)
+@click.option('--gene-file', required=True)
 @click.option(
     '--window-size',
     required=True,
@@ -25,7 +26,8 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 def main(
     onek1k_id: str,
     gene_name: str,
-    chrom: str,
+    sample_mapping_file: str,  # 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
+    gene_file: str,  # e.g., 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv'
     window_size: int,
 ):
     """for a given individual,
@@ -47,10 +49,7 @@ def main(
     """
 
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
-    sample_key_filename = (
-        'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
-    )
-    sample_key_df = pd.read_csv(AnyPath(sample_key_filename), sep='\t', index_col=0)
+    sample_key_df = pd.read_csv(AnyPath(sample_mapping_file), sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df.index == onek1k_id]['InternalID'].values[0]
     logging.info(f'CPG ID: {cpg_id}')  # e.g., 'CPG9951'
@@ -79,11 +78,6 @@ def main(
     # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
     # include variants up to 10kb up- and downstream
-    gene_file = (
-        'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr'
-        + chrom
-        + '.tsv'
-    )
     gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
     interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(
         window_size
@@ -91,6 +85,7 @@ def main(
     interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(
         window_size
     )
+    chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
