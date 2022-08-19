@@ -2,6 +2,7 @@
 
 import hail as hl
 from bokeh.io import show
+from analysis_runner import output_path
 
 mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
 mt = hl.experimental.densify(mt)
