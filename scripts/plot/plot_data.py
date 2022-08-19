@@ -22,6 +22,7 @@ def main():
         mt,
         [hl.parse_locus_interval('chr22:23704425-23802743', reference_genome='GRCh38')],
     )
+    mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
     p1_filename = output_path(f'histogram_maf_post_filter.png', 'web')
