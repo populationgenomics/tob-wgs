@@ -481,6 +481,8 @@ def run_spearman_correlation_scatter(
     # add in vep annotation
     t = t.key_by('locus', 'alleles')
     t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
+    t = t.key_by()
+    t = t.drop(t.locus)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
