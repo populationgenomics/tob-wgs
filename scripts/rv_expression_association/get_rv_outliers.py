@@ -65,10 +65,10 @@ def main(
     init_batch()
     # get VEP-annotated WGS object (hail matrix table)
     mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
+    logging.info('Number of total variants: {}'.format(mt.count()[0]))
 
     # filter out low QC variants
     mt = mt.filter_rows(hl.len(mt.filters) == 0)
-    logging.info('Number of total variants: {}'.format(mt.count()[0]))
 
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
