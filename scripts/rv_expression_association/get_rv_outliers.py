@@ -4,6 +4,7 @@ import click
 import logging
 import hail as hl
 import pandas as pd
+from cpg_utils.hail_batch import reference_path
 from cpg_utils.hail_batch import output_path, init_batch
 from cloudpathlib import AnyPath
 
@@ -134,9 +135,10 @@ def main(
 
     # annotate variants with CADD scores, gnomad etc
     logging.info('Annotate variants with CADD scores and gnomad AF')
-    ref_ht = hl.read_table(
-        'gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht'
-    )
+    # ref_ht = hl.read_table(
+    #     'gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht'
+    # )
+    ref_ht = reference_path('seqr/v0-1/combined_reference_data_grch38-2.0.4.ht')
     donor_mt = donor_mt.annotate_rows(
         cadd=ref_ht[donor_mt.row_key].cadd,
         gnomad_genomes=ref_ht[donor_mt.row_key].gnomad_genomes,
