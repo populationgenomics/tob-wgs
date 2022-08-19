@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import hail as hl
-from bokeh.io import show
+# from bokeh.io import show
 from bokeh.io.export import get_screenshot_as_png
 from analysis_runner import output_path
 
