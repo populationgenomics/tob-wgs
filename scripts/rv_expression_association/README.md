@@ -16,7 +16,9 @@ analysis-runner --dataset "tob-wgs" \
     --description "get set of variants for given outlier" \
     --access-level "test" \
     --output-dir "tob_wgs_rv/expression_outliers" \
-    get_rv_outliers.py --onek1k-id "943_944" --gene-name "IGLL5" --chrom "22" --window-size 10000
+    get_rv_outliers.py --onek1k-id "943_944" --gene-name "IGLL5" --window-size 10000 \
+    --sample-mapping-file "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv" \
+    --gene-file "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv"
 ```
 
 ### Test them for association
