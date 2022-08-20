@@ -231,6 +231,7 @@ def prepare_genotype_info(keys_path):
     # repartition to save overhead cost
     mt = mt.naive_coalesce(1000)
     mt.write(filtered_mt_path)
+    return filtered_mt_path
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
