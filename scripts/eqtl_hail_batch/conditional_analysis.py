@@ -343,11 +343,6 @@ def convert_dataframe_to_text(dataframe):
 @click.option('--residuals', required=True, help='A CSV of gene residuals, with genes \
     as columns and samples as rows.')
 @click.option(
-    '--output-prefix',
-    required=True,
-    help='A path prefix of where to output files, eg: gs://MyBucket/output-folder/',
-)
-@click.option(
     '--iterations', type=int, default=4, help='Number of iterations to perform'
 )
 @click.option(
