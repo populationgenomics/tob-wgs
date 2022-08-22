@@ -6,7 +6,6 @@ Test plotting
 """
 
 import hail as hl
-from cpg_utils.hail_batch import output_path
 from bokeh.io.export import get_screenshot_as_png
 
 
@@ -25,7 +24,7 @@ def main():
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
-    p1_filename = output_path(f'histogram_maf_post_filter.png', 'web')
+    p1_filename = 'gs://cpg-tob-wgs-test-web/plot/v0/histogram_maf_post_filter.png'
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
 
