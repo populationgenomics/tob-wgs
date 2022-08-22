@@ -524,21 +524,20 @@ def run_spearman_correlation_scatter(
     t = hl.Table.from_pandas(spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
+    t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
     # add in vep annotation
     t = t.key_by('locus', 'alleles')
     t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     t = t.key_by()
-    t = t.drop(t.locus)
+    t = t.drop(t.locus, t.alleles)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
-    spearman_df['a1'] = spearman_df['alleles'].str[0]
-    spearman_df['a2'] = spearman_df['alleles'].str[1]
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
-    # add association ID annotation after adding in alleles, a1, and a2
+    # add association ID annotation
     spearman_df['association_id'] = spearman_df.apply(
         lambda x: ':'.join(
             x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
@@ -546,7 +545,7 @@ def run_spearman_correlation_scatter(
         axis=1,
     )
     spearman_df['variant_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
+        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
     )
     spearman_df['snp_id'] = spearman_df.apply(
         lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
