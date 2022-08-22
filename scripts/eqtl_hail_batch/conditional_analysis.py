@@ -371,7 +371,7 @@ def main(
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
-    residual_df = pd.read_csv(AnyPath(residuals))
+    residual_df = pd.read_csv(residuals)
     significant_snps_df = pd.read_parquet(significant_snps)
     
     if test_subset_genes:
