@@ -372,9 +372,7 @@ def main(
     batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     residual_df = pd.read_csv(AnyPath(residuals))
-    significant_snps_df = pd.read_parquet(AnyPath(
-        significant_snps)
-    )
+    significant_snps_df = pd.read_parquet(significant_snps)
     
     if test_subset_genes:
         n_genes = test_subset_genes
