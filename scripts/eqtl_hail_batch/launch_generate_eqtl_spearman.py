@@ -6,7 +6,6 @@ For example:
     python3 scripts/hail_batch/eqtl_hail_batch/launch_generate_eqtl_spearman.py \
         --input-path "gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files" \
         --dry-run \
-        --output-dir gs://cpg-tob-wgs-test/eqtl_output \
         --chromosomes '1 2'
 """
 
@@ -47,18 +46,12 @@ from google.cloud import storage
         'A path prefix of where input files are located. eg: gs://MyBucket/folder. '
     ),
 )
-@click.option(
-    '--output-dir',
-    required=True,
-    help='A path of where to output files. Version number must be included on the end. eg: gs://MyBucket/output-folder/v0',
-)
 @click.option('--dry-run', is_flag=True, help='Just check if files exist')
 def submit_eqtl_jobs(
-    chromosomes, input_path, output_dir, dry_run=False, cell_types=None
+    chromosomes, input_path, dry_run=False, cell_types=None
 ):
     """Run association script for all chromosomes and cell types"""
 
-    assert output_dir.startswith('gs://') and input_path.startswith('gs://')
     chromosomes = chromosomes.split(' ')
     assert isinstance(chromosomes, list)
 
@@ -142,7 +135,6 @@ def submit_eqtl_jobs(
                     f'--covariates {covariates} '
                     f'--geneloc {geneloc} '
                     f'--keys {keys} '
-                    f'--output-prefix {output_dir}'
                 )
 
     batch.run(wait=False)
