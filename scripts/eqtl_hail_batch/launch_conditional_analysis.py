@@ -6,7 +6,6 @@ For example:
     python3 scripts/hail_batch/eqtl_hail_batch/launch_conditional_analysis.py \
         --input-path "gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files" \
         --dry-run \
-        --output-dir gs://cpg-tob-wgs-test/eqtl_output \
         --chromosomes '1 2'
 """
 
@@ -56,11 +55,6 @@ from google.cloud import storage
     ),
 )
 @click.option(
-    '--output-dir',
-    required=True,
-    help='A path of where to output files, eg: gs://MyBucket/output-folder/',
-)
-@click.option(
     '--test-subset-genes',  # pylint: disable=too-many-locals
     type=int,
     help='Test with {test_subset_genes} genes, often = 5.',
@@ -70,14 +64,12 @@ def submit_eqtl_jobs(
     chromosomes,
     input_path,
     first_round_path,
-    output_dir,
     test_subset_genes=None,
     dry_run=False,
     cell_types=None,
 ):
     """Run association script for all chromosomes and cell types"""
 
-    assert output_dir.startswith('gs://') and input_path.startswith('gs://')
     chromosomes = chromosomes.split(' ')
     assert isinstance(chromosomes, list)
 
@@ -119,7 +111,7 @@ def submit_eqtl_jobs(
             significant_snps = os.path.join(
                 first_round_path,
                 f'{cell_type}',
-                f'chr{chromosome}', 'correlation_results.tsv',
+                f'chr{chromosome}', 'parquet',
             )
 
             if dry_run:
@@ -144,14 +136,10 @@ def submit_eqtl_jobs(
                     commit=get_git_commit_ref_of_current_repository(),
                 )
 
-                output_prefix = os.path.join(
-                    output_dir, f'{cell_type}', f'chr{chromosome}'
-                )
                 job.command(
                     f"""python3 scripts/eqtl_hail_batch/conditional_analysis.py \
                     --residuals {residuals} \
                     --significant-snps {significant_snps} \
-                    --output-prefix {output_prefix} \
                     {f'--test-subset-genes {test_subset_genes}' if test_subset_genes else ''}
                     """
                     )

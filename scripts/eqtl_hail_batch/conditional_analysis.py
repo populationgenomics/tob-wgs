@@ -11,6 +11,7 @@ from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
+    output_path,
     copy_common_env,
     init_batch,
     remote_tmpdir,
@@ -357,7 +358,6 @@ def convert_dataframe_to_text(dataframe):
 def main(
     significant_snps: str,
     residuals,
-    output_prefix: str,
     iterations=4,
     test_subset_genes=None,
 ):
@@ -366,15 +366,19 @@ def main(
     scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
     """
 
-    # get cell type info
-    celltype = output_prefix.split('scrna-seq/')[-1].split('/')[0]
+    # get chromosome and cell type info
+    residual_list = residuals.split('/')
+    residual_list = residual_list[: -1]
+    chrom = residual_list[-1]
+    celltype = residual_list[-2]
+    output_prefix = output_path(f'{celltype}/{chrom}')
 
     backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
     batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
 
     residual_df = pd.read_csv(AnyPath(residuals))
-    significant_snps_df = pd.read_csv(AnyPath(
-        significant_snps), sep='\t'
+    significant_snps_df = pd.read_parquet(AnyPath(
+        significant_snps)
     )
     
     if test_subset_genes:
