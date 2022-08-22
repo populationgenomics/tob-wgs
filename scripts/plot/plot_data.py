@@ -7,6 +7,12 @@ Test plotting
 
 import hail as hl
 from bokeh.io.export import get_screenshot_as_png
+from cpg_utils.hail_batch import (
+    dataset_path,
+    output_path,
+)
+
+VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
 
 
 def main():
@@ -16,7 +22,7 @@ def main():
 
     hl.init(default_reference='GRCh38')
 
-    mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
+    mt = hl.read_matrix_table(VEP_MT)
     mt = hl.filter_intervals(
         mt,
         [hl.parse_locus_interval('chr22:23704425-23802743', reference_genome='GRCh38')],
@@ -24,7 +30,7 @@ def main():
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
-    p1_filename = 'gs://cpg-tob-wgs-test-web/plot/v0/histogram_maf_post_filter.png'
+    p1_filename = output_path('histogram_maf_post_filter.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
 
