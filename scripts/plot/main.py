@@ -26,7 +26,7 @@ job = dataproc.hail_dataproc_job(
     f'plot_data.py',
     max_age='1h',
     packages=['selenium'],
-    init=['gs://cpg-reference/hail_dataproc/install_common.sh'],
+    init=['gs://cpg-reference/hail_dataproc/install_phantomjs.sh'],
     job_name=f'plot_data',
 )
 copy_common_env(job)
