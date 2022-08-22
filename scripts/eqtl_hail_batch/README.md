@@ -60,5 +60,5 @@ analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eq
 For the conditional analysis (rounds 2-5), execute the following command:
 
 ```sh
-analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_conditional_analysis.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0' --output-dir 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0'
+analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_conditional_analysis.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0'
 ```
