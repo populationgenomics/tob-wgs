@@ -2,7 +2,6 @@
 
 """Run Spearman rank correlation on SNPs and expression residuals"""
 
-import os
 
 import hail as hl
 import hailtop.batch as hb
@@ -35,12 +34,12 @@ def filter_lowly_expressed_genes(expression_df):
     """Remove genes with low expression in all samples
 
     Input:
-    expression_df: a data frame with samples as rows and genes as columns, 
-    containing normalised expression values (i.e., the average number of molecules 
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
     for each gene detected in each person).
 
     Returns:
-    A filtered version of the input data frame, after removing columns (genes) 
+    A filtered version of the input data frame, after removing columns (genes)
     with 0 values in more than 10% of the rows (samples).
     """
 
@@ -72,10 +71,10 @@ def get_number_of_scatters(expression_df, geneloc_df):
     """get index of total number of genes
 
     Input:
-    expression_df: a data frame with samples as rows and genes as columns, 
-    containing normalised expression values (i.e., the average number of molecules 
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
     for each gene detected in each person).
-    geneloc_df: a data frame with the gene location (chromosome, start, and 
+    geneloc_df: a data frame with the gene location (chromosome, start, and
     end locations as columns) specified for each gene (rows).
 
     Returns:
@@ -95,8 +94,8 @@ def get_log_expression(expression_df):
     """get logged expression values
 
     Input:
-    expression_df: a data frame with samples as rows and genes as columns, 
-    containing normalised expression values (i.e., the average number of molecules 
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
     for each gene detected in each person).
 
     Returns:
@@ -129,8 +128,8 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
-    expression_df: a data frame with samples as rows and genes as columns, 
-    containing normalised expression values (i.e., the average number of molecules 
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
     for each gene detected in each person).
 
     Returns:
@@ -140,7 +139,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     log_cpm = calculate_log_cpm(expression_df)
     # get gene expression distribution in the output
     # specified here https://github.com/populationgenomics/tob-wgs/issues/97
-    
+
     def create_struct(gene):
         hist, bin_edges = np.histogram(gene, bins=10)
         n_samples = gene.count()
@@ -153,15 +152,26 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
         iqr_outliers_min = q1 - (1.5 * iqr)
         iqr_outliers_max = q3 + (1.5 * iqr)
         data_struct = {
-            'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
-            'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
-            'q1': q1, 'q3': q3, 'iqr': iqr, 'iqr_min': iqr_outliers_min, 'iqr_max': iqr_outliers_max, 
-            }
+            'bin_counts': hist,
+            'bin_edges': bin_edges,
+            'n_samples': n_samples,
+            'min': min_val,
+            'max': max_val,
+            'mean': mean_val,
+            'median': median_val,
+            'q1': q1,
+            'q3': q3,
+            'iqr': iqr,
+            'iqr_min': iqr_outliers_min,
+            'iqr_max': iqr_outliers_max,
+        }
 
         return data_struct
 
     # apply function over all columns (genes) and reset index so that gene names are in the df
-    data_summary = pd.DataFrame(log_cpm.apply(create_struct, axis=0), columns=['data']).reset_index()
+    data_summary = pd.DataFrame(
+        log_cpm.apply(create_struct, axis=0), columns=['data']
+    ).reset_index()
     data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
     # add in cell type info
     data_summary['cell_type_id'] = celltype
@@ -182,14 +192,14 @@ def prepare_genotype_info(keys_path):
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01. 
+    4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
 
     init_batch()
     filtered_mt_path = output_path('genotype_table.mt', 'tmp')
     if hl.hadoop_exists(filtered_mt_path):
         return filtered_mt_path
-    
+
     mt = hl.read_matrix_table(TOB_WGS)
     mt = mt.naive_coalesce(10000)
     mt = hl.experimental.densify(mt)
@@ -213,7 +223,11 @@ def prepare_genotype_info(keys_path):
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
     vep = hl.read_matrix_table(VEP_ANNOTATION)
-    mt = mt.annotate_rows(vep_functional_anno=vep.rows()[mt.row_key].vep.regulatory_feature_consequences.biotype)
+    mt = mt.annotate_rows(
+        vep_functional_anno=vep.rows()[
+            mt.row_key
+        ].vep.regulatory_feature_consequences.biotype
+    )
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
     genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
@@ -231,16 +245,17 @@ def prepare_genotype_info(keys_path):
     # repartition to save overhead cost
     mt = mt.naive_coalesce(1000)
     mt.write(filtered_mt_path)
+    return filtered_mt_path
 
 
 def calculate_residuals(expression_df, covariate_df, output_prefix):
     """Calculate residuals for each gene in scatter
-    
+
     Input:
-    expression_df: a data frame with samples as rows and genes as columns, 
-    containing normalised expression values (i.e., the average number of molecules 
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
     for each gene detected in each person).
-    covariate_df: a data frame with samples as rows and cpvariate information 
+    covariate_df: a data frame with samples as rows and cpvariate information
     as columns (PCA scores, sex, age, and PEER factors).
 
     Returns: a dataframe of expression residuals, with genes as columns and samples
@@ -249,14 +264,20 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
 
     log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
-    sample_ids = log_expression_df.merge(covariate_df, on='sampleid', how='right').dropna(axis=0, how='any').sampleid
+    sample_ids = (
+        log_expression_df.merge(covariate_df, on='sampleid', how='right')
+        .dropna(axis=0, how='any')
+        .sampleid
+    )
 
     # Calculate expression residuals
     def calculate_gene_residual(gene_id):
         """Calculate gene residuals"""
         gene = gene_id
         exprs_val = log_expression_df[['sampleid', gene]]
-        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right').dropna(axis=0, how='any')
+        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right').dropna(
+            axis=0, how='any'
+        )
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
         test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
         y, x = dmatrices(
@@ -279,33 +300,30 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
 
 # Run Spearman rank in parallel by sending genes in batches
 def run_spearman_correlation_scatter(
-    idx,
-    expression,
-    geneloc,
-    residuals_df,
-    filtered_mt_path,
-    celltype,
-    output_prefix
+    idx, expression, geneloc, residuals_df, filtered_mt_path, celltype, output_prefix
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
-    
+
     Input:
-    idx: the index of a gene within the filtered expression_df. Note: a 1Mb region is taken 
+    idx: the index of a gene within the filtered expression_df. Note: a 1Mb region is taken
     up and downstream of each gene.
-    expression: input path for the expression data, which consists of a data frame 
-    with samples as rows and genes as columns, containing normalised expression 
+    expression: input path for the expression data, which consists of a data frame
+    with samples as rows and genes as columns, containing normalised expression
     values.
-    geneloc: input path for gene location data, which consists of a data frame with the 
+    geneloc: input path for gene location data, which consists of a data frame with the
     gene location (chromosome, start, and end locations as columns) specified for each gene (rows)
-    residuals_df: residual dataframe, calculated in calculate_residuals(). 
-    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(), 
+    residuals_df: residual dataframe, calculated in calculate_residuals().
+    filtered_mt_path: the path to a filtered matrix table generated using prepare_genotype_info(),
     (and filtering requirements outlined in the same function).
 
     Returns:
     A dataframe with significance results (p-value and FDR) from the Spearman rank correlation. Each
-    row contains information for a SNP, and columns contain information on significance levels, 
+    row contains information for a SNP, and columns contain information on significance levels,
     spearmans rho, and gene information.
     """
+
+    # import multipy here to avoid issues with driver image updates
+    from multipy.fdr import qvalue
 
     # calculate log expression values
     expression_df = pd.read_csv(AnyPath(expression), sep='\t')
@@ -333,12 +351,21 @@ def run_spearman_correlation_scatter(
 
     # Do this only on SNPs contained within 1Mb gene region to save on
     # computational time
-    right_boundary = min(gene_info.right+1, hl.get_reference('GRCh38').lengths[chromosome])
+    right_boundary = min(
+        gene_info.right + 1, hl.get_reference('GRCh38').lengths[chromosome]
+    )
     left_boundary = max(1, gene_info.left)
     first_and_last_snp = f'{chromosome}:{left_boundary}-{right_boundary}'
-    mt = hl.filter_intervals(mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')])
+    mt = hl.filter_intervals(
+        mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
+    )
     # remove SNPs with no variance
-    mt = mt.filter_rows((hl.agg.all(mt.GT.n_alt_alleles() == 0)) | (hl.agg.all(mt.GT.n_alt_alleles() == 1)) | (hl.agg.all(mt.GT.n_alt_alleles() == 2)), keep=False)
+    mt = mt.filter_rows(
+        (hl.agg.all(mt.GT.n_alt_alleles() == 0))
+        | (hl.agg.all(mt.GT.n_alt_alleles() == 1))
+        | (hl.agg.all(mt.GT.n_alt_alleles() == 2)),
+        keep=False,
+    )
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
@@ -355,7 +382,7 @@ def run_spearman_correlation_scatter(
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
     )
-    
+
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
     t = mt.entries()
@@ -369,8 +396,8 @@ def run_spearman_correlation_scatter(
         + ':'
         + hl.str(t.alleles[0])
         + ':'
-        + hl.str(t.alleles[1]), 
-        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position()
+        + hl.str(t.alleles[1]),
+        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position(),
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
@@ -381,10 +408,10 @@ def run_spearman_correlation_scatter(
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
     if len(snps_to_remove) > 0:
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snpid))
-    
+
     genotype_df = t.to_pandas(flatten=True)
     # filter gene_snp_df to have the same snps after filtering SNPs that
-    # don't have an alt_allele value 
+    # don't have an alt_allele value
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
     # Get association effect data, to be used for violin plots for each genotype of each SNP
@@ -394,8 +421,10 @@ def run_spearman_correlation_scatter(
         log_cpm['sampleid'] = sampleid
         # reduce log_cpm matrix to gene of interest only
         log_cpm = log_cpm[['sampleid', gene]]
-        # merge log_cpm data with genotype info 
-        gt_expr_data = genotype_df.merge(log_cpm, left_on='sampleid', right_on='sampleid')
+        # merge log_cpm data with genotype info
+        gt_expr_data = genotype_df.merge(
+            log_cpm, left_on='sampleid', right_on='sampleid'
+        )
         # group gt_expr_data by snpid and genotype
         grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
 
@@ -408,10 +437,17 @@ def run_spearman_correlation_scatter(
             q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
             iqr = q3 - q1
             data_struct = {
-                'bin_counts': hist, 'bin_edges': bin_edges, 'n_samples': n_samples, 
-                'min': min_val, 'max': max_val, 'mean': mean_val, 'median': median_val, 
-                'q1': q1, 'q3': q3, 'iqr': iqr, 
-                }
+                'bin_counts': hist,
+                'bin_edges': bin_edges,
+                'n_samples': n_samples,
+                'min': min_val,
+                'max': max_val,
+                'mean': mean_val,
+                'median': median_val,
+                'q1': q1,
+                'q3': q3,
+                'iqr': iqr,
+            }
 
             return data_struct
 
@@ -422,16 +458,28 @@ def run_spearman_correlation_scatter(
             group = grouped_gt.get_group((snp_id, genotype))
             global_bp = group.global_bp.iloc[0]
             gene_id = gene_info.gene_id
-            snp_gt_summary_data.append({'snp_id': snp_id, 'global_bp': global_bp, 'genotype': genotype, 'gene_id': gene_id, 'gene_symbol': gene, 'cell_type_id': celltype, 'struct': create_struct(gene, group)})
+            snp_gt_summary_data.append(
+                {
+                    'snp_id': snp_id,
+                    'global_bp': global_bp,
+                    'genotype': genotype,
+                    'gene_id': gene_id,
+                    'gene_symbol': gene,
+                    'cell_type_id': celltype,
+                    'struct': create_struct(gene, group),
+                }
+            )
 
         snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
-        
+
         return snp_gt_summary_data
-    
+
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
     # Save file
-    tmp_dir = output_prefix.replace(output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp')
+    tmp_dir = output_prefix.replace(
+        output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp'
+    )
     path = AnyPath(tmp_dir) / f'eqtl_effect_{gene}.parquet'
     with path.open('wb') as fp:
         association_effect_data.to_parquet(fp)
@@ -478,6 +526,8 @@ def run_spearman_correlation_scatter(
     # add in vep annotation
     t = t.key_by('locus', 'alleles')
     t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
+    t = t.key_by()
+    t = t.drop(t.locus)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
@@ -488,65 +538,68 @@ def run_spearman_correlation_scatter(
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
     # add association ID annotation after adding in alleles, a1, and a2
-    spearman_df['association_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]), axis=1)
-    spearman_df['variant_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1)
-    spearman_df['snp_id'] = spearman_df.apply(lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1)
-    
-    return spearman_df
-
-
-def merge_df_and_convert_to_string(*df_list):
-    """Merge all Spearman dfs and convert to string using .to_string() on df"""
-    
-    # import multipy here to avoid issues with driver image updates
-    from multipy.fdr import qvalue 
-
-    merged_df: pd.DataFrame = pd.concat(df_list)
-    pvalues = merged_df['p_value']
+    spearman_df['association_id'] = spearman_df.apply(
+        lambda x: ':'.join(
+            x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
+        ),
+        axis=1,
+    )
+    spearman_df['variant_id'] = spearman_df.apply(
+        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
+    )
+    spearman_df['snp_id'] = spearman_df.apply(
+        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
+    )
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
+    pvalues = spearman_df['p_value']
     _, qvals = qvalue(pvalues)
     fdr_values = pd.DataFrame(list(qvals)).iloc[1]
-    merged_df = merged_df.assign(fdr=fdr_values)
-    merged_df['fdr'] = merged_df.fdr.astype(float)
-    return merged_df.to_csv(index=False, sep='\t')
+    spearman_df = spearman_df.assign(fdr=fdr_values)
+    spearman_df['fdr'] = spearman_df.fdr.astype(float)
+    # Save file
+    spearman_df_path = (
+        AnyPath(output_prefix) / f'parquet/correlation_results_{gene}.parquet'
+    )
+    with spearman_df_path.open('wb') as fp:
+        spearman_df.to_parquet(fp)
 
 
 # Create click command line to enter dependency files
 @click.command()
 @click.option(
-    '--expression', required=True, help='A TSV of normalised expression values, \
+    '--expression',
+    required=True,
+    help='A TSV of normalised expression values, \
         where values represent the average number of molecules for each gene. Gene information \
-        is contained in columns and sample information in rows.'
+        is contained in columns and sample information in rows.',
 )
 @click.option(
-    '--geneloc', required=True, help='A TSV of start and end positions for each gene. Each row in \
+    '--geneloc',
+    required=True,
+    help='A TSV of start and end positions for each gene. Each row in \
         this df contains a gene, with ENSEMBL gene id, gene symbol, chromosome, start and end \
-        positions, and strand information as columns.'
+        positions, and strand information as columns.',
 )
 @click.option(
-    '--covariates', required=True, help='A TSV of covariates to calculate residuals. Sample ids \
+    '--covariates',
+    required=True,
+    help='A TSV of covariates to calculate residuals. Sample ids \
         are contained in rows and covariate information in columns. As a minimum, covariate \
         information should include PCA scores for the first 4 PCs, the top 2 PEER factors, \
-        sex, and age.'
+        sex, and age.',
 )
 @click.option(
     '--keys',
     required=True,
     help='A TSV of sample ids to convert external to internal IDs. Rows contain \
         sample ids, while columns contain OneK1K IDs and CPG IDs.',
-) 
-@click.option(
-    '--output-prefix',
-    required=True,
-    help='A path prefix of where to output files, eg: gs://MyBucket/output-folder/',
 )
 def main(
     expression: str,
     geneloc,
     covariates,
     keys,
-    output_prefix: str,
 ):
     """
     Creates a Hail Batch pipeline for calculating EQTLs
@@ -556,10 +609,17 @@ def main(
     celltype = expression.split('/')[-1].split('_expression')[0]
     chromosome = geneloc.split('_')[-1].removesuffix('.tsv')
     # rename output prefix to have chromosome and cell type
-    output_prefix = os.path.join(output_prefix, f'{celltype}', f'{chromosome}')
+    output_prefix = output_path(f'{celltype}/{chromosome}')
 
-    backend = hb.ServiceBackend(billing_project=get_config()['hail']['billing_project'], remote_tmpdir=remote_tmpdir())
-    batch = hb.Batch(name=celltype, backend=backend, default_python_image=get_config()['workflow']['driver_image'])
+    backend = hb.ServiceBackend(
+        billing_project=get_config()['hail']['billing_project'],
+        remote_tmpdir=remote_tmpdir(),
+    )
+    batch = hb.Batch(
+        name=celltype,
+        backend=backend,
+        default_python_image=get_config()['workflow']['driver_image'],
+    )
 
     # load in files to get number of scatters and residuals
     expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
@@ -567,7 +627,9 @@ def main(
     covariate_df_literal = pd.read_csv(AnyPath(covariates), sep=',')
 
     # only run batch jobs if there are test genes in the chromosome
-    n_genes_in_scatter = get_number_of_scatters(expression_df_literal, geneloc_df_literal)
+    n_genes_in_scatter = get_number_of_scatters(
+        expression_df_literal, geneloc_df_literal
+    )
     if n_genes_in_scatter == 0:
         raise ValueError('No genes in get_number_of_scatters()')
 
@@ -593,9 +655,7 @@ def main(
 
     filter_mt_job = batch.new_python_job('filter_mt')
     copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(
-        prepare_genotype_info, keys_path=keys
-    )
+    filtered_mt_path = filter_mt_job.call(prepare_genotype_info, keys_path=keys)
 
     for idx in range(n_genes_in_scatter):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
@@ -603,6 +663,7 @@ def main(
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
+        j.image(MULTIPY_IMAGE)
         copy_common_env(j)
         result: hb.resource.PythonResult = j.call(
             run_spearman_correlation_scatter,
@@ -616,18 +677,6 @@ def main(
         )
         spearman_dfs_from_scatter.append(result)
 
-    merge_job = batch.new_python_job(name='merge_scatters')
-    copy_common_env(merge_job)
-    merge_job.cpu(2)
-    # use a separate image for multipy, which is an extension of the hail driver image
-    merge_job.image(MULTIPY_IMAGE)
-    merge_job.memory('8Gi')
-    merge_job.storage('2Gi')
-    result_second = merge_job.call(
-        merge_df_and_convert_to_string, *spearman_dfs_from_scatter
-    )
-    corr_result_output_path = os.path.join(output_prefix + '/correlation_results.tsv')
-    batch.write_output(result_second.as_str(), corr_result_output_path)
     batch.run(wait=False)
 
 
