@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 """Perform conditional analysis on SNPs and expression residuals"""
+from typing import Any 
 
 import os
 import hail as hl
@@ -393,6 +394,8 @@ def main(
     previous_sig_snps_directory = significant_snps  # pylint: disable=invalid-name
     previous_residual_path = residuals  # pylint: disable=invalid-name
 
+    sig_snps_dependencies: list[Any] = []
+
     # Perform conditional analysis for n iterations (specified in click interface)
     # note, iteration 1 is performed in generate_eqtl_spearman.py, which requires starting
     # the iteration at 2 (from a 0 index)
@@ -401,6 +404,7 @@ def main(
         calc_resid_df_job = batch.new_python_job(
             f'calculate-resid-df-iter-{iteration}'
         )
+        calc_resid_df_job.depends_on(*sig_snps_dependencies)
         calc_resid_df_job.cpu(2)
         calc_resid_df_job.memory('8Gi')
         calc_resid_df_job.storage('2Gi')
@@ -419,13 +423,14 @@ def main(
 
         sig_snps_component_paths = []
 
-        sig_snps_folder_to_write_to = os.path.join(output_prefix, f'round{iteration}_sigsnps/')
+        new_sig_snps_directory = os.path.join(output_prefix, f'round{iteration}_sigsnps/')
         sink_jobs = []
         for gene_idx in range(n_genes):
             j = batch.new_python_job(name=f'calculate_spearman_iter_{iteration}_job_{gene_idx}')
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
+            j.depends_on(*sig_snps_dependencies)
             copy_common_env(j)
             gene_result_path: hb.resource.PythonResult = j.call(
                 run_computation_in_scatter,
@@ -434,16 +439,13 @@ def main(
                 previous_residual_path,
                 previous_sig_snps_directory,
                 celltype,
-                output_path=sig_snps_folder_to_write_to
+                output_path=new_sig_snps_directory
             )
             sig_snps_component_paths.append(gene_result_path)
             sink_jobs.append(j)
 
-        # create a fake PythonResource dependency to avoid having
-        # to keep track of all dependent jobs between iterations
-        sink_job = batch.new_python_job(name=f'sink-{iteration}')
-        sink_job.depends_on(*sink_jobs)
-        previous_sig_snps_directory = sink_job.call(fake_dependency, sig_snps_folder_to_write_to)
+        previous_sig_snps_directory = new_sig_snps_directory
+        sig_snps_dependencies = sink_jobs
 
     batch.run(wait=False)
 
