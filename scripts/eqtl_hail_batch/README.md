@@ -33,7 +33,6 @@ analysis-runner --dataset tob-wgs \
     --access-level test --output-dir "scrna-seq/plasma/chr22/v0" \
     --description "eqtl batch job" \
     python3 generate_eqtl_spearman.py \
-        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0' \
         --expression 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_intermediate_expression.tsv' \
         --geneloc 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv' \
         --covariates 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/covariates_files/B_intermediate_peer_factors_file.txt' \
@@ -47,7 +46,6 @@ analysis-runner --dataset tob-wgs \
     --access-level test --output-dir "scrna-seq/plasma/chr22/v0" \
     --description "eqtl batch job" \
     python3 conditional_analysis.py \
-        --output-prefix 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0' \
         --residuals 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0/log_residuals.csv' \
         --significant-snps 'gs://cpg-tob-wgs-test/scrna-seq/plasma/chr22/v0/correlation_results.tsv' \
         --test-subset-genes 5 # test with 5 genes only
@@ -56,11 +54,11 @@ analysis-runner --dataset tob-wgs \
 To launch all cell types and chromosomes at once, run the following python wrapper script for the first round of eQTL analysis:
 
 ```sh
-analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_generate_eqtl_spearman.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --output-dir 'gs://cpg-tob-wgs-main/scrna-seq/eqtl_output/v0' --chromosomes '22'
+analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_generate_eqtl_spearman.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --chromosomes '22'
 ```
 
 For the conditional analysis (rounds 2-5), execute the following command:
 
 ```sh
-analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_conditional_analysis.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0' --output-dir 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0'
+analysis-runner --dataset tob-wgs --access-level test --output-dir 'scrna-seq/eqtl_output/v0' --description "eqtl batch job" python3 launch_conditional_analysis.py --input-path "gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files" --chromosomes '22' --first-round-path 'gs://cpg-tob-wgs-test/scrna-seq/eqtl_output/v0'
 ```

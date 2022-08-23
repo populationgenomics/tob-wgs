@@ -2,7 +2,6 @@
 
 """Run Spearman rank correlation on SNPs and expression residuals"""
 
-import os
 
 import hail as hl
 import hailtop.batch as hb
@@ -595,17 +594,11 @@ def run_spearman_correlation_scatter(
     help='A TSV of sample ids to convert external to internal IDs. Rows contain \
         sample ids, while columns contain OneK1K IDs and CPG IDs.',
 )
-@click.option(
-    '--output-prefix',
-    required=True,
-    help='A path prefix of where to output files, eg: gs://MyBucket/output-folder/',
-)
 def main(
     expression: str,
     geneloc,
     covariates,
     keys,
-    output_prefix: str,
 ):
     """
     Creates a Hail Batch pipeline for calculating EQTLs
@@ -615,7 +608,7 @@ def main(
     celltype = expression.split('/')[-1].split('_expression')[0]
     chromosome = geneloc.split('_')[-1].removesuffix('.tsv')
     # rename output prefix to have chromosome and cell type
-    output_prefix = os.path.join(output_prefix, f'{celltype}', f'{chromosome}')
+    output_prefix = output_path(f'{celltype}/{chromosome}')
 
     backend = hb.ServiceBackend(
         billing_project=get_config()['hail']['billing_project'],
