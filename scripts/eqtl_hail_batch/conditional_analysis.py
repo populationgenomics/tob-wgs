@@ -27,7 +27,7 @@ MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
-FILTERED_MT = dataset_path('scrna-seq/genotype_table.mt', 'tmp')
+FILTERED_MT = output_path('genotype_table.mt', 'tmp')
 
 
 def get_number_of_scatters(residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame) -> int:
