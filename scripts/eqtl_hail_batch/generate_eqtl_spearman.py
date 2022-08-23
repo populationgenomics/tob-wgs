@@ -489,7 +489,6 @@ def run_spearman_correlation_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
-        snp = df.snpid
         alleles = df.alleles
         snp = df.snpid
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
@@ -525,10 +524,10 @@ def run_spearman_correlation_scatter(
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
     # add in vep annotation
-    t = t.key_by('locus', 'alleles')
+    t = t.key_by(t.locus, t.alleles)
     t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     t = t.key_by()
-    t = t.drop(t.locus, t.alleles)
+    t = t.drop(t.locus, t.alleles, t.snp_id)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
@@ -536,19 +535,6 @@ def run_spearman_correlation_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
-    # add association ID annotation after adding in alleles, a1, and a2
-    spearman_df['association_id'] = spearman_df.apply(
-        lambda x: ':'.join(
-            x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
-        ),
-        axis=1,
-    )
-    spearman_df['variant_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
-    )
-    spearman_df['snp_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
-    )
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = spearman_df['p_value']
