@@ -5,7 +5,7 @@
 from bokeh.io.export import get_screenshot_as_png
 from cpg_utils.config import get_config
 from cpg_utils.hail_batch import (dataset_path, init_batch, output_path)
-import hailtop.batch as hb
+import hail as hl
 
 VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
 
