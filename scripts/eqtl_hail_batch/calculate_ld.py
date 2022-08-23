@@ -12,14 +12,14 @@ def query(input_path):
 
     hl.init(default_reference='GRCh38')
 
-    tmp_dir = input_path.replace(input_path.split('/')[2], input_path.split('/')[2] + '-tmp')
+    tmp_dir = input_path.replace(
+        input_path.split('/')[2], input_path.split('/')[2] + '-tmp'
+    )
     mt_path = f'{tmp_dir}/genotype_table.mt/'
     mt = hl.read_matrix_table(mt_path)
     mt = mt.annotate_rows(
-            global_bp=hl.locus(
-                mt.locus.contig, mt.locus.position
-            ).global_position(),
-        )
+        global_bp=hl.locus(mt.locus.contig, mt.locus.position).global_position(),
+    )
     # if running on entire genome, concatenate all significant
     # correlation matrices together, then read in as one df
     # example: https://stackoverflow.com/questions/20906474/import-multiple-csv-files-into-pandas-and-concatenate-into-one-dataframe
@@ -39,18 +39,22 @@ def query(input_path):
     # turn matrix into table and save, in order to reference row idx
     mt_path = f'{input_path}significant_snps.mt'
     mt.write(mt_path)
-    # perform ld calculation between all pairs of variants 
+    # perform ld calculation between all pairs of variants
     # within two megabases (1 megabase on either side)
     ld = hl.ld_matrix(mt.GT.n_alt_alleles(), mt.locus, radius=2e6)
-    # only calculate the upper triangle 
+    # only calculate the upper triangle
     ld = ld.sparsify_triangle()
     table = ld.entries()
     # replace row idx with global_bp
     table = table.rename({'i': 'row_idx'}).key_by('row_idx')
     mt = mt.key_rows_by('row_idx')
-    table = table.annotate(i=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    table = (
+        table.annotate(i=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    )
     table = table.rename({'j': 'row_idx'}).key_by('row_idx')
-    table = table.annotate(j=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    table = (
+        table.annotate(j=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
+    )
     # export as pandas table and save as csv
     table = table.to_pandas()
     # save table

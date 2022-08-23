@@ -42,14 +42,10 @@ from google.cloud import storage
 @click.option(
     '--input-path',
     required=True,
-    help=(
-        'A path prefix of where input files are located. eg: gs://MyBucket/folder. '
-    ),
+    help=('A path prefix of where input files are located. eg: gs://MyBucket/folder. '),
 )
 @click.option('--dry-run', is_flag=True, help='Just check if files exist')
-def submit_eqtl_jobs(
-    chromosomes, input_path, dry_run=False, cell_types=None
-):
+def submit_eqtl_jobs(chromosomes, input_path, dry_run=False, cell_types=None):
     """Run association script for all chromosomes and cell types"""
 
     chromosomes = chromosomes.split(' ')
@@ -119,7 +115,7 @@ def submit_eqtl_jobs(
                 job = batch.new_job(f'{cell_type}-chr{chromosome}')
                 copy_common_env(job)
                 job.image(get_config()['workflow']['driver_image'])
-                
+
                 # check out a git repository at the current commit
                 prepare_git_job(
                     job=job,

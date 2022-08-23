@@ -106,12 +106,16 @@ def submit_eqtl_jobs(
     for cell_type in cell_types:
         for chromosome in chromosomes:
             residuals = os.path.join(
-                first_round_path, f'{cell_type}', f'chr{chromosome}', f'log_residuals.csv'
+                first_round_path,
+                f'{cell_type}',
+                f'chr{chromosome}',
+                f'log_residuals.csv',
             )
             significant_snps = os.path.join(
                 first_round_path,
                 f'{cell_type}',
-                f'chr{chromosome}', 'parquet',
+                f'chr{chromosome}',
+                'parquet',
             )
 
             if dry_run:
@@ -123,11 +127,11 @@ def submit_eqtl_jobs(
                 for file in files_that_are_missing:
                     logging.error(f'File {file} is missing')
             else:
-                
+
                 job = batch.new_job(f'{cell_type}-chr{chromosome}')
                 copy_common_env(job)
                 job.image(get_config()['workflow']['driver_image'])
-                
+
                 # check out a git repository at the current commit
                 prepare_git_job(
                     job=job,
@@ -142,8 +146,8 @@ def submit_eqtl_jobs(
                     --significant-snps {significant_snps} \
                     {f'--test-subset-genes {test_subset_genes}' if test_subset_genes else ''}
                     """
-                    )
-    
+                )
+
     batch.run(wait=False)
 
 
