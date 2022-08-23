@@ -420,6 +420,7 @@ def main(
         sig_snps_component_paths = []
 
         sig_snps_folder_to_write_to = os.path.join(output_prefix, f'round{iteration}_sigsnps/')
+        sink_jobs = []
         for gene_idx in range(n_genes):
             j = batch.new_python_job(name=f'calculate_spearman_iter_{iteration}_job_{gene_idx}')
             j.cpu(2)
@@ -436,9 +437,12 @@ def main(
                 output_path=sig_snps_folder_to_write_to
             )
             sig_snps_component_paths.append(gene_result_path)
+            sink_jobs.append(j)
 
+        # create a fake PythonResource dependency to avoid having
+        # to keep track of all dependent jobs between iterations
         sink_job = batch.new_python_job(name=f'sink-{iteration}')
-        sink_job.image('python:3.9')
+        sink_job.depends_on(*sink_jobs)
         previous_sig_snps_directory = sink_job.call(fake_dependency, sig_snps_folder_to_write_to)
 
     batch.run(wait=False)
