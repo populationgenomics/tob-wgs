@@ -536,7 +536,7 @@ def run_spearman_correlation_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
-    # add association ID annotation
+    # add association ID annotation after adding in alleles, a1, and a2
     spearman_df['association_id'] = spearman_df.apply(
         lambda x: ':'.join(
             x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
@@ -544,7 +544,7 @@ def run_spearman_correlation_scatter(
         axis=1,
     )
     spearman_df['variant_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
+        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
     )
     spearman_df['snp_id'] = spearman_df.apply(
         lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
