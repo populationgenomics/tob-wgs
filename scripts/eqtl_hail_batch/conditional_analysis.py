@@ -313,6 +313,8 @@ def run_computation_in_scatter(
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
+    t = t.key_by()
+    t = t.drop(t.locus)
     # turn back into pandas df and add additional information
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
