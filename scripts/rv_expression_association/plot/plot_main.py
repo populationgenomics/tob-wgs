@@ -3,8 +3,9 @@
 """Entry point for the analysis runner."""
 
 from bokeh.io.export import get_screenshot_as_png
+
 # from cpg_utils.config import get_config
-from cpg_utils.hail_batch import (dataset_path, init_batch, output_path)
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 import hail as hl
 
 VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
@@ -26,9 +27,9 @@ def main():
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
 
-    p2_filename = output_path('histogram_plot2.png', 'web')
-    with hl.hadoop_open(p2_filename, 'wb') as f:
-        get_screenshot_as_png(p1).save(f, format='PNG')
+    # p2_filename = output_path('histogram_plot2.png', 'web')
+    # with hl.hadoop_open(p2_filename, 'wb') as f:
+    #     get_screenshot_as_png(p1).save(f, format='PNG')
 
     # sample = 'CPG18'
     # donor_mt = mt.filter_cols(mt.s == sample)
@@ -39,6 +40,6 @@ def main():
     # with hl.hadoop_open(p2_filename, 'wb') as f:
     #     get_screenshot_as_png(p2).save(f, format='PNG')
 
+
 if __name__ == '__main__':
     main()
-
