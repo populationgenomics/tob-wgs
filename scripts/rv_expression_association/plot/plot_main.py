@@ -40,5 +40,6 @@ def main():
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
 
+
 if __name__ == '__main__':
     main()
