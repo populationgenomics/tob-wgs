@@ -317,8 +317,7 @@ def run_computation_in_scatter(
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
     # add celltype id
-    celltype_id = celltype.lower()
-    adjusted_spearman_df['cell_type_id'] = celltype_id
+    adjusted_spearman_df['cell_type_id'] = celltype
     # add association ID annotation after adding in alleles, a1, and a2
     adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(
         lambda x: ':'.join(
