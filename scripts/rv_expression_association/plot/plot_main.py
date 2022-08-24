@@ -15,13 +15,14 @@ def main():
     init_batch()
 
     mt = hl.read_matrix_table(VEP_MT)
-    mt = mt.head(50000)
-    mt = hl.experimental.densify(mt)
+    # mt = mt.head(50000)
+    # mt = hl.experimental.densify(mt)
     mt = hl.variant_qc(mt)
     mt = hl.filter_intervals(
         mt,
         [hl.parse_locus_interval('chr22:23704425-23802743', reference_genome='GRCh38')],
     )
+    mt = hl.experimental.densify(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
     p1_filename = output_path('histogram_maf_pre_filter.png', 'web')
