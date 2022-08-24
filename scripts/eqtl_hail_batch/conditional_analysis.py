@@ -335,7 +335,7 @@ def run_computation_in_scatter(
 
     # TODO Kat to fix
     output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
-    adjusted_spearman_df.write_parquet(output_path)
+    adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
 
