@@ -35,7 +35,7 @@ def main():
 
     sample = 'CPG18'
     donor_mt = mt.filter_cols(mt.s == sample)
-    donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
+    # donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
     mt = mt.semi_join_rows(donor_mt.rows())
     p2 = hl.plot.histogram(mt.variant_qc.AF[1])
     p2_filename = output_path('histogram_maf_post_filter.png', 'web')
