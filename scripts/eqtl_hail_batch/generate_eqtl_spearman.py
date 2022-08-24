@@ -539,8 +539,6 @@ def run_spearman_correlation_scatter(
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
-    spearman_df['a1'] = spearman_df['alleles'].str[0]
-    spearman_df['a2'] = spearman_df['alleles'].str[1]
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
