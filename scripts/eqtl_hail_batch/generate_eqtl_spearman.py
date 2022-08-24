@@ -385,11 +385,14 @@ def run_spearman_correlation_scatter(
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
     t = mt.entries()
-    t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
-    t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
-    t = t.annotate(contig=t.locus.contig, position=t.locus.position)
-    t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
-    t = t.annotate(
+    t = t.key_by()
+    t = t.select(
+        n_alt_alleles=t.GT.n_alt_alleles(),
+        sampleid=t.onek1k_id,
+        contig=t.locus.contig,
+        position=t.locus.position,
+        a1=t.alleles[0],
+        a2=t.alleles[1],
         snpid=hl.str(t.contig)
         + ':'
         + hl.str(t.position)
@@ -399,7 +402,6 @@ def run_spearman_correlation_scatter(
         + hl.str(t.a2),
         global_bp=t.locus.global_position(),
     )
-    t = t.key_by()
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = hl.literal(set(gene_snp_df.snpid))
