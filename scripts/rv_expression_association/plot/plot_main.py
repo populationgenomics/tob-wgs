@@ -38,7 +38,7 @@ def main():
     donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
     mt = mt.semi_join_rows(donor_mt.rows())
     p2 = hl.plot.histogram(mt.variant_qc.AF[1])
-    p2_filename = output_path('histogram_maf_post_filter.png', 'web')
+    p2_filename = output_path('histogram_maf_post_filter_old.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
 
