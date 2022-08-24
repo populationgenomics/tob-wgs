@@ -23,10 +23,8 @@ def query(input_path):
     # if running on entire genome, concatenate all significant
     # correlation matrices together, then read in as one df
     # example: https://stackoverflow.com/questions/20906474/import-multiple-csv-files-into-pandas-and-concatenate-into-one-dataframe
-    significant_snps_path = f'{input_path}correlation_results.csv'
-    significant_snps_df = pd.read_csv(
-        significant_snps_path, sep=' ', skipinitialspace=True
-    )
+    significant_snps_path = f'{input_path}correlation_results_parquet'
+    significant_snps_df = pd.read_parquet(significant_snps_path)
     t = hl.Table.from_pandas(significant_snps_df)
     # only keep rows whose FDR is < 0.05
     t = t.filter(t.fdr < 0.05)
@@ -55,12 +53,9 @@ def query(input_path):
     table = (
         table.annotate(j=mt.rows()[table.row_idx].global_bp).key_by().drop('row_idx')
     )
-    # export as pandas table and save as csv
-    table = table.to_pandas()
-    # save table
-    ld_filename = f'{input_path}ld_matrix.ht'
-    # ld_filename = output_path(f'ld_matrix.csv', 'analysis')
-    table.to_csv(ld_filename, index=False)
+    # save table as parquet
+    ld_filename = f'{input_path}ld_matrix.parquet'
+    t.to_spark().write.parquet(ld_filename)
 
 
 if __name__ == '__main__':
