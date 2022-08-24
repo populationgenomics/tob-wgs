@@ -312,11 +312,25 @@ def run_computation_in_scatter(
     # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
+    t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     # turn back into pandas df and add additional information
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
     # add celltype id
     adjusted_spearman_df['cell_type_id'] = celltype
+    # add association ID annotation after adding in alleles, a1, and a2
+    adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(
+        lambda x: ':'.join(
+            x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
+        ),
+        axis=1,
+    )
+    adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(
+        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
+    )
+    adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(
+        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
+    )
 
     # TODO Kat to fix
     output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
