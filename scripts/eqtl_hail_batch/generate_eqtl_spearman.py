@@ -183,7 +183,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     gtf.columns = ['seqname', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
     gtf['ensembl_ids'] = gtf.attribute.apply(lambda x: re.search('gene_id "(.*?)"', x).group(1))
     gtf['gene_symbol'] = gtf.attribute.apply(lambda x: re.search('gene_name "(.*?)"', x).group(1))
-    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_symbol'), how='left', on='gene_name').ensembl_ids
+    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_symbol'), how='left', on='gene_symbol').ensembl_ids
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
