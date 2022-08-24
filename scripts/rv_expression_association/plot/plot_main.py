@@ -3,7 +3,7 @@
 """Entry point for the analysis runner."""
 
 from bokeh.io.export import get_screenshot_as_png
-from cpg_utils.config import get_config
+# from cpg_utils.config import get_config
 from cpg_utils.hail_batch import (dataset_path, init_batch, output_path)
 import hail as hl
 
