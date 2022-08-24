@@ -481,7 +481,7 @@ def main(
                 previous_residual_path,
                 previous_sig_snps_directory,
                 celltype,
-                output_path=new_sig_snps_directory,
+                output_prefix=new_sig_snps_directory,
             )
             sig_snps_component_paths.append(gene_result_path)
             sink_jobs.append(j)
