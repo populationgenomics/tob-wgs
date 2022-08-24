@@ -28,7 +28,6 @@ def main():
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
 
-
     sample = 'CPG18'
     donor_mt = mt.filter_cols(mt.s == sample)
     donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
@@ -37,7 +36,6 @@ def main():
     p2_filename = output_path('histogram_maf_post_filter_old.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
-
     ref_ht = reference_path('seqr/v0-1/combined_reference_data_grch38-2.0.4.ht')
     donor_mt = donor_mt.annotate_rows(
         gnomad_genomes=ref_ht[donor_mt.row_key].gnomad_genomes,
