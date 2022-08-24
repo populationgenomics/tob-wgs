@@ -391,16 +391,18 @@ def run_spearman_correlation_scatter(
         sampleid=t.onek1k_id,
         contig=t.locus.contig,
         position=t.locus.position,
+        global_bp=t.locus.global_position(),
         a1=t.alleles[0],
         a2=t.alleles[1],
+    )
+    t = t.annotate(
         snpid=hl.str(t.contig)
         + ':'
         + hl.str(t.position)
         + ':'
         + hl.str(t.a1)
         + ':'
-        + hl.str(t.a2),
-        global_bp=t.locus.global_position(),
+        + hl.str(t.a2)
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
