@@ -4,6 +4,7 @@
 
 
 import hail as hl
+import re
 import hailtop.batch as hb
 import pandas as pd
 import numpy as np
@@ -28,6 +29,7 @@ assert MULTIPY_IMAGE
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 VEP_ANNOTATION = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt/')
+GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.gz'
 
 
 def filter_lowly_expressed_genes(expression_df):
@@ -175,6 +177,13 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
     # add in cell type info
     data_summary['cell_type_id'] = celltype
+    # add in ENSEMBL IDs
+    gtf = pd.read_csv(GENCODE_GTF, sep='\t', header=None, index_col=False, skiprows=5)
+    # add in column names as per ENSEMBL standard GTF column names: https://asia.ensembl.org/info/website/upload/gff.html
+    gtf.columns = ['seqname', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
+    gtf['ensembl_ids'] = gtf.attribute.apply(lambda x: re.search('gene_id "(.*?)"', x).group(1))
+    gtf['gene_symbol'] = gtf.attribute.apply(lambda x: re.search('gene_name "(.*?)"', x).group(1))
+    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_symbol'), how='left', on='gene_name').ensembl_ids
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
