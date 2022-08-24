@@ -201,6 +201,8 @@ def prepare_genotype_info(keys_path):
         return filtered_mt_path
 
     mt = hl.read_matrix_table(TOB_WGS)
+    samples = mt.s.collect()
+    n_samples = len(samples)
     mt = mt.naive_coalesce(10000)
     mt = hl.experimental.densify(mt)
     # filter to biallelic loci only
@@ -210,9 +212,6 @@ def prepare_genotype_info(keys_path):
     # VQSR does not filter out low quality genotypes. Filter these out
     mt = mt.filter_entries(mt.GQ <= 20, keep=False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    # checkpoint the mt so that it isn't evaluated multiple times
-    mt = mt.checkpoint(output_path('genotype_table_checkpoint.mt', 'tmp'))
-    n_samples = mt.count_cols()
     call_rate = 0.8
     mt = mt.filter_rows(
         hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
@@ -230,7 +229,7 @@ def prepare_genotype_info(keys_path):
     )
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-    genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
+    genotype_samples = pd.DataFrame(samples, columns=['sampleid'])
     sampleid_keys = pd.merge(
         genotype_samples,
         sampleid_keys,
