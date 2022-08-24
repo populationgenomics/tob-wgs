@@ -240,8 +240,8 @@ def run_computation_in_scatter(
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
     esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
-    with esnp1_path.open('w') as fp:
-        esnp1.to_csv(fp, index=False)
+    # with esnp1_path.open('w') as fp:
+    #     esnp1.to_csv(fp, index=False)
 
     # Remaning eSNPs to test
     esnps_to_test = (
@@ -335,7 +335,7 @@ def run_computation_in_scatter(
         lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
     )
 
-    # TODO Kat to fix
+    # save each sig snps file as a parquet
     output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
     adjusted_spearman_df.to_parquet(output_path)
 
