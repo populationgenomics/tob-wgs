@@ -15,6 +15,7 @@ def main():
     init_batch()
 
     mt = hl.read_matrix_table(VEP_MT)
+    mt = head(mt, 10000)
     mt = hl.experimental.densify(mt)
     mt = hl.variant_qc(mt)
     mt = hl.filter_intervals(
