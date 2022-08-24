@@ -387,18 +387,20 @@ def run_spearman_correlation_scatter(
     # the spearman correlation function
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
-    t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
+    t = t.annotate(contig=t.locus.contig, position=t.locus.position)
+    t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
     t = t.annotate(
         snpid=hl.str(t.contig)
         + ':'
         + hl.str(t.position)
         + ':'
-        + hl.str(t.alleles[0])
+        + hl.str(t.a1)
         + ':'
-        + hl.str(t.alleles[1]),
-        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position(),
+        + hl.str(t.a2),
+        global_bp=t.locus.global_position(),
     )
+    t = t.key_by()
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = hl.literal(set(gene_snp_df.snpid))
@@ -456,11 +458,18 @@ def run_spearman_correlation_scatter(
             snp_id = item[0]
             genotype = item[1]
             group = grouped_gt.get_group((snp_id, genotype))
+            chrom = group.contig.iloc[0]
+            bp = group.position.iloc[0]
             global_bp = group.global_bp.iloc[0]
+            a1 = group.a1.iloc[0]
+            a2 = group.a2.iloc[0]
             gene_id = gene_info.gene_id
             snp_gt_summary_data.append(
                 {
-                    'snp_id': snp_id,
+                    'chrom': chrom,
+                    'bp': bp,
+                    'a1': a1,
+                    'a2': a2,
                     'global_bp': global_bp,
                     'genotype': genotype,
                     'gene_id': gene_id,
@@ -470,9 +479,7 @@ def run_spearman_correlation_scatter(
                 }
             )
 
-        snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
-
-        return snp_gt_summary_data
+        return pd.DataFrame.from_dict(snp_gt_summary_data)
 
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
