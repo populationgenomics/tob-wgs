@@ -74,7 +74,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = 
+    mt = mt.filter_rows(hl.chrom == chrom) # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
@@ -117,18 +117,19 @@ def main(
     # focus on SNVs for now
     donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
-    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)
+    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2) # not needed?
     logging.info(
         f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
     )
 
-    # filter to only variants with some regulatory consequences
-    donor_mt = donor_mt.filter_rows(
-        hl.len(donor_mt.vep.regulatory_feature_consequences) > 0
-    )
-    logging.info(
-        f'Number of variants after filtering for variants with regulatory consequences: {donor_mt.count()[0]}'
-    )
+    # SKIP FOR NOW NO VEP ANNOTATIONS
+    # # filter to only variants with some regulatory consequences
+    # donor_mt = donor_mt.filter_rows(
+    #     hl.len(donor_mt.vep.regulatory_feature_consequences) > 0
+    # )
+    # logging.info(
+    #     f'Number of variants after filtering for variants with regulatory consequences: {donor_mt.count()[0]}'
+    # )
 
     # retain info about het variants
     is_het_list = donor_mt.variant_qc.n_het.collect()
@@ -159,10 +160,10 @@ def main(
     mt = hl.variant_qc(mt)
     maf_sample_list = mt.variant_qc.AF[1].collect()
 
-    # get relevant regulatory info from VEP (biotype)
-    regulatory_consequences = donor_mt.vep.regulatory_feature_consequences[
-        'biotype'
-    ].collect()
+    # # get relevant regulatory info from VEP (biotype)
+    # regulatory_consequences = donor_mt.vep.regulatory_feature_consequences[
+    #     'biotype'
+    # ].collect()
 
     # get gene info
     gene_start = gene_df[gene_df['gene_name'] == gene_name]['start']
@@ -179,7 +180,7 @@ def main(
         'cadd': cadd_list,
         'maf_onek1k': maf_sample_list,
         'maf_gnomad_popmax': maf_popmax,
-        'regulatory_consequences': regulatory_consequences,
+        # 'regulatory_consequences': regulatory_consequences,
         'ensembl_gene_id': ensembl_gene_id,
         'chrom': chrom,
         'gene_start': int(gene_start),
