@@ -117,11 +117,15 @@ def main(
     )
 
     # focus on SNVs for now
-    donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
+    donor_mt = donor_mt.filter_rows(donor_mt.locus.is_snp) # check syntax
+    # donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
-    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # not needed?
+    # donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # biallelic already?
+    # logging.info(
+    #     f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
+    # )
     logging.info(
-        f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
+        f'Number of variants after filtering for SNVs: {donor_mt.count()[0]}'
     )
 
     # SKIP FOR NOW NO VEP ANNOTATIONS
