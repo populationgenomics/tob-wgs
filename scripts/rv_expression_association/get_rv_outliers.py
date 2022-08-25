@@ -11,6 +11,7 @@ from cloudpathlib import AnyPath
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+MT = dataset_path('mt/v7.mt')
 
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
@@ -64,28 +65,38 @@ def main(
 
     init_batch()
     # get VEP-annotated WGS object (hail matrix table)
-    mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
+    # mt = hl.read_matrix_table('gs://cpg-tob-wgs-test/tob_wgs_vep/v1/vep105_GRCh38.mt')
+    mt = hl.read_matrix_table(MT)
     logging.info(f'Number of total variants: {mt.count()[0]}')
+
+    # get relevant chromosome
+    gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
+    chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
+
+    # filter to relevant chromosome to speed densification up
+    mt = 
+    logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
+
+    # densify
+    mt = hl.experimental.densify(mt)
 
     # filter out low QC variants
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+    mt_path = output_path('densified_chrom_and_qc_filtered.mt', 'tmp')
+    mt = mt.checkpoint(mt_path)
+    logging.info(f'Number of QC-passing variants: {mt.count()[0]}')
 
     # select matrix down to that one donor
     donor_mt = mt.filter_cols(mt.s == cpg_id)
 
-    logging.info(f'Number of QC-passing variants: {donor_mt.count()[0]}')
-
-    # check this file in the future (GENCODE??)
     # get gene body position (start and end) and build interval
-    # include variants up to 10kb up- and downstream
-    gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
+    # include variants up to {window size} up- and downstream
     interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(
         window_size
     )
     interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(
         window_size
     )
-    chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # get gene-specific genomic interval
     gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
