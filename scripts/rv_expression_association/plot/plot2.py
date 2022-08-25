@@ -9,7 +9,8 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 # , reference_path
 import hail as hl
 
-VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
+# VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
+VEP_MT = dataset_path('mt/v7.mt')
 
 
 def main():
