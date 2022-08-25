@@ -76,7 +76,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = mt.filter_rows(mt.chrom == chrom)  # figure out actual syntax
+    mt = mt.filter_rows(mt.locus.chrom == ("chr"+chrom))  # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
