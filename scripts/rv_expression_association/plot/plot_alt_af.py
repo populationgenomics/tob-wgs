@@ -25,8 +25,10 @@ def main():
         mt,
         [hl.parse_locus_interval('chr22:23219960-23348287', reference_genome='GRCh38')],
     )
+    print(mt.count())
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+    print(mt.count())
     # (attempt to) add checkpoint
     mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
     mt = mt.checkpoint(mt_path, overwrite=True)
