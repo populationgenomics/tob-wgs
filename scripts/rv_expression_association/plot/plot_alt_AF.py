@@ -18,7 +18,7 @@ def main():
     init_batch()
 
     mt = hl.read_matrix_table(VEP_MT)
-    mt = mt.filter_rows(mt.chrom == '22') # check syntax
+    mt = mt.filter_rows(mt.chrom == '22')  # check syntax
     mt = hl.experimental.densify(mt)
     mt = hl.filter_intervals(
         mt,
