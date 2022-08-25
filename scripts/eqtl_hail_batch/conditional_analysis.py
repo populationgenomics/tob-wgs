@@ -222,6 +222,9 @@ def run_computation_in_scatter(
     spearmans rho, and gene information.
     """
 
+    # import multipy here to avoid issues with driver image updates
+    from multipy.fdr import qvalue
+
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
 
@@ -334,6 +337,13 @@ def run_computation_in_scatter(
     adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(
         lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
     )
+    # Correct for multiple testing using Storey qvalues
+    # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
+    pvalues = adjusted_spearman_df['p_value']
+    _, qvals = qvalue(pvalues)
+    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    adjusted_spearman_df = adjusted_spearman_df.assign(fdr=fdr_values)
+    adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
 
     # save each sig snps file as a parquet
     output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
