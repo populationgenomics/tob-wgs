@@ -19,6 +19,7 @@ def main():
 
     mt = hl.read_matrix_table(VEP_MT)
     mt = mt.filter_rows(mt.locus.contig == 'chr22')  # check syntax
+    print(mt.count())
     mt = hl.experimental.densify(mt)
     mt = hl.filter_intervals(
         mt,
