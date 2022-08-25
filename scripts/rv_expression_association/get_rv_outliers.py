@@ -4,8 +4,7 @@ import click
 import logging
 import hail as hl
 import pandas as pd
-from cpg_utils.hail_batch import reference_path
-from cpg_utils.hail_batch import output_path, init_batch
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path, reference_path
 from cloudpathlib import AnyPath
 
 # use logging to print statements, display at info level
