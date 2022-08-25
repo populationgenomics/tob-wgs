@@ -26,8 +26,8 @@ MT = dataset_path('mt/v7.mt')
 def main(
     onek1k_id: str,
     gene_name: str,
-    sample_mapping_file: str,  # 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
-    gene_file: str,  # e.g., 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv'
+    sample_mapping_file: str,  # 'scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
+    gene_file: str,  # e.g., 'scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv'
     window_size: int,
 ):
     """for a given individual,
@@ -49,7 +49,7 @@ def main(
     """
 
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
-    sample_key_df = pd.read_csv(AnyPath(sample_mapping_file), sep='\t', index_col=0)
+    sample_key_df = pd.read_csv(AnyPath(dataset_path(sample_mapping_file)), sep='\t', index_col=0)
 
     cpg_id = sample_key_df[sample_key_df.index == onek1k_id]['InternalID'].values[0]
     logging.info(f'CPG ID: {cpg_id}')  # e.g., 'CPG9951'
@@ -69,7 +69,7 @@ def main(
     logging.info(f'Number of total variants: {mt.count()[0]}')
 
     # get relevant chromosome
-    gene_df = pd.read_csv(AnyPath(gene_file), sep='\t', index_col=0)
+    gene_df = pd.read_csv(AnyPath(dataset_path(gene_file)), sep='\t', index_col=0)
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
