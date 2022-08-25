@@ -341,7 +341,7 @@ def run_computation_in_scatter(
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = adjusted_spearman_df['p_value']
     _, qvals = qvalue(pvalues)
-    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    fdr_values = pd.DataFrame(list(qvals))
     adjusted_spearman_df = adjusted_spearman_df.assign(fdr=fdr_values)
     adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
 

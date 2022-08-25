@@ -554,7 +554,7 @@ def run_spearman_correlation_scatter(
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = spearman_df['p_value']
     _, qvals = qvalue(pvalues)
-    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    fdr_values = pd.DataFrame(list(qvals))
     spearman_df = spearman_df.assign(fdr=fdr_values)
     spearman_df['fdr'] = spearman_df.fdr.astype(float)
     # Save file
