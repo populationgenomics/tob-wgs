@@ -29,16 +29,17 @@ def main():
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     print(mt.count())
-    # (attempt to) add checkpoint
-    mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
-    mt = mt.checkpoint(mt_path, overwrite=True)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
     p1_filename = output_path('histogram_alt_af_all_gene_variants.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
+    # (attempt to) add checkpoint
+    mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
+    mt = mt.checkpoint(mt_path, overwrite=True)
 
     sample = 'CPG9951'
     donor_mt = mt.filter_cols(mt.s == sample)
+    print(donor_mt.count())
     donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
     mt = mt.semi_join_rows(donor_mt.rows())
     p2 = hl.plot.histogram(mt.variant_qc.AF[1])
