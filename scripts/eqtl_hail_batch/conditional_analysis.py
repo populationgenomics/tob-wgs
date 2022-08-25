@@ -87,7 +87,7 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
+    chromosome = gene_snp_test_df.chrom[0]
     first_and_last_snp = (
         chromosome
         + ':'
