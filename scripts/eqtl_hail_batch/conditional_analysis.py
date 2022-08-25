@@ -193,7 +193,7 @@ def calculate_residual_df(
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
 
-    adjusted_residual_mat.to_csv(output_path)
+    adjusted_residual_mat.to_csv(output_path, index=False)
     return output_path
 
 
