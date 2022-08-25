@@ -31,7 +31,7 @@ def main(
     gene_file: str,  # e.g., 'scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv'
     window_size: int,
 ):
-    """for a given individual,
+    '''for a given individual,
     and gene for which that individual is an expression outlier
     get all variants within a given window,
 
@@ -47,7 +47,7 @@ def main(
 
     create the following table:
     donor ID | gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | ..
-    """
+    '''
 
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
     sample_key_df = pd.read_csv(
@@ -76,7 +76,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = mt.filter_rows(mt.locus.chrom == ("chr"+chrom))  # figure out actual syntax
+    mt = mt.filter_rows(mt.locus.chrom == ('chr'+chrom))  # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
