@@ -6,10 +6,12 @@ from bokeh.io.export import get_screenshot_as_png
 
 # from cpg_utils.config import get_config
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path
+
 # , reference_path
 import hail as hl
 
-VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
+# VEP_MT = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt')
+VEP_MT = dataset_path('mt/v7.mt')
 
 
 def main():
@@ -37,8 +39,10 @@ def main():
     p2_filename = output_path('histogram_maf_post_filter_old.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
-    # ref_ht = reference_path('seqr/v0-1/combined_reference_data_grch38-2.0.4.ht')
-    ref_ht = hl.read_table('gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht') 
+    # ref_ht = reference_path('seqr/v0-1/combined_reference_data_grch38-2.0.4.ht') # not sure why this didn't work
+    ref_ht = hl.read_table(
+        'gs://cpg-reference/seqr/v0-1/combined_reference_data_grch38-2.0.4.ht'
+    )
     donor_mt = donor_mt.annotate_rows(
         gnomad_genomes=ref_ht[donor_mt.row_key].gnomad_genomes,
     )
