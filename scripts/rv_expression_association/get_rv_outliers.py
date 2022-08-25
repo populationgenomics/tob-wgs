@@ -76,7 +76,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = mt.filter_rows(mt.locus.chrom == ('chr'+chrom))  # figure out actual syntax
+    mt = mt.filter_rows(mt.locus.contig == ('chr'+chrom))  # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
@@ -85,7 +85,7 @@ def main(
     # filter out low QC variants
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     mt_path = output_path('densified_chrom_and_qc_filtered.mt', 'tmp')
-    mt = mt.checkpoint(mt_path)
+    mt = mt.checkpoint(mt_path, overwrite=True)
     logging.info(f'Number of QC-passing variants: {mt.count()[0]}')
 
     # select matrix down to that one donor
