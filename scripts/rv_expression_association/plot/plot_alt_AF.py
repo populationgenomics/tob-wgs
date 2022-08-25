@@ -18,25 +18,28 @@ def main():
     init_batch()
 
     mt = hl.read_matrix_table(VEP_MT)
-    # mt = hl.experimental.densify(mt)
+    mt = mt.filter_rows(mt.chrom == '22') # check syntax
+    mt = hl.experimental.densify(mt)
     mt = hl.filter_intervals(
         mt,
-        [hl.parse_locus_interval('chr22:23704425-23802743', reference_genome='GRCh38')],
+        [hl.parse_locus_interval('chr22:23219960-23348287', reference_genome='GRCh38')],
     )
-    mt = hl.experimental.densify(mt)
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+    # (attempt to) add checkpoint
+    mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
+    mt = mt.checkpoint(mt_path)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
-    p1_filename = output_path('histogram_maf_pre_filter.png', 'web')
+    p1_filename = output_path('histogram_alt_af_all_gene_variants.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
 
-    sample = 'CPG18'
+    sample = 'CPG9951'
     donor_mt = mt.filter_cols(mt.s == sample)
     donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
     mt = mt.semi_join_rows(donor_mt.rows())
     p2 = hl.plot.histogram(mt.variant_qc.AF[1])
-    p2_filename = output_path('histogram_maf_post_filter_old.png', 'web')
+    p2_filename = output_path('histogram_alt_af_nonref_gene_variants.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
     # ref_ht = reference_path('seqr/v0-1/combined_reference_data_grch38-2.0.4.ht') # not sure why this didn't work
