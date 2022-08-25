@@ -28,7 +28,7 @@ def main():
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     # (attempt to) add checkpoint
     mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
-    mt = mt.checkpoint(mt_path)
+    mt = mt.checkpoint(mt_path, overwrite=True)
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
     p1_filename = output_path('histogram_alt_af_all_gene_variants.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
