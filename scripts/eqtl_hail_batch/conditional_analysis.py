@@ -484,6 +484,7 @@ def main(
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
+            j.image(MULTIPY_IMAGE)
             j.depends_on(*sig_snps_dependencies)
             copy_common_env(j)
             gene_result_path: hb.resource.PythonResult = j.call(
