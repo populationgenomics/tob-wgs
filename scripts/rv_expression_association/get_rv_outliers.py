@@ -12,6 +12,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 MT = dataset_path('mt/v7.mt')
 
+
 # get OneK1K sample ID and gene name as arguments using click
 @click.command()
 @click.option('--onek1k-id', required=True)
@@ -49,7 +50,9 @@ def main(
     """
 
     # file matching OneK1K IDs to CPG (internal) and TOB (external) IDs
-    sample_key_df = pd.read_csv(AnyPath(dataset_path(sample_mapping_file)), sep='\t', index_col=0)
+    sample_key_df = pd.read_csv(
+        AnyPath(dataset_path(sample_mapping_file)), sep='\t', index_col=0
+    )
 
     cpg_id = sample_key_df[sample_key_df.index == onek1k_id]['InternalID'].values[0]
     logging.info(f'CPG ID: {cpg_id}')  # e.g., 'CPG9951'
@@ -73,7 +76,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = mt.filter_rows(mt.chrom == chrom) # figure out actual syntax
+    mt = mt.filter_rows(mt.chrom == chrom)  # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
@@ -116,7 +119,7 @@ def main(
     # focus on SNVs for now
     donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
-    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2) # not needed?
+    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # not needed?
     logging.info(
         f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
     )

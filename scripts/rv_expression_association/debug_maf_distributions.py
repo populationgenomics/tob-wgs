@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import hail as hl
+
 # from bokeh.io import show
 from bokeh.io.export import get_screenshot_as_png
-from cpg_utils.hail_batch import output_path, init_batch 
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 MT = dataset_path('mt/v7.mt')
 
