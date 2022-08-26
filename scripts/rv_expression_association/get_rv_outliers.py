@@ -121,7 +121,8 @@ def main(
     )
 
     # focus on SNVs for now
-    donor_mt = donor_mt.filter_rows(hl.is_snp(donor_mt.locus))
+    donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles)==2) # removing variants with no alt (should those be here?)
+    donor_mt = donor_mt.filter_rows(hl.is_snp(donor_mt.alleles[0], donor_mt.alleles[1]))
     # donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
     # donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # biallelic already
