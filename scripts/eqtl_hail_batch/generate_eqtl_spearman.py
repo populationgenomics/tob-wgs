@@ -201,6 +201,8 @@ def prepare_genotype_info(keys_path):
         return filtered_mt_path
 
     mt = hl.read_matrix_table(TOB_WGS)
+    samples = mt.s.collect()
+    n_samples = len(samples)
     mt = mt.naive_coalesce(10000)
     mt = hl.experimental.densify(mt)
     # filter to biallelic loci only
@@ -210,9 +212,6 @@ def prepare_genotype_info(keys_path):
     # VQSR does not filter out low quality genotypes. Filter these out
     mt = mt.filter_entries(mt.GQ <= 20, keep=False)
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    # checkpoint the mt so that it isn't evaluated multiple times
-    mt = mt.checkpoint(output_path('genotype_table_checkpoint.mt', 'tmp'))
-    n_samples = mt.count_cols()
     call_rate = 0.8
     mt = mt.filter_rows(
         hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
@@ -230,7 +229,7 @@ def prepare_genotype_info(keys_path):
     )
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-    genotype_samples = pd.DataFrame(mt.s.collect(), columns=['sampleid'])
+    genotype_samples = pd.DataFrame(samples, columns=['sampleid'])
     sampleid_keys = pd.merge(
         genotype_samples,
         sampleid_keys,
@@ -386,18 +385,24 @@ def run_spearman_correlation_scatter(
     # get genotypes from mt in order to load individual SNPs into
     # the spearman correlation function
     t = mt.entries()
-    t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
-    t = t.key_by(contig=t.locus.contig, position=t.locus.position)
-    t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
+    t = t.key_by()
+    t = t.select(
+        n_alt_alleles=t.GT.n_alt_alleles(),
+        sampleid=t.onek1k_id,
+        contig=t.locus.contig,
+        position=t.locus.position,
+        global_bp=t.locus.global_position(),
+        a1=t.alleles[0],
+        a2=t.alleles[1],
+    )
     t = t.annotate(
         snpid=hl.str(t.contig)
         + ':'
         + hl.str(t.position)
         + ':'
-        + hl.str(t.alleles[0])
+        + hl.str(t.a1)
         + ':'
-        + hl.str(t.alleles[1]),
-        global_bp=hl.locus(t.contig, hl.int32(t.position)).global_position(),
+        + hl.str(t.a2)
     )
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
@@ -456,11 +461,18 @@ def run_spearman_correlation_scatter(
             snp_id = item[0]
             genotype = item[1]
             group = grouped_gt.get_group((snp_id, genotype))
+            chrom = group.contig.iloc[0]
+            bp = group.position.iloc[0]
             global_bp = group.global_bp.iloc[0]
+            a1 = group.a1.iloc[0]
+            a2 = group.a2.iloc[0]
             gene_id = gene_info.gene_id
             snp_gt_summary_data.append(
                 {
-                    'snp_id': snp_id,
+                    'chrom': chrom,
+                    'bp': bp,
+                    'a1': a1,
+                    'a2': a2,
                     'global_bp': global_bp,
                     'genotype': genotype,
                     'gene_id': gene_id,
@@ -470,9 +482,7 @@ def run_spearman_correlation_scatter(
                 }
             )
 
-        snp_gt_summary_data = pd.DataFrame.from_dict(snp_gt_summary_data)
-
-        return snp_gt_summary_data
+        return pd.DataFrame.from_dict(snp_gt_summary_data)
 
     gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
@@ -489,7 +499,6 @@ def run_spearman_correlation_scatter(
         """get Spearman rank correlation"""
         gene_symbol = df.gene_symbol
         gene_id = df.gene_id
-        snp = df.snpid
         alleles = df.alleles
         snp = df.snpid
         gt = genotype_df[genotype_df.snpid == snp][['sampleid', 'n_alt_alleles']]
@@ -523,33 +532,19 @@ def run_spearman_correlation_scatter(
     t = hl.Table.from_pandas(spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
     t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
+    t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
     # add in vep annotation
-    t = t.key_by('locus', 'alleles')
+    t = t.key_by(t.locus, t.alleles)
     t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     t = t.key_by()
-    t = t.drop(t.locus)
+    t = t.drop(t.locus, t.alleles, t.snp_id)
     # turn back into pandas df and add additional information
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
-    spearman_df['a1'] = spearman_df['alleles'].str[0]
-    spearman_df['a2'] = spearman_df['alleles'].str[1]
     # add celltype id
     celltype_id = celltype.lower()
     spearman_df['cell_type_id'] = celltype_id
-    # add association ID annotation after adding in alleles, a1, and a2
-    spearman_df['association_id'] = spearman_df.apply(
-        lambda x: ':'.join(
-            x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
-        ),
-        axis=1,
-    )
-    spearman_df['variant_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
-    )
-    spearman_df['snp_id'] = spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
-    )
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = spearman_df['p_value']

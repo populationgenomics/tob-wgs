@@ -315,9 +315,6 @@ def run_computation_in_scatter(
     # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
-    t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
-    t = t.key_by()
-    t = t.drop(t.locus)
     # turn back into pandas df and add additional information
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
@@ -346,6 +343,9 @@ def run_computation_in_scatter(
     adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
 
     # save each sig snps file as a parquet
+    adjusted_spearman_df['cell_type_id'] = celltype
+
+    # Save file
     output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
     adjusted_spearman_df.to_parquet(output_path)
 
