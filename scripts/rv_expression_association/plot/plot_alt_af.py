@@ -29,6 +29,9 @@ def main():
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     print(mt.count())
+    # remove variants with ref only
+    mt = mt.filter_rows(hl.len(mt.alleles) == 2)
+    print(mt.count())
     print(mt.variant_qc.AF.show())
     p1 = hl.plot.histogram(mt.variant_qc.AF[1])
     p1_filename = output_path('histogram_alt_af_all_gene_variants.png', 'web')
