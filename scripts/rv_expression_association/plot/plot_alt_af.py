@@ -41,7 +41,8 @@ def main():
     mt_path = output_path('densified_gene_and_qc_filtered.mt', 'tmp')
     mt = mt.checkpoint(mt_path, overwrite=True)
 
-    sample = 'CPG9951'
+    # sample = 'CPG9951'
+    sample = 'CPG1057'
     donor_mt = mt.filter_cols(mt.s == sample)
     print(donor_mt.count())
     donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
