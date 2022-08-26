@@ -76,7 +76,7 @@ def main(
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
 
     # filter to relevant chromosome to speed densification up
-    mt = mt.filter_rows(mt.locus.contig == ('chr'+chrom))  # figure out actual syntax
+    mt = mt.filter_rows(mt.locus.contig == ('chr' + chrom))  # figure out actual syntax
     logging.info(f'Number of variants on chromosome {chrom}: {mt.count()[0]}')
 
     # densify
@@ -102,7 +102,7 @@ def main(
     # clip to chromosome boundaries
     left_boundary = max(1, interval_start)
     right_boundary = min(
-        interval_end, hl.get_reference('GRCh38').lengths[chromosome]
+        interval_end, hl.get_reference('GRCh38').lengths[f'chr{chrom}']
     )
     # get gene-specific genomic interval
     gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
@@ -124,13 +124,11 @@ def main(
     donor_mt = donor_mt.filter_rows(donor_mt.locus.is_snp)  # check syntax
     # donor_mt = donor_mt.filter_rows(donor_mt.vep.variant_class == 'SNV')
     # filter for biallelic only
-    # donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # biallelic already?
+    # donor_mt = donor_mt.filter_rows(hl.len(donor_mt.alleles) == 2)  # biallelic already
     # logging.info(
     #     f'Number of variants after filtering for biallelic SNVs: {donor_mt.count()[0]}'
     # )
-    logging.info(
-        f'Number of variants after filtering for SNVs: {donor_mt.count()[0]}'
-    )
+    logging.info(f'Number of variants after filtering for SNVs: {donor_mt.count()[0]}')
 
     # SKIP FOR NOW NO VEP ANNOTATIONS
     # # filter to only variants with some regulatory consequences
