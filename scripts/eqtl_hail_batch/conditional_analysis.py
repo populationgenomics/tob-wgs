@@ -153,6 +153,8 @@ def calculate_residual_df(
         .first()
         .reset_index()
     )
+    # add in SNP_ID column
+    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
 
     # Subset residuals for the genes to be tested
     gene_ids = esnp1['gene_symbol'][
@@ -253,6 +255,8 @@ def run_computation_in_scatter(
         .apply(lambda group: group.iloc[1:, 1:])
         .reset_index()
     )
+    # add in SNP_ID column
+    esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
 
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
