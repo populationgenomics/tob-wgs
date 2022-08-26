@@ -99,9 +99,13 @@ def main(
     interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(
         window_size
     )
-
+    # clip to chromosome boundaries
+    left_boundary = max(1, interval_start)
+    right_boundary = min(
+        interval_end, hl.get_reference('GRCh38').lengths[chromosome]
+    )
     # get gene-specific genomic interval
-    gene_interval = 'chr' + chrom + ':' + str(interval_start) + '-' + str(interval_end)
+    gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
     logging.info(f'Interval considered: {gene_interval}')  # 'chr22:23219960-23348287'
 
     donor_mt = hl.filter_intervals(
