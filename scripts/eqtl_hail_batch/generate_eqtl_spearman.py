@@ -652,7 +652,8 @@ def main(
     copy_common_env(filter_mt_job)
     filtered_mt_path = filter_mt_job.call(prepare_genotype_info, keys_path=keys)
 
-    for idx in range(n_genes_in_scatter):
+    # for idx in range(n_genes_in_scatter):
+    for idx in range(5):
         j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
         j.depends_on(filter_mt_job, calculate_residuals_job)
         j.cpu(2)
