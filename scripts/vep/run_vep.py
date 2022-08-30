@@ -21,14 +21,14 @@ def main(mt: str):
     hl.init(default_reference='GRCh38')
 
     mt = hl.read_matrix_table(mt)
+    ht = mt.rows()
     # filter to biallelic loci only
-    mt = mt.filter_rows(hl.len(mt.alleles) == 2)
-    mt = mt.filter_rows(mt.alleles[1] != '*')
+    ht = ht.filter(hl.len(ht.alleles) == 2)
+    ht = ht.filter(ht.alleles[1] != '*')
     vep = hl.vep(mt, config='file:///vep_data/vep-gcloud.json')
-    vep = vep.rows()
-    vep_path = output_path('vep105_GRCh38.mt')
+    vep_path = output_path('vep104_GRCh38.mt')
     vep.write(vep_path)
 
 
 if __name__ == '__main__':
-    main()  # pylint: disable=E1120
+    main()
