@@ -1,3 +1,6 @@
+# Scripts to find associations between rare variants (from WGS data) and single-cell expression (from scRNA-seq data)
+At first, on TOB data (TOB-WGS + OneK1K scRNA-seq).
+
 ## Outlier analysis
 
 ### Generate positive association examples
@@ -21,7 +24,13 @@ analysis-runner --dataset "tob-wgs" \
     --gene-file "scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv"
 ```
 
-### Test them for association
+## Systematic analysis
+
+For all genes (with some criterion, _e.g.,_ min expression) create a similar file as above, this time without donor annotations (and therefore without filter for variants with alt allele for that one specific individual:
+
+```gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | regulatory consequences (VEP) | ...```
+
+Then generate input files (including converting to plink etc) for whatever association tool we have established as optimal.
 
 #### Convert genotypes to plink format
 In order to test for associations between a gene's expression and a set of variants (using an updated [CellRegMap](https://github.com/limix/CellRegMap/), or [SAIGE-GENE](https://saigegit.github.io//SAIGE-doc/docs/set.html), or other), the specific sets of variants need (for now?) to be converted back to plink format files (bed, bim, fam).
@@ -33,10 +42,4 @@ In order to test for associations between a gene's expression and a set of varia
 #### Run association 
 * Using [CellRegMap-RV](https://github.com/annacuomo/CellRegMap)
 
-## Systematic analysis
 
-For all genes (with some criterion, _e.g.,_ min expression) create a similar file as above, this time without donor annotations (and therefore without filter for variants with alt allele for that one specific individual:
-
-```gene ID | variant ID | position | CADD | MAF (OneK1K) | MAF (gnomad) | regulatory consequences (VEP) | ...```
-
-Then generate input files (including converting to plink etc) for whatever association tool we have established as optimal.
