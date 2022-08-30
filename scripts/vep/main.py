@@ -33,6 +33,8 @@ def main(script: str, mt: str):
     dataproc.hail_dataproc_job(
         batch=batch,
         worker_machine_type='n1-highmem-8',
+        worker_boot_disk_size=200,
+        secondary_worker_boot_disk_size=200,
         script=f'{script} --mt {mt}',
         max_age='12h',
         init=[
