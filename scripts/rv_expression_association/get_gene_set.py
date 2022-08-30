@@ -12,10 +12,11 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 MT = dataset_path('mt/v7.mt')
 
+
 # get gene name as argument using click
 @click.command()
 @click.option('--gene-name', required=True)
-# @click.option('--sample-mapping-file', required=True) # this is not needed anymore for a specific individuals, but we should make sure is filtered for individuals we have scRNA-seq data for
+# @click.option('--sample-mapping-file', required=True)  # this is not needed anymore for a specific individuals, but we should make sure is filtered for individuals we have scRNA-seq data for
 @click.option('--gene-file', required=True)
 @click.option(
     '--window-size',
