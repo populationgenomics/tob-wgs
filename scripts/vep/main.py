@@ -2,7 +2,6 @@
 
 """
 Use VEP using a dataproc cluster.
-Taken from Matt Welland's script, run_vep_help.py
 
 """
 
@@ -11,6 +10,7 @@ import click
 import hailtop.batch as hb
 from analysis_runner import dataproc
 from cpg_utils.hail_batch import get_config, remote_tmpdir
+
 
 @click.command()
 @click.option('--script', 'script', help='path to VEP main script')
