@@ -77,9 +77,9 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
-    samples_to_keep = set(residual_df.sampleid)
-    set_to_keep = hl.literal(samples_to_keep)
-    mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+    samples_to_keep = hl.literal(list(residual_df.sampleid))
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
+    
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_test_df.snp_id)
