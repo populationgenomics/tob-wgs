@@ -1,4 +1,5 @@
-# Scripts to find associations between rare variants (from WGS data) and single-cell expression (from scRNA-seq data)
+# Rare variant effects on single-cell expression
+Scripts to find associations between rare variants (from WGS data) and single-cell expression (from scRNA-seq data)
 At first, on TOB data (TOB-WGS + OneK1K scRNA-seq).
 
 ## Outlier analysis
