@@ -29,7 +29,7 @@ def main(script: str, mt: str, vep_version: str):
         worker_machine_type='n1-highmem-8',
         worker_boot_disk_size=200,
         secondary_worker_boot_disk_size=200,
-        script=f'{script} --mt {mt}',
+        script=f'{script} --mt {mt} --vep-version {vep_version}',
         max_age='12h',
         init=[
             f'gs://cpg-reference/hail_dataproc/install_common.sh',
