@@ -221,12 +221,12 @@ def prepare_genotype_info(keys_path):
     mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
-    # vep = hl.read_matrix_table(VEP_ANNOTATION)
-    # mt = mt.annotate_rows(
-    #     vep_functional_anno=vep.rows()[
-    #         mt.row_key
-    #     ].vep.regulatory_feature_consequences.biotype
-    # )
+    vep = hl.read_matrix_table(VEP_ANNOTATION)
+    mt = mt.annotate_rows(
+        vep_functional_anno=vep.rows()[
+            mt.row_key
+        ].vep.regulatory_feature_consequences.biotype
+    )
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
     genotype_samples = pd.DataFrame(samples, columns=['sampleid'])
@@ -535,7 +535,7 @@ def run_spearman_correlation_scatter(
     t = t.annotate(a1=t.alleles[0], a2=t.alleles[1])
     # add in vep annotation
     t = t.key_by(t.locus, t.alleles)
-    # t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
+    t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
     t = t.key_by()
     t = t.drop(t.locus, t.alleles, t.snp_id)
     # turn back into pandas df and add additional information
