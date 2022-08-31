@@ -113,20 +113,20 @@ def main(
     rare_variants = maf_sample_list[maf_sample_list<0.01]
 
     logging.info('Count variants at different MAF windows')
-    lf_scores: List[int] = [] # low frequency variants (1-5%)
+    lf_scores: List[int] = [] # low frequency variants (1-5%) # probably wrong syntax too
     rv_scores: List[int] = [] # rare variants (<1%)
 
     samples = mt.s.collect()
     
     for sample in samples:
         donor_mt = mt.filter_cols(mt.s == sample)
-        ## low frequency variants
+        # low frequency variants
         donor_mt_lq = donor_mt.filter_rows(hl.set(low_frequency_variants).contains(donor_mt.row_key))  # consider relevant variants
-        donor_mt_lq = donor_mt_lq.filter_rows(hl.agg.any(donor_mt_lq.GT.is_non_ref())) # this will get non ref instead of MAF in sample
+        donor_mt_lq = donor_mt_lq.filter_rows(hl.agg.any(donor_mt_lq.GT.is_non_ref()))  # this will get non ref instead of MAF in sample
         lf_scores[sample] = donor_mt_lq.count()[0]
-        ## rare variants
+        # rare variants
         donor_mt_rv = donor_mt.filter_rows(hl.set(rare_variants).contains(donor_mt.row_key))  # consider relevant variants
-        donor_mt_rv = donor_mt_rv.filter_rows(hl.agg.any(donor_mt_rv.GT.is_non_ref())) # this will get non ref instead of MAF in sample
+        donor_mt_rv = donor_mt_rv.filter_rows(hl.agg.any(donor_mt_rv.GT.is_non_ref()))  # this will get non ref instead of MAF in sample
         rv_scores[sample] = donor_mt_rv.count()[0]
    
 
