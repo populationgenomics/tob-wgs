@@ -25,6 +25,8 @@ def main(mt: str, vep_version: str):
     ht = mt.rows()
     # filter to biallelic loci only
     ht = ht.filter(hl.len(ht.alleles) == 2)
+    # remove starred alleles, as this results in an error in VEP
+    # see https://discuss.hail.is/t/vep-output-variant-not-found-in-original-variants/1148
     ht = ht.filter(ht.alleles[1] != '*')
     vep = hl.vep(ht, config='file:///vep_data/vep-gcloud.json')
     vep_path = output_path(f'vep{vep_version}_GRCh38.ht')
