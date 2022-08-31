@@ -7,28 +7,22 @@ Use VEP using a dataproc cluster.
 
 
 import click
-import hailtop.batch as hb
 from analysis_runner import dataproc
-from cpg_utils.hail_batch import get_config, remote_tmpdir
+from cpg_utils.hail_batch import get_batch
 
 
 @click.command()
 @click.option('--script', 'script', help='path to VEP main script')
 @click.option('--mt', required=True, help='Hail matrix table to run VEP on')
-def main(script: str, mt: str):
+@click.option('--vep-version', help='Version of VEP', default='104.3')
+def main(script: str, mt: str, vep_version: str):
     """
     runs a script inside dataproc to execute VEP
     :param script: str, the path to the VEP main script
     """
     
-    config = get_config()
-    service_backend = hb.ServiceBackend(
-        billing_project=config['hail']['billing_project'],
-        remote_tmpdir=remote_tmpdir(),
-    )
-
     # create a hail batch
-    batch = hb.Batch(name='run_vep_in_dataproc_cluster', backend=service_backend)
+    batch = get_batch('run_vep_in_dataproc_cluster')
 
     dataproc.hail_dataproc_job(
         batch=batch,
@@ -38,8 +32,8 @@ def main(script: str, mt: str):
         script=f'{script} --mt {mt}',
         max_age='12h',
         init=[
-            'gs://cpg-reference/hail_dataproc/install_common.sh',
-            'gs://cpg-reference/vep/vep-GRCh38.sh',
+            f'gs://cpg-reference/hail_dataproc/install_common.sh',
+            f'gs://cpg-reference/vep/{vep_version}/dataproc/init.sh',
         ],
         job_name='run_vep',
         num_secondary_workers=20,
