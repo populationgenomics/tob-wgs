@@ -4,7 +4,6 @@
 
 
 import hail as hl
-import re
 import hailtop.batch as hb
 import pandas as pd
 import numpy as np
@@ -174,16 +173,12 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     data_summary = pd.DataFrame(
         log_cpm.apply(create_struct, axis=0), columns=['data']
     ).reset_index()
-    data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
+    data_summary = data_summary.rename({'index': 'gene_name'}, axis='columns')
     # add in cell type info
     data_summary['cell_type_id'] = celltype
     # add in ENSEMBL IDs
-    gtf = pd.read_csv(GENCODE_GTF, sep='\t', header=None, index_col=False, skiprows=5)
-    # add in column names as per ENSEMBL standard GTF column names: https://asia.ensembl.org/info/website/upload/gff.html
-    gtf.columns = ['seqname', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
-    gtf['ensembl_ids'] = gtf.attribute.apply(lambda x: re.search('gene_id "(.*?)"', x).group(1))
-    gtf['gene_symbol'] = gtf.attribute.apply(lambda x: re.search('gene_name "(.*?)"', x).group(1))
-    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_symbol'), how='left', on='gene_symbol').ensembl_ids
+    gtf = hl.experimental.import_gtf(GENCODE_GTF, force=True, reference_genome='GRCh38', skip_invalid_contigs=True)
+    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
