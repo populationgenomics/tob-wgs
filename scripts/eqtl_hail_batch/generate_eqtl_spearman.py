@@ -28,7 +28,7 @@ assert MULTIPY_IMAGE
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
 VEP_ANNOTATION = dataset_path('tob_wgs_vep/v1/vep105_GRCh38.mt/')
-GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.gz'
+GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'
 
 
 def filter_lowly_expressed_genes(expression_df):
