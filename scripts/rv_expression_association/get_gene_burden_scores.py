@@ -105,10 +105,10 @@ def main(
     mt = hl.variant_qc(mt)
     alt_af_sample_list = mt.variant_qc.AF[1].collect()
 
+    logging.info('Get within sample MAF rather than alt allele counts')
+    maf_sample_list = [1-i if i >= 0.5 else i for i in alt_af_sample_list]
+
     logging.info('Count variants at different MAF windows')
-    maf_sample_list = alt_af_sample_list or 1-alt_af_sample_list
-
-
     lf_scores = List[int] # low frequency (1-5%)
     rv_scores = List[int] # rare variants (<1%)
 
