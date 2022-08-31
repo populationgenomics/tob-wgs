@@ -115,8 +115,9 @@ def main(
     samples = mt.s.collect()
     
     for sample in samples:
-        lf_scores[sample] = len(maf_sample_list[sample] > 0.01 and maf_sample_list[sample] < 0.05)
-        rv_scores[sample] = len(maf_sample_list[sample] < 0.01)
+        donor_mt = mt.filter_cols(mt.s == cpg_id)
+        lf_scores[sample] = donor_mt.filter_rows(low_frequency_variants).count()[0]
+        rv_scores[sample] = donor_mt.filter_rows(rare_variants).count()[0]
    
 
     logging.info('Preparing results data')
