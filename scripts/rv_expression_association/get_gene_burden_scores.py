@@ -112,15 +112,19 @@ def main(
     rare_variants = maf_sample_list[maf_sample_list<0.01]
 
     logging.info('Count variants at different MAF windows')
-    lf_scores = List[int] # low frequency (1-5%)
-    rv_scores = List[int] # rare variants (<1%)
+    lf_scores = [] # low frequency variants (1-5%)
+    rv_scores = [] # rare variants (<1%)
 
     samples = mt.s.collect()
     
     for sample in samples:
-        donor_mt = mt.filter_cols(mt.s == cpg_id)
-        lf_scores[sample] = donor_mt.filter_rows(low_frequency_variants).count()[0]
-        rv_scores[sample] = donor_mt.filter_rows(rare_variants).count()[0]
+        donor_mt = mt.filter_cols(mt.s == sample)
+        ## low frequency variants
+        donor_mt_lq = donor_mt.filter_rows(hl.set(low_frequency_variants).contains(donor_mt.row_key))  # consider relevant variants
+        donor_mt_lq = donor_mt_lq.filter_rows(hl.agg.any(donor_mt_lq.GT.is_non_ref())) # this will get non ref instead of MAF in sample
+        lf_scores[sample] = donor_mt_lq.count()[0]
+        ## rare variants
+        # rv_scores[sample] = donor_mt.filter_rows(rare_variants).count()[0]
    
 
     logging.info('Preparing results data')
