@@ -87,12 +87,9 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    # chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
-    # get one random element from the list
+    # get one random element from the list to get chromosome
     random_snp = next(iter(snps_to_keep))
-    print(random_snp)
     chromosome = random_snp.split(':')[0]
-    print(f'Got chromosome: {chromosome}')
 
     first_and_last_snp = (
         chromosome
@@ -250,9 +247,9 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
-    # with esnp1_path.open('w') as fp:
-    #     esnp1.to_csv(fp, index=False)
+    esnp1_path = AnyPath(output_prefix) / f'/eSNPs/conditioned_esnps_{iteration}.tsv'
+    with esnp1_path.open('w') as fp:
+        esnp1.to_csv(fp, index=False)
 
     # Remaning eSNPs to test
     esnps_to_test = (
@@ -354,8 +351,6 @@ def run_computation_in_scatter(
     fdr_values = pd.DataFrame(list(qvals))
     adjusted_spearman_df = adjusted_spearman_df.assign(fdr=fdr_values)
     adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
-
-    # save each sig snps file as a parquet
     adjusted_spearman_df['cell_type_id'] = celltype
 
     # Save file
@@ -363,34 +358,6 @@ def run_computation_in_scatter(
     adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
-
-
-# def merge_significant_snps_paths(*path_list):
-#     """
-#     Merge list of list of sig_snps dataframes
-#     """
-
-#     # This PythonJob is run in the multipy container,
-#     # do the import here so it's not run in the driver container
-#     from multipy.fdr import qvalue
-
-#     merged_sig_snps: pd.DataFrame = pd.concat([pd.read_parquet(p) for p in path_list])
-#     pvalues = merged_sig_snps['p_value']
-#     # Correct for multiple testing using Storey qvalues
-#     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
-#     _, qvals = qvalue(pvalues)
-#     fdr_values = pd.DataFrame(list(qvals))
-#     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
-#     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
-
-#     return merged_sig_snps
-
-
-# def convert_dataframe_to_text(dataframe):
-#     """
-#     convert to string for writing
-#     """
-#     return dataframe.to_string()
 
 
 # Create click command line to enter dependency files
