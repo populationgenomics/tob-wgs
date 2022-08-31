@@ -113,11 +113,15 @@ def main(
     rare_variants = maf_sample_list[maf_sample_list < 0.01]
 
     logging.info('Count variants at different MAF windows')
+
+    # mt = mt.annotate_cols(count_lowfreq=hl.agg.count(mt.AF)) # figure out syntax properly
+
     lf_scores: List[int] = []  # low frequency variants (1-5%) # probably wrong syntax too
     rv_scores: List[int] = []  # rare variants (<1%)
-
+    
     samples = mt.s.collect()
     
+    # switch to aggregating, can I group by individual?
     for sample in samples:
         donor_mt = mt.filter_cols(mt.s == sample)
         # low frequency variants
