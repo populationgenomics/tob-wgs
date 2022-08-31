@@ -286,6 +286,9 @@ def run_computation_in_scatter(
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
+        # Remove SNPs with NA values. This is due to some individuals having NA genotype values when
+        # the residual df was created using the top eSNP as the conditioning SNP.
+        test_df = test_df.dropna(axis=0, how='any')
         spearmans_rho, p = spearmanr(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
@@ -304,7 +307,7 @@ def run_computation_in_scatter(
         'spearmans_rho',
         'p_value',
     ]
-    # remove any NA values. Remove this line when run on main dataset
+    # remove any NA values (i.e., individuals with zero variance in their genotypes)
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
     # add in locus and chromosome information to get global position in hail
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
