@@ -107,7 +107,7 @@ def main(
     alt_af_sample_list = mt.variant_qc.AF[1].collect()
 
     logging.info('Get within sample MAF rather than alt allele counts')
-    maf_sample_list = [1-i if i >= 0.5 else i for i in alt_af_sample_list]  # does it make sense to reannotate variants based on minor/major within this dataset?
+    maf_sample_list = float([1-i if i >= 0.5 else i for i in alt_af_sample_list])  # does it make sense to reannotate variants based on minor/major within this dataset?
 
     low_frequency_variants = maf_sample_list[maf_sample_list > 0.01 and maf_sample_list < 0.05]
     rare_variants = maf_sample_list[maf_sample_list < 0.01]
