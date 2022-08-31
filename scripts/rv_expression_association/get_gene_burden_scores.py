@@ -4,7 +4,7 @@ import click
 import logging
 import hail as hl
 import pandas as pd
-from cpg_utils.hail_batch import dataset_path, init_batch, output_path, reference_path
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 from cloudpathlib import AnyPath
 
 # use logging to print statements, display at info level
@@ -109,9 +109,11 @@ def main(
     maf_sample_list = alt_af_sample_list or 1-alt_af_sample_list
 
 
-    lf_scores = [] # low frequency (1-5%)
-    rv_scores = [] # rare variants (<1%)
+    lf_scores = List[int] # low frequency (1-5%)
+    rv_scores = List[int] # rare variants (<1%)
 
+    samples = mt.s.collect()
+    
     for sample in samples:
         lf_scores[sample] = len(maf_sample_list[sample] > 0.01 and maf_sample_list[sample] < 0.05)
         rv_scores[sample] = len(maf_sample_list[sample] < 0.01)
@@ -119,7 +121,7 @@ def main(
 
     logging.info('Preparing results data')
     results_data = {
-        'individual': mt.s.collect(),
+        'individual': samples,
         'score_lowfreq': lf_scores,
         'score_rare': rv_scores,
     }
