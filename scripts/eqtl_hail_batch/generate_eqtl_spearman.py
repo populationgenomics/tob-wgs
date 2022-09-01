@@ -229,7 +229,7 @@ def prepare_genotype_info(keys_path):
     mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
-    vep = hl.read_matrix_table(VEP_ANNOTATION)
+    vep = hl.read_table(VEP_ANNOTATION)
     mt = mt.annotate_rows(
         vep_functional_anno=vep.rows()[
             mt.row_key
