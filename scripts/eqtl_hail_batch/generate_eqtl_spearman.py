@@ -231,7 +231,7 @@ def prepare_genotype_info(keys_path):
     # add in VEP annotation
     vep = hl.read_table(VEP_ANNOTATION)
     mt = mt.annotate_rows(
-        vep_functional_anno=vep.rows()[
+        vep_functional_anno=vep[
             mt.row_key
         ].vep.regulatory_feature_consequences.biotype
     )
