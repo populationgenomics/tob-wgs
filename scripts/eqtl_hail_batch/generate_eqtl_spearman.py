@@ -176,13 +176,13 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     data_summary = data_summary.rename({'index': 'gene_name'}, axis='columns')
     # add in cell type info
     data_summary['cell_type_id'] = celltype
-    # add in ENSEMBL IDs
-    init_batch(driver_cores=8)
-    gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
-    # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
-    gtf = gtf.annotate(frame=hl.str(gtf.frame))
-    gtf = gtf.to_pandas()
-    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
+    # # add in ENSEMBL IDs
+    # init_batch(driver_cores=8)
+    # gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
+    # # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
+    # gtf = gtf.annotate(frame=hl.str(gtf.frame))
+    # gtf = gtf.to_pandas()
+    # data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
