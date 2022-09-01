@@ -247,7 +247,7 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(output_prefix) / f'/eSNPs/conditioned_esnps_{iteration}.tsv'
+    esnp1_path = AnyPath(output_prefix) / f'eSNPs/conditioned_esnps_{iteration}.tsv'
     with esnp1_path.open('w') as fp:
         esnp1.to_csv(fp, index=False)
 
