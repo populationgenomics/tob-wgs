@@ -209,7 +209,8 @@ def run_computation_in_scatter(
     residual_path,
     significant_snps_path,
     celltype,
-    output_prefix,
+    round_outputdir,
+    sigsnps_outputdir
 ):
     """Run genes in scatter
 
@@ -247,7 +248,7 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
+    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}.tsv'
     with esnp1_path.open('w') as fp:
         esnp1.to_csv(fp, index=False)
 
@@ -354,7 +355,7 @@ def run_computation_in_scatter(
     adjusted_spearman_df['cell_type_id'] = celltype
 
     # Save file
-    output_path = os.path.join(output_prefix, f'sig_snps_round_{iteration}', f'sig-snps-{idx}.parquet')
+    output_path = os.path.join(sigsnps_outputdir, f'sig-snps-{idx}.parquet')
     adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
@@ -438,6 +439,10 @@ def main(
         calc_resid_df_job.storage('2Gi')
         copy_common_env(calc_resid_df_job)
 
+        round_dir = os.path.join(
+            output_prefix, f'round{iteration}/'
+        )
+
         # this calculate_residual_df will also write an output that is useful later
         # if we assign previous_residual_path to the result of the call, we get the job dependency we actually want
         # as opposed to saying the following, which means there's actually no job dependency (bad):
@@ -447,14 +452,14 @@ def main(
             previous_residual_path,
             previous_sig_snps_directory,
             output_path=os.path.join(
-                output_prefix, f'round{iteration}_residual_results.csv'
+                round_dir, f'residual_results.csv'
             ),
         )
 
         sig_snps_component_paths = []
 
         new_sig_snps_directory = os.path.join(
-            output_prefix, f'round{iteration}_sigsnps/'
+            round_dir, 'sigsnps/'
         )
         sink_jobs = []
         for gene_idx in range(n_genes):
@@ -474,7 +479,8 @@ def main(
                 previous_residual_path,
                 previous_sig_snps_directory,
                 celltype,
-                output_prefix=new_sig_snps_directory,
+                round_outputdir=round_dir,
+                sigsnps_outputdir=new_sig_snps_directory
             )
             sig_snps_component_paths.append(gene_result_path)
             sink_jobs.append(j)
