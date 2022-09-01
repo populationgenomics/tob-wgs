@@ -179,6 +179,8 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     # add in ENSEMBL IDs
     init_batch()
     gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
+    # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
+    gtf = gtf.annotate(frame=hl.str(gtf.frame))
     gtf = gtf.to_pandas()
     data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
 
