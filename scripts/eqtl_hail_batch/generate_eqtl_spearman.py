@@ -177,7 +177,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     # add in cell type info
     data_summary['cell_type_id'] = celltype
     # add in ENSEMBL IDs
-    init_batch()
+    init_batch(driver_cores=8)
     gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
     # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
