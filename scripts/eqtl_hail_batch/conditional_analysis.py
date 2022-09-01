@@ -247,7 +247,7 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(output_prefix) / f'eSNPs/conditioned_esnps_{iteration}.tsv'
+    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
     with esnp1_path.open('w') as fp:
         esnp1.to_csv(fp, index=False)
 
@@ -354,7 +354,7 @@ def run_computation_in_scatter(
     adjusted_spearman_df['cell_type_id'] = celltype
 
     # Save file
-    output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
+    output_path = os.path.join(output_prefix, f'sig_snps_round_{iteration}', f'sig-snps-{idx}.parquet')
     adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
