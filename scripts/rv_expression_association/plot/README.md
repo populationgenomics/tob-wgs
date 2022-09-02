@@ -10,3 +10,7 @@ analysis-runner --dataset tob-wgs --description "plot alternative allele frequen
 ```sh
 analysis-runner --dataset tob-wgs --description "plot qc metrics" --output-dir "plot/v0" --access-level test python3 plot_qc.py
 ```
+
+```sh
+analysis-runner --dataset tob-wgs --description "plot alternative allele frequencies" --output-dir "plot/v0" --access-level test python3 extract_rare_variants.py
+```
