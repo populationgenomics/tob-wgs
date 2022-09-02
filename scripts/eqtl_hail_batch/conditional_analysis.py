@@ -77,7 +77,7 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
-    samples_to_keep = hl.literal(list(residual_df.sampleid))
+    samples_to_keep = hl.set(list(residual_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     
     # Do this only on SNPs contained within gene_snp_df to save on
@@ -332,19 +332,6 @@ def run_computation_in_scatter(
     # add celltype id
     celltype_id = celltype.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
-    # add association ID annotation after adding in alleles, a1, and a2
-    adjusted_spearman_df['association_id'] = adjusted_spearman_df.apply(
-        lambda x: ':'.join(
-            x[['chrom', 'bp', 'a1', 'a2', 'gene_symbol', 'cell_type_id', 'round']]
-        ),
-        axis=1,
-    )
-    adjusted_spearman_df['variant_id'] = adjusted_spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a2']]), axis=1
-    )
-    adjusted_spearman_df['snp_id'] = adjusted_spearman_df.apply(
-        lambda x: ':'.join(x[['chrom', 'bp', 'a1', 'a2']]), axis=1
-    )
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = adjusted_spearman_df['p_value']
