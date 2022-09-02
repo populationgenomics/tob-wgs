@@ -30,6 +30,7 @@ def main():
     ht = ht.filter_rows(hl.len(ht.alleles) == 2)
     print(ht.count())
     print(ht.freq.AF.show())
+    print(min(ht.freq.AF.collect()))
 
 
     # p1 = hl.plot.histogram(ht.variant_qc.AF[1])
