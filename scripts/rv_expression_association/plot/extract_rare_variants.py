@@ -16,7 +16,7 @@ def main():
 
     ht = hl.read_table(HT)
     # ht = ht.filter_rows(ht.locus.contig == 'chr22')  
-    ht = ht.filter_rws(ht.vep.seq_region_name == 'chr22')
+    ht = ht.filter_rows(ht.vep.seq_region_name == 'chr22')
     print(ht.count())
     # ht = hl.experimental.densify(ht)
     # ht = hl.filter_intervals(
