@@ -177,7 +177,11 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     # add in cell type info
     data_summary['cell_type_id'] = celltype
     # add in ENSEMBL IDs
+    init_batch(driver_cores=8)
     gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
+    # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
+    gtf = gtf.annotate(frame=hl.str(gtf.frame))
+    gtf = gtf.to_pandas()
     data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
 
     # Save file
@@ -225,9 +229,9 @@ def prepare_genotype_info(keys_path):
     mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
     mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
     # add in VEP annotation
-    vep = hl.read_matrix_table(VEP_ANNOTATION)
+    vep = hl.read_table(VEP_ANNOTATION)
     mt = mt.annotate_rows(
-        vep_functional_anno=vep.rows()[
+        vep_functional_anno=vep[
             mt.row_key
         ].vep.regulatory_feature_consequences.biotype
     )
@@ -553,7 +557,7 @@ def run_spearman_correlation_scatter(
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = spearman_df['p_value']
     _, qvals = qvalue(pvalues)
-    fdr_values = pd.DataFrame(list(qvals)).iloc[1]
+    fdr_values = pd.DataFrame(list(qvals))
     spearman_df = spearman_df.assign(fdr=fdr_values)
     spearman_df['fdr'] = spearman_df.fdr.astype(float)
     # Save file
@@ -642,6 +646,7 @@ def main(
     )
     # calculate and save log cpm values
     generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    generate_log_cpm_output_job.memory('8Gi')
     copy_common_env(generate_log_cpm_output_job)
     generate_log_cpm_output_job.call(
         generate_log_cpm_output,

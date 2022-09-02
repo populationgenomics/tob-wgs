@@ -77,9 +77,9 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
-    samples_to_keep = set(residual_df.sampleid)
-    set_to_keep = hl.literal(samples_to_keep)
-    mt = mt.filter_cols(set_to_keep.contains(mt['onek1k_id']))
+    samples_to_keep = hl.set(list(residual_df.sampleid))
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
+    
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_test_df.snp_id)
@@ -87,7 +87,10 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
-    chromosome = gene_snp_test_df.snp_id[0].split(':')[:1][0]
+    # get one random element from the list to get chromosome
+    random_snp = next(iter(snps_to_keep))
+    chromosome = random_snp.split(':')[0]
+
     first_and_last_snp = (
         chromosome
         + ':'
@@ -153,6 +156,8 @@ def calculate_residual_df(
         .first()
         .reset_index()
     )
+    # add in SNP_ID column
+    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
 
     # Subset residuals for the genes to be tested
     gene_ids = esnp1['gene_symbol'][
@@ -193,7 +198,7 @@ def calculate_residual_df(
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
 
-    adjusted_residual_mat.to_csv(output_path)
+    adjusted_residual_mat.to_csv(output_path, index=False)
     return output_path
 
 
@@ -204,7 +209,8 @@ def run_computation_in_scatter(
     residual_path,
     significant_snps_path,
     celltype,
-    output_prefix,
+    round_outputdir,
+    sigsnps_outputdir
 ):
     """Run genes in scatter
 
@@ -221,6 +227,9 @@ def run_computation_in_scatter(
     row contains information for a SNP, and columns contain information on significance levels,
     spearmans rho, and gene information.
     """
+
+    # import multipy here to avoid issues with driver image updates
+    from multipy.fdr import qvalue
 
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
@@ -239,7 +248,7 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(output_prefix) / f'conditioned_esnps_{iteration}.tsv'
+    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}.tsv'
     with esnp1_path.open('w') as fp:
         esnp1.to_csv(fp, index=False)
 
@@ -250,6 +259,8 @@ def run_computation_in_scatter(
         .apply(lambda group: group.iloc[1:, 1:])
         .reset_index()
     )
+    # add in SNP_ID column
+    esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
 
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
@@ -273,6 +284,9 @@ def run_computation_in_scatter(
         res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
+        # Remove SNPs with NA values. This is due to some individuals having NA genotype values when
+        # the residual df was created using the top eSNP as the conditioning SNP.
+        test_df = test_df.dropna(axis=0, how='any')
         spearmans_rho, p = spearmanr(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
@@ -291,7 +305,7 @@ def run_computation_in_scatter(
         'spearmans_rho',
         'p_value',
     ]
-    # remove any NA values. Remove this line when run on main dataset
+    # remove any NA values (i.e., individuals with zero variance in their genotypes)
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
     # add in locus and chromosome information to get global position in hail
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
@@ -316,41 +330,22 @@ def run_computation_in_scatter(
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
     # add celltype id
+    celltype_id = celltype.lower()
+    adjusted_spearman_df['cell_type_id'] = celltype_id
+    # Correct for multiple testing using Storey qvalues
+    # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
+    pvalues = adjusted_spearman_df['p_value']
+    _, qvals = qvalue(pvalues)
+    fdr_values = pd.DataFrame(list(qvals))
+    adjusted_spearman_df = adjusted_spearman_df.assign(fdr=fdr_values)
+    adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
     adjusted_spearman_df['cell_type_id'] = celltype
 
-    # TODO Kat to fix
-    output_path = os.path.join(output_prefix, f'sig-snps-{idx}.parquet')
-    adjusted_spearman_df.write_parquet(output_path)
+    # Save file
+    output_path = os.path.join(sigsnps_outputdir, f'sig-snps-{idx}.parquet')
+    adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
-
-
-# def merge_significant_snps_paths(*path_list):
-#     """
-#     Merge list of list of sig_snps dataframes
-#     """
-
-#     # This PythonJob is run in the multipy container,
-#     # do the import here so it's not run in the driver container
-#     from multipy.fdr import qvalue
-
-#     merged_sig_snps: pd.DataFrame = pd.concat([pd.read_parquet(p) for p in path_list])
-#     pvalues = merged_sig_snps['p_value']
-#     # Correct for multiple testing using Storey qvalues
-#     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
-#     _, qvals = qvalue(pvalues)
-#     fdr_values = pd.DataFrame(list(qvals))
-#     merged_sig_snps = merged_sig_snps.assign(fdr=fdr_values)
-#     merged_sig_snps['fdr'] = merged_sig_snps.fdr.astype(float)
-
-#     return merged_sig_snps
-
-
-# def convert_dataframe_to_text(dataframe):
-#     """
-#     convert to string for writing
-#     """
-#     return dataframe.to_string()
 
 
 # Create click command line to enter dependency files
@@ -431,6 +426,10 @@ def main(
         calc_resid_df_job.storage('2Gi')
         copy_common_env(calc_resid_df_job)
 
+        round_dir = os.path.join(
+            output_prefix, f'round{iteration}/'
+        )
+
         # this calculate_residual_df will also write an output that is useful later
         # if we assign previous_residual_path to the result of the call, we get the job dependency we actually want
         # as opposed to saying the following, which means there's actually no job dependency (bad):
@@ -440,14 +439,14 @@ def main(
             previous_residual_path,
             previous_sig_snps_directory,
             output_path=os.path.join(
-                output_prefix, f'round{iteration}_residual_results.csv'
+                round_dir, f'residual_results.csv'
             ),
         )
 
         sig_snps_component_paths = []
 
         new_sig_snps_directory = os.path.join(
-            output_prefix, f'round{iteration}_sigsnps/'
+            round_dir, 'sigsnps/'
         )
         sink_jobs = []
         for gene_idx in range(n_genes):
@@ -457,6 +456,7 @@ def main(
             j.cpu(2)
             j.memory('8Gi')
             j.storage('2Gi')
+            j.image(MULTIPY_IMAGE)
             j.depends_on(*sig_snps_dependencies)
             copy_common_env(j)
             gene_result_path: hb.resource.PythonResult = j.call(
@@ -466,7 +466,8 @@ def main(
                 previous_residual_path,
                 previous_sig_snps_directory,
                 celltype,
-                output_path=new_sig_snps_directory,
+                round_outputdir=round_dir,
+                sigsnps_outputdir=new_sig_snps_directory
             )
             sig_snps_component_paths.append(gene_result_path)
             sink_jobs.append(j)
