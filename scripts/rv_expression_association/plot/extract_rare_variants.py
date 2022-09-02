@@ -16,7 +16,7 @@ def main():
 
     ht = hl.read_table(HT)
     # ht = ht.filter_rows(ht.locus.contig == 'chr22')  
-    ht = ht.filter_rows(ht.vep.seq_region_name == 'chr22')
+    ht = ht.filter(ht.vep.seq_region_name == 'chr22')
     print(ht.count())
     # ht = hl.experimental.densify(ht)
     # ht = hl.filter_intervals(
@@ -28,7 +28,7 @@ def main():
     # ht = ht.filter_rows(hl.len(hl.or_else(ht.filters, hl.empty_set(hl.tstr))) == 0)
     print(ht.count())
     # filter for biallelic
-    ht = ht.filter_rows(hl.len(ht.alleles) == 2)
+    ht = ht.filter(hl.len(ht.alleles) == 2)
     print(ht.count())
     print(ht.freq.AF.show())
     print(min(ht.freq.AF.collect()))
