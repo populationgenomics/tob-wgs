@@ -1,6 +1,10 @@
 # Run hail batch job to generate list of eQTLs
 
-This runs a Hail batch script in order to generate a list of eQTLs from scRNA-seq expression. This [code](https://github.com/powellgenomicslab/onek1k_phase1/tree/main/single_cell_cis_eQTL_mapping) was taken from Seyhan Yazar from Joseph Powell's group at the Garvan-Weizmann Centre for Cellular Genomics, then converted into Python/hail batch. 
+This runs a Hail batch script in order to generate a list of eQTLs from scRNA-seq expression. This [code](https://github.com/powellgenomicslab/onek1k_phase1/tree/main/single_cell_cis_eQTL_mapping) was taken from Seyhan Yazar from Joseph Powell's group at the Garvan-Weizmann Centre for Cellular Genomics, then converted into Python/hail batch. In contrast to the above script which was filtered for variants with a MAF <= 0.05, this pipeline filters the TOB-WGS dataset on the following criteria:
+* Variants with MAF <= 0.01
+* Variants which don’t pass the VQSR filter
+* Low quality genotypes, set as those <= 20
+* Samples with a genotype call rate < 0.8
 
 ## Workflow:
 
