@@ -14,7 +14,7 @@ HT = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht')
 def main():
     init_batch()
 
-    ht = hl.read_table(VEP_HT)
+    ht = hl.read_table(HT)
     ht = ht.filter_rows(ht.locus.contig == 'chr22')  # check syntax
     print(ht.count())
     # ht = hl.experimental.densify(ht)
