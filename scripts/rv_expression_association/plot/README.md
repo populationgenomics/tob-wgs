@@ -12,5 +12,5 @@ analysis-runner --dataset tob-wgs --description "plot qc metrics" --output-dir "
 ```
 
 ```sh
-analysis-runner --dataset tob-wgs --description "plot alternative allele frequencies" --output-dir "plot/v0" --access-level test python3 extract_rare_variants.py
+analysis-runner --dataset tob-wgs --description "print number of variants at AF threshold" --output-dir "plot/v0" --access-level test python3 extract_rare_variants.py
 ```
