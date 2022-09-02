@@ -23,15 +23,15 @@ def main():
     #     ht,
     #     [hl.parse_locus_interval('chr22:23219960-23348287', reference_genome='GRCh38')],
     # )
-    print(ht.count())
+    # print(ht.count())
     # ht = hl.variant_qc(ht)
     # ht = ht.filter_rows(hl.len(hl.or_else(ht.filters, hl.empty_set(hl.tstr))) == 0)
-    print(ht.count())
+    # print(ht.count())
     # filter for biallelic
     ht = ht.filter(hl.len(ht.alleles) == 2)
     print(ht.count())
     print(ht.freq.AF.show())
-    print(min(ht.freq.AF.collect()))
+    print(min(ht.freq.AF[1].collect()))
 
 
     # p1 = hl.plot.histogram(ht.variant_qc.AF[1])
