@@ -7,6 +7,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch  #, output_path
 
 # , reference_path
 import hail as hl
+import numpy as np
 
 HT = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht')
 
@@ -31,7 +32,7 @@ def main():
     ht = ht.filter(hl.len(ht.alleles) == 2)
     print(ht.count())
     print(ht.freq.AF.show())
-    print(min(ht.freq.AF[1].collect()))
+    print(np.nanmin(ht.freq.AF[1].collect()))
 
 
     # p1 = hl.plot.histogram(ht.variant_qc.AF[1])
