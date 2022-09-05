@@ -29,8 +29,8 @@ from cpg_utils.hail_batch import (
 from google.cloud import storage
 
 from genotype_info import filter_joint_call_mt
-from generate_eqtl_spearman import main as generate_eqtl_spearman
-from conditional_analysis import main as generate_conditional_analysis
+# from generate_eqtl_spearman import main as generate_eqtl_spearman
+# from conditional_analysis import main as generate_conditional_analysis
 from constants import (
     DEFAULT_JOINT_CALL_TABLE_PATH,
     DEFAULT_FREQUENCY_TABLE_PATH,
@@ -38,6 +38,17 @@ from constants import (
     DEFAULT_GENCODE_GTF_PATH,
     MULTIPY_IMAGE,
 )
+def mainify(obj):
+    """If obj is not defined in __main__ then redefine it in
+    main so that dill will serialize the definition along with the object"""
+    if obj.__module__ != "__main__":
+        import __main__
+        import inspect
+        s = inspect.getsource(obj)
+        co = compile(s, '<string>', 'exec')
+        exec(co, __main__.__dict__)
+
+mainify(filter_joint_call_mt)
 
 
 @click.command()
