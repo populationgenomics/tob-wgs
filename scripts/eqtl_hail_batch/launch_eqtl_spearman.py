@@ -87,11 +87,11 @@ def from_cli(
 ):
     chromosomes_list = chromosomes.split(' ')
 
-    # backend = hb.ServiceBackend(
-    #     billing_project=get_config()['hail']['billing_project'],
-    #     remote_tmpdir=remote_tmpdir(),
-    # )
-    backend=None
+    backend = hb.ServiceBackend(
+        billing_project=get_config()['hail']['billing_project'],
+        remote_tmpdir=remote_tmpdir(),
+    )
+    # backend=None
     batch = hb.Batch(
         name='eqtl_spearman', backend=backend, default_python_image=MULTIPY_IMAGE
     )
