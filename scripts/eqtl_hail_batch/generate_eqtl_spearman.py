@@ -7,11 +7,8 @@ import hail as hl
 import hailtop.batch as hb
 import pandas as pd
 import numpy as np
-import statsmodels.api as sm
-from patsy import dmatrices  # pylint: disable=no-name-in-module
 from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
-    dataset_path,
     output_path,
     copy_common_env,
     init_batch,
@@ -23,12 +20,11 @@ import click
 
 DEFAULT_DRIVER_MEMORY = '4G'
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
-assert MULTIPY_IMAGE
 
-TOB_WGS = dataset_path('mt/v7.mt/')
-FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
-VEP_ANNOTATION = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
-GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'
+# TOB_WGS = dataset_path('mt/v7.mt/')
+# FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
+# VEP_ANNOTATION = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
+# GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'
 
 
 def filter_lowly_expressed_genes(expression_df):
@@ -68,7 +64,7 @@ def remove_sc_outliers(df):
     return df
 
 
-def get_number_of_scatters(expression_df, geneloc_df):
+def get_number_of_scatters(*, expression_tsv_path, geneloc_tsv_path):
     """get index of total number of genes
 
     Input:
@@ -82,6 +78,8 @@ def get_number_of_scatters(expression_df, geneloc_df):
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
+    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
+    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
 
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = list(expression_df.columns.values)[1:]
@@ -125,7 +123,7 @@ def calculate_log_cpm(expression_df):
     return log_cpm
 
 
-def generate_log_cpm_output(expression_df, output_prefix, celltype):
+def generate_log_cpm_output(*, output_prefix: str, cell_type: str, expression_tsv_path: str, gencode_gtf_path: str):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
@@ -137,6 +135,7 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     Counts per million mapped reads
     """
 
+    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     log_cpm = calculate_log_cpm(expression_df)
     # get gene expression distribution in the output
     # specified here https://github.com/populationgenomics/tob-wgs/issues/97
@@ -175,87 +174,28 @@ def generate_log_cpm_output(expression_df, output_prefix, celltype):
     ).reset_index()
     data_summary = data_summary.rename({'index': 'gene_name'}, axis='columns')
     # add in cell type info
-    data_summary['cell_type_id'] = celltype
+    data_summary['cell_type_id'] = cell_type
     # add in ENSEMBL IDs
     init_batch(driver_cores=8)
-    gtf = hl.experimental.import_gtf(GENCODE_GTF, reference_genome='GRCh38', skip_invalid_contigs=True)
+    gtf = hl.experimental.import_gtf(
+        gencode_gtf_path, reference_genome='GRCh38', skip_invalid_contigs=True
+    )
     # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
     gtf = gtf.to_pandas()
-    data_summary['ensembl_ids'] = data_summary.merge(gtf.drop_duplicates('gene_name'), how='left', on='gene_name').gene_id
+    data_summary['ensembl_ids'] = data_summary.merge(
+        gtf.drop_duplicates('gene_name'), how='left', on='gene_name'
+    ).gene_id
 
     # Save file
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
     with data_summary_path.open('wb') as fp:
         data_summary.to_parquet(fp)
 
-
-def prepare_genotype_info(keys_path):
-    """Filter hail matrix table
-
-    Input:
-    keys_path: path to a tsv file with information on
-    OneK1K amd CPG IDs (columns) for each sample (rows).
-
-    Returns:
-    Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
-    1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01.
-    """
-
-    init_batch()
-    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
-    if hl.hadoop_exists(filtered_mt_path):
-        return filtered_mt_path
-
-    mt = hl.read_matrix_table(TOB_WGS)
-    samples = mt.s.collect()
-    n_samples = len(samples)
-    mt = mt.naive_coalesce(10000)
-    mt = hl.experimental.densify(mt)
-    # filter to biallelic loci only
-    mt = mt.filter_rows(hl.len(mt.alleles) == 2)
-    # filter out variants that didn't pass the VQSR filter
-    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-    # VQSR does not filter out low quality genotypes. Filter these out
-    mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-    # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    call_rate = 0.8
-    mt = mt.filter_rows(
-        hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
-    )
-    # filter out variants with MAF <= 0.01
-    ht = hl.read_table(FREQ_TABLE)
-    mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
-    mt = mt.filter_rows(mt.freq.AF[1] > 0.01)
-    # add in VEP annotation
-    vep = hl.read_table(VEP_ANNOTATION)
-    mt = mt.annotate_rows(
-        vep_functional_anno=vep[
-            mt.row_key
-        ].vep.regulatory_feature_consequences.biotype
-    )
-    # add OneK1K IDs to genotype mt
-    sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
-    genotype_samples = pd.DataFrame(samples, columns=['sampleid'])
-    sampleid_keys = pd.merge(
-        genotype_samples,
-        sampleid_keys,
-        how='left',
-        left_on='sampleid',
-        right_on='InternalID',
-    )
-    sampleid_keys.fillna('', inplace=True)
-    sampleid_keys = hl.Table.from_pandas(sampleid_keys)
-    sampleid_keys = sampleid_keys.key_by('sampleid')
-    mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
-    # repartition to save overhead cost
-    mt = mt.naive_coalesce(1000)
-    mt.write(filtered_mt_path)
-    return filtered_mt_path
+    return data_summary_path.as_uri()
 
 
-def calculate_residuals(expression_df, covariate_df, output_prefix):
+def calculate_residuals(expression_tsv_path, covariates_tsv_path, output_prefix):
     """Calculate residuals for each gene in scatter
 
     Input:
@@ -268,11 +208,18 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows.
     """
+    # import these here to avoid polluting the global namespace
+    #   (and make testing easier)
+    import statsmodels.api as sm
+    from patsy import dmatrices  # pylint: disable=no-name-in-module
+
+    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
+    covariates_df = pd.read_csv(AnyPath(covariates_tsv_path), sep=',')
 
     log_expression_df = get_log_expression(expression_df)
     gene_ids = list(log_expression_df.columns.values)[1:]
     sample_ids = (
-        log_expression_df.merge(covariate_df, on='sampleid', how='right')
+        log_expression_df.merge(covariates_df, on='sampleid', how='right')
         .dropna(axis=0, how='any')
         .sampleid
     )
@@ -282,7 +229,7 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
         """Calculate gene residuals"""
         gene = gene_id
         exprs_val = log_expression_df[['sampleid', gene]]
-        test_df = exprs_val.merge(covariate_df, on='sampleid', how='right').dropna(
+        test_df = exprs_val.merge(covariates_df, on='sampleid', how='right').dropna(
             axis=0, how='any'
         )
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
@@ -302,12 +249,12 @@ def calculate_residuals(expression_df, covariate_df, output_prefix):
     with residual_path.open('w') as fp:
         residual_df.to_csv(fp, index=False)
 
-    return residual_df
+    return residual_path.as_uri()
 
 
 # Run Spearman rank in parallel by sending genes in batches
 def run_spearman_correlation_scatter(
-    idx, expression, geneloc, residuals_df, filtered_mt_path, celltype, output_prefix
+    idx, *, expression_tsv_path, geneloc_tsv_path, residuals_csv_path, filtered_mt_path, cell_type, parquet_output_dir: str, force: bool=False
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
 
@@ -333,11 +280,14 @@ def run_spearman_correlation_scatter(
     from multipy.fdr import qvalue
 
     # calculate log expression values
-    expression_df = pd.read_csv(AnyPath(expression), sep='\t')
+    residuals_df = pd.read_csv(AnyPath(residuals_csv_path))
+    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     log_expression_df = get_log_expression(expression_df)
 
+    # TODO: why calculate the sliding window around each gene,
+    #   then filter for the specific gene, why not get the gene first?
     # Get 1Mb sliding window around each gene
-    geneloc_df = pd.read_csv(AnyPath(geneloc), sep='\t')
+    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
     gene_ids = list(log_expression_df.columns.values)[1:]
     geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
     geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
@@ -345,6 +295,15 @@ def run_spearman_correlation_scatter(
 
     # perform correlation in chunks by gene
     gene_info = geneloc_df.iloc[idx]
+    gene = gene_info.gene_name
+
+    # checkpoint
+    spearman_parquet_path = (
+        AnyPath(parquet_output_dir) / f'correlation_results_{gene}.parquet'
+    )
+    if spearman_parquet_path.exists() and not force:
+        return spearman_parquet_path
+
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
     init_batch(driver_cores=8, worker_cores=8)
@@ -485,16 +444,18 @@ def run_spearman_correlation_scatter(
                     'genotype': genotype,
                     'gene_id': gene_id,
                     'gene_symbol': gene,
-                    'cell_type_id': celltype,
+                    'cell_type_id': cell_type,
                     'struct': create_struct(gene, group),
                 }
             )
 
         return pd.DataFrame.from_dict(snp_gt_summary_data)
 
-    gene = gene_info.gene_name
     association_effect_data = get_association_effect_data(gene)
+
     # Save file
+    # TODO: hmm, this feels a little hacky, is it actually tmp, can we write
+    #   to a tmp bucket?
     tmp_dir = output_prefix.replace(
         output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp'
     )
@@ -551,7 +512,7 @@ def run_spearman_correlation_scatter(
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
     # add celltype id
-    celltype_id = celltype.lower()
+    celltype_id = cell_type.lower()
     spearman_df['cell_type_id'] = celltype_id
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
@@ -560,12 +521,12 @@ def run_spearman_correlation_scatter(
     fdr_values = pd.DataFrame(list(qvals))
     spearman_df = spearman_df.assign(fdr=fdr_values)
     spearman_df['fdr'] = spearman_df.fdr.astype(float)
+
     # Save file
-    spearman_df_path = (
-        AnyPath(output_prefix) / f'parquet/correlation_results_{gene}.parquet'
-    )
-    with spearman_df_path.open('wb') as fp:
+    with spearman_parquet_path.open('wb') as fp:
         spearman_df.to_parquet(fp)
+
+    return spearman_parquet_path
 
 
 # Create click command line to enter dependency files
@@ -598,92 +559,121 @@ def run_spearman_correlation_scatter(
     help='A TSV of sample ids to convert external to internal IDs. Rows contain \
         sample ids, while columns contain OneK1K IDs and CPG IDs.',
 )
-def main(
-    expression: str,
-    geneloc,
-    covariates,
-    keys,
-):
-    """
-    Creates a Hail Batch pipeline for calculating EQTLs
-    """
+def from_cli(expression, geneloc, covariates, keys):
 
-    # get cell type info and chromosome info
-    celltype = expression.split('/')[-1].split('_expression')[0]
+    cell_type = expression.split('/')[-1].split('_expression')[0]
     chromosome = geneloc.split('_')[-1].removesuffix('.tsv')
-    # rename output prefix to have chromosome and cell type
-    output_prefix = output_path(f'{celltype}/{chromosome}')
 
     backend = hb.ServiceBackend(
         billing_project=get_config()['hail']['billing_project'],
         remote_tmpdir=remote_tmpdir(),
     )
     batch = hb.Batch(
-        name=celltype,
+        name=f'Generate EQTL spearman ({cell_type}:',
         backend=backend,
         default_python_image=get_config()['workflow']['driver_image'],
     )
 
-    # load in files to get number of scatters and residuals
-    expression_df_literal = pd.read_csv(AnyPath(expression), sep='\t')
-    geneloc_df_literal = pd.read_csv(AnyPath(geneloc), sep='\t')
-    covariate_df_literal = pd.read_csv(AnyPath(covariates), sep=',')
+    main(
+        batch=batch,
+        job_prefix='',
+        expression_tsv_path=expression,
+        geneloc_tsv_path=geneloc,
+        covariates_tsv_path=covariates,
+        keys_tsv_path=keys,
+        output_prefix=output_path(f'{cell_type}/{chromosome}'),
+        cell_type=cell_type,
+        chromosome=chromosome,
+    )
 
-    # only run batch jobs if there are test genes in the chromosome
+    batch.run(wait=False)
+
+
+
+def main(
+    batch: hb.Batch,
+    job_prefix: str,
+    *,
+    filtered_mt_path: str,
+    gencode_gtf_path: str,
+    expression_tsv_path: str,
+    geneloc_tsv_path: str,
+    covariates_tsv_path: str,
+    output_prefix: str,
+    # can be derived, but better to pass
+    cell_type: str,
+    chromosome: str,
+        force: bool=False,
+):
+    """
+    Creates a Hail Batch pipeline for calculating EQTLs
+    """
+
     n_genes_in_scatter = get_number_of_scatters(
-        expression_df_literal, geneloc_df_literal
+        expression_tsv_path=expression_tsv_path, geneloc_tsv_path=geneloc_tsv_path
     )
     if n_genes_in_scatter == 0:
+        # only run batch jobs if there are test genes in the chromosome
         raise ValueError('No genes in get_number_of_scatters()')
 
-    calculate_residuals_job = batch.new_python_job('calculate-residuals')
+    calculate_residuals_job = batch.new_python_job(f'{job_prefix}calculate-residuals')
     copy_common_env(calculate_residuals_job)
-    residuals_df = calculate_residuals_job.call(
+    residuals_csv_path = calculate_residuals_job.call(
         calculate_residuals,
-        expression_df=expression_df_literal,
-        covariate_df=covariate_df_literal,
         output_prefix=output_prefix,
+        expression_tsv_path=expression_tsv_path,
+        covariates_tsv_path=covariates_tsv_path,
     )
     # calculate and save log cpm values
-    generate_log_cpm_output_job = batch.new_python_job('generate_log_cpm_output')
+    generate_log_cpm_output_job = batch.new_python_job(f'{job_prefix}generate_log_cpm_output')
     generate_log_cpm_output_job.memory('8Gi')
     copy_common_env(generate_log_cpm_output_job)
     generate_log_cpm_output_job.call(
         generate_log_cpm_output,
-        expression_df=expression_df_literal,
+        cell_type=cell_type,
         output_prefix=output_prefix,
-        celltype=celltype,
+        expression_tsv_path=expression_tsv_path,
+        gencode_gtf_path=gencode_gtf_path,
     )
 
-    spearman_dfs_from_scatter = []
-
-    filter_mt_job = batch.new_python_job('filter_mt')
-    copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(prepare_genotype_info, keys_path=keys)
+    spearman_output_directory = os.path.join(output_prefix, 'parquet')
+    spearman_output_dependencies = []
 
     for idx in range(n_genes_in_scatter):
-        j = batch.new_python_job(name=f'calculate_spearman_correlation_{idx}')
-        j.depends_on(filter_mt_job, calculate_residuals_job)
+        j = batch.new_python_job(name=f'{job_prefix}calculate_spearman_correlation_{idx}')
+        j.depends_on(calculate_residuals_job)
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
         j.image(MULTIPY_IMAGE)
         copy_common_env(j)
-        result: hb.resource.PythonResult = j.call(
+        j.call(
             run_spearman_correlation_scatter,
             idx=idx,
-            expression=expression,
-            geneloc=geneloc,
-            residuals_df=residuals_df,
+            expression_tsv_path=expression_tsv_path,
+            geneloc_tsv_path=geneloc_tsv_path,
+            residuals_csv_path=residuals_csv_path,
             filtered_mt_path=filtered_mt_path,
-            celltype=celltype,
-            output_prefix=output_prefix,
+            celltype=cell_type,
+            parquet_output_dir=spearman_output_directory,
+            force=force,
         )
-        spearman_dfs_from_scatter.append(result)
+        # we'll track job dependencies with an explicit sink
+        spearman_output_dependencies.append(j)
 
-    batch.run(wait=False)
+    # create a fake job to avoid having to carry dependencies outside this script
+    def return_value(value):
+        return value
+
+    fake_sink = batch.new_python_job(f'{job_prefix}sink')
+    fake_sink.depends_on(*spearman_output_dependencies)
+    sinked_output_dir = fake_sink.call(return_value, spearman_output_directory)
+
+    return {
+        'spearman_parquet_directory': sinked_output_dir
+    }
 
 
 if __name__ == '__main__':
     # pylint: disable=no-value-for-parameter
-    main()
+    from_cli()
