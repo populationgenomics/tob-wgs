@@ -28,17 +28,16 @@ from cpg_utils.hail_batch import (
 )
 from google.cloud import storage
 
-from generate_eqtl_spearman import main as generate_eqtl_spearman
 from genotype_info import filter_joint_call_mt
-
-DEFAULT_JOINT_CALL_TABLE_PATH = (dataset_path('mt/v7.mt/'),)
-DEFAULT_FREQUENCY_TABLE_PATH = (
-    dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis'),
+from generate_eqtl_spearman import main as generate_eqtl_spearman
+from conditional_analysis import main as generate_conditional_analysis
+from constants import (
+    DEFAULT_JOINT_CALL_TABLE_PATH,
+    DEFAULT_FREQUENCY_TABLE_PATH,
+    DEFAULT_VEP_ANNOTATION_TABLE_PATH,
+    DEFAULT_GENCODE_GTF_PATH,
+    MULTIPY_IMAGE,
 )
-DEFAULT_VEP_ANNOTATION_TABLE_PATH = (
-    dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/'),
-)
-DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'  # reference_path('gencode_gtf'),
 
 
 @click.command()
@@ -49,6 +48,13 @@ DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gt
     'If a relative path is given, it will be from the output-path',
 )
 @click.option(
+    '--chromosomes',
+    # TODO: Why is this required, can this run on all by default?
+    required=True,
+    help='List of chromosome numbers to run eQTL analysis on. '
+    'Space separated, as one argument',
+)
+@click.option(
     '--cell-types',
     default=None,
     multiple=True,
@@ -56,27 +62,35 @@ DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gt
     '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
 )
 @click.option(
-    '--chromosomes',
-    required=True,
-    help='List of chromosome numbers to run eQTL analysis on. '
-    'Space separated, as one argument',
+    '--conditional-test-subset-genes',
+    type=int,
+    help='Subset genes in conditional analysis',
 )
 @click.option('--force', is_flag=True, help='Skip checkpoints')
-@click.option('--dry-run', is_flag=True, help='Just check if files exist')
-def from_cli(chromosomes, input_files_prefix, cell_types):
+def from_cli(
+    chromosomes: str,
+    input_files_prefix: str,
+    cell_types: list[str] | None,
+    force: bool = False,
+    conditional_test_subset_genes: int = None,
+):
     chromosomes_list = chromosomes.split(' ')
 
     backend = hb.ServiceBackend(
         billing_project=get_config()['hail']['billing_project'],
         remote_tmpdir=remote_tmpdir(),
     )
-    batch = hb.Batch(name='eqtl_spearman', backend=backend)
+    batch = hb.Batch(
+        name='eqtl_spearman', backend=backend, default_python_image=MULTIPY_IMAGE
+    )
 
     _ = main(
         batch,
         input_files_prefix=input_files_prefix,
         chromosomes=chromosomes_list,
         cell_types=cell_types,
+        force=force,
+        conditional_test_subset_genes=conditional_test_subset_genes,
     )
     batch.run(wait=False, dry_run=True)
 
@@ -87,11 +101,13 @@ def main(
     input_files_prefix: str,
     chromosomes: list[str],
     cell_types: list[str] = None,
+    conditional_iterations: int = 4,
     joint_call_table_path: str = DEFAULT_JOINT_CALL_TABLE_PATH,
     frequency_table_path: str = DEFAULT_FREQUENCY_TABLE_PATH,
     vep_annotation_table_path: str = DEFAULT_VEP_ANNOTATION_TABLE_PATH,
     gencode_gtf_path: str = DEFAULT_GENCODE_GTF_PATH,
-    force: bool=False
+    force: bool = False,
+    conditional_test_subset_genes: int = None,
 ):
     """Run association script for all chromosomes and cell types"""
 
@@ -105,8 +121,12 @@ def main(
 
     if cell_types is None or len(cell_types) == 0:
         # not provided (ie: use all cell types)
-        cell_types = get_cell_types_from(dataset_path('expression_files'))
+        expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
+        cell_types = get_cell_types_from(expression_files_dir)
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+
+        if len(cell_types) == 0:
+            raise ValueError(f'No cell types found at: {expression_files_dir}')
 
     # ideally this would come from metamist :(
     keys_tsv_path = os.path.join(input_files_prefix, 'OneK1K_CPG_IDs.tsv')
@@ -136,7 +156,7 @@ def main(
 
         for chromosome in chromosomes:
 
-            outputs[cell_type][chromosome] = generate_eqtl_spearman(
+            eqtl_outputs = generate_eqtl_spearman(
                 batch=batch,
                 # constants
                 force=force,
@@ -155,6 +175,24 @@ def main(
                     f'GRCh38_geneloc_chr{chromosome}.tsv',
                 ),
             )
+
+            conditional_outputs = generate_conditional_analysis(
+                batch=batch,
+                # constants
+                force=force,
+                job_prefix=f'{cell_type}_chr{chromosome}_conditional',
+                cell_type=cell_type,
+                chromosome=chromosome,
+                significant_snps_directory=eqtl_outputs['spearman_parquet_directory'],
+                residuals_path=eqtl_outputs['residuals_csv_path'],
+                iterations=conditional_iterations,
+                output_prefix=output_path(f'{cell_type}/{chromosome}'),
+            )
+
+            outputs[cell_type][chromosome] = {
+                **{'eqtl_' + k: v for k, v in eqtl_outputs.items()},
+                **{'conditional_' + k: v for k, v in conditional_outputs.items()},
+            }
 
 
 def get_cell_types_from(expression_files_dir: str):
@@ -191,18 +229,19 @@ def get_cell_types_from(expression_files_dir: str):
 
 
 if __name__ == '__main__':
+    from_cli()
 
-    backend = None
-    # backend = hb.ServiceBackend(
-    #     billing_project=get_config()['hail']['billing_project'],
-    #     remote_tmpdir=remote_tmpdir(),
+    # backend = None
+    # # backend = hb.ServiceBackend(
+    # #     billing_project=get_config()['hail']['billing_project'],
+    # #     remote_tmpdir=remote_tmpdir(),
+    # # )
+    # batch = hb.Batch(name='eqtl_spearman', backend=backend)
+    #
+    # _ = main(
+    #     batch,
+    #     input_files_prefix='gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files',
+    #     chromosomes=['22'],
+    #     cell_types=['B_intermediate'],
     # )
-    batch = hb.Batch(name='eqtl_spearman', backend=backend)
-
-    _ = main(
-        batch,
-        input_files_prefix='gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files',
-        chromosomes=['22'],
-        cell_types=['B_intermediate'],
-    )
-    batch.run(wait=False, dry_run=True)
+    # batch.run(dry_run=True)
