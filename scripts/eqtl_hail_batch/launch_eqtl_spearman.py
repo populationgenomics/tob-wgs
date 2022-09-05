@@ -16,6 +16,10 @@ import logging
 import os
 from collections import defaultdict
 
+# needed for a dynamic import
+import pandas as pd
+from cloudpathlib import AnyPath
+
 import click
 import hailtop.batch as hb
 from cpg_utils.config import get_config
