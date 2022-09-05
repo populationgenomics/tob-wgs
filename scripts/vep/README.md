@@ -7,7 +7,7 @@ analysis-runner \
 	--dataset tob-wgs \
 	--description "run vep" \
 	--output-dir "tob_wgs_vep/v0" \
-	--access-level main main.py \
+	--access-level standard main.py \
 	--script run_vep.py \
 	--mt 'gs://cpg-tob-wgs-main/mt/v7.mt/' \
 	--vep-version '104.3'
