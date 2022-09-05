@@ -2,7 +2,8 @@
 
 """Run Spearman rank correlation on SNPs and expression residuals"""
 
-
+import os
+import click
 import hail as hl
 import hailtop.batch as hb
 import pandas as pd
@@ -13,18 +14,20 @@ from cpg_utils.hail_batch import (
     copy_common_env,
     init_batch,
     remote_tmpdir,
+    dataset_path,
 )
 from cpg_utils.config import get_config
 from cloudpathlib import AnyPath
-import click
+
+from constants import (
+    DEFAULT_JOINT_CALL_TABLE_PATH,
+    DEFAULT_FREQUENCY_TABLE_PATH,
+    DEFAULT_VEP_ANNOTATION_TABLE_PATH,
+    DEFAULT_GENCODE_GTF_PATH,
+    MULTIPY_IMAGE,
+)
 
 DEFAULT_DRIVER_MEMORY = '4G'
-MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
-
-# TOB_WGS = dataset_path('mt/v7.mt/')
-# FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
-# VEP_ANNOTATION = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
-# GENCODE_GTF = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'
 
 
 def filter_lowly_expressed_genes(expression_df):
@@ -78,6 +81,9 @@ def get_number_of_scatters(*, expression_tsv_path, geneloc_tsv_path):
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
+    # TODO: remove this
+    return 296
+
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
 
@@ -123,7 +129,13 @@ def calculate_log_cpm(expression_df):
     return log_cpm
 
 
-def generate_log_cpm_output(*, output_prefix: str, cell_type: str, expression_tsv_path: str, gencode_gtf_path: str):
+def generate_log_cpm_output(
+    *,
+    output_prefix: str,
+    cell_type: str,
+    expression_tsv_path: str,
+    gencode_gtf_path: str,
+):
     """Calculate log cpm for each cell type and chromosome
 
     Input:
@@ -254,7 +266,15 @@ def calculate_residuals(expression_tsv_path, covariates_tsv_path, output_prefix)
 
 # Run Spearman rank in parallel by sending genes in batches
 def run_spearman_correlation_scatter(
-    idx, *, expression_tsv_path, geneloc_tsv_path, residuals_csv_path, filtered_mt_path, cell_type, parquet_output_dir: str, force: bool=False
+    idx,
+    *,
+    expression_tsv_path,
+    geneloc_tsv_path,
+    residuals_csv_path,
+    filtered_mt_path,
+    cell_type,
+    parquet_output_dir: str,
+    force: bool = False,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
 
@@ -456,10 +476,11 @@ def run_spearman_correlation_scatter(
     # Save file
     # TODO: hmm, this feels a little hacky, is it actually tmp, can we write
     #   to a tmp bucket?
-    tmp_dir = output_prefix.replace(
-        output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp'
-    )
-    path = AnyPath(tmp_dir) / f'eqtl_effect_{gene}.parquet'
+    # tmp_dir = output_prefix.replace(
+    #     output_prefix.split('/')[2], output_prefix.split('/')[2] + '-tmp'
+    # )
+    # edit: short term I've replaced it
+    path = AnyPath(output_path(f'eqtl_effect_{gene}.parquet', 'tmp'))
     with path.open('wb') as fp:
         association_effect_data.to_parquet(fp)
 
@@ -554,12 +575,11 @@ def run_spearman_correlation_scatter(
         sex, and age.',
 )
 @click.option(
-    '--keys',
+    '--filtered-mt',
     required=True,
-    help='A TSV of sample ids to convert external to internal IDs. Rows contain \
-        sample ids, while columns contain OneK1K IDs and CPG IDs.',
+    help='Filtered MT, default location is: output_path("genotype_table.mt", "tmp")',
 )
-def from_cli(expression, geneloc, covariates, keys):
+def from_cli(expression, geneloc, covariates, filtered_mt: str):
 
     cell_type = expression.split('/')[-1].split('_expression')[0]
     chromosome = geneloc.split('_')[-1].removesuffix('.tsv')
@@ -571,23 +591,24 @@ def from_cli(expression, geneloc, covariates, keys):
     batch = hb.Batch(
         name=f'Generate EQTL spearman ({cell_type}:',
         backend=backend,
-        default_python_image=get_config()['workflow']['driver_image'],
+        default_python_image=MULTIPY_IMAGE,
     )
 
     main(
         batch=batch,
         job_prefix='',
+        output_prefix=output_path(f'{cell_type}/{chromosome}'),
+        chromosome=chromosome,
+        cell_type=cell_type,
+        # input paths
+        filtered_mt_path=filtered_mt,
         expression_tsv_path=expression,
         geneloc_tsv_path=geneloc,
         covariates_tsv_path=covariates,
-        keys_tsv_path=keys,
-        output_prefix=output_path(f'{cell_type}/{chromosome}'),
-        cell_type=cell_type,
-        chromosome=chromosome,
+        gencode_gtf_path=DEFAULT_GENCODE_GTF_PATH,
     )
 
     batch.run(wait=False)
-
 
 
 def main(
@@ -603,7 +624,7 @@ def main(
     # can be derived, but better to pass
     cell_type: str,
     chromosome: str,
-        force: bool=False,
+    force: bool = False,
 ):
     """
     Creates a Hail Batch pipeline for calculating EQTLs
@@ -625,7 +646,9 @@ def main(
         covariates_tsv_path=covariates_tsv_path,
     )
     # calculate and save log cpm values
-    generate_log_cpm_output_job = batch.new_python_job(f'{job_prefix}generate_log_cpm_output')
+    generate_log_cpm_output_job = batch.new_python_job(
+        f'{job_prefix}generate_log_cpm_output'
+    )
     generate_log_cpm_output_job.memory('8Gi')
     copy_common_env(generate_log_cpm_output_job)
     generate_log_cpm_output_job.call(
@@ -640,7 +663,9 @@ def main(
     spearman_output_dependencies = []
 
     for idx in range(n_genes_in_scatter):
-        j = batch.new_python_job(name=f'{job_prefix}calculate_spearman_correlation_{idx}')
+        j = batch.new_python_job(
+            name=f'{job_prefix}calculate_spearman_correlation_{idx}'
+        )
         j.depends_on(calculate_residuals_job)
         j.cpu(2)
         j.memory('8Gi')
@@ -670,10 +695,10 @@ def main(
     sinked_output_dir = fake_sink.call(return_value, spearman_output_directory)
 
     return {
-        'spearman_parquet_directory': sinked_output_dir
+        'spearman_parquet_directory': sinked_output_dir,
+        'residuals_csv_path': residuals_csv_path,
     }
 
 
 if __name__ == '__main__':
-    # pylint: disable=no-value-for-parameter
-    from_cli()
+    from_cli()  # pylint: disable=no-value-for-parameter
