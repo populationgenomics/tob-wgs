@@ -1,10 +1,4 @@
-import hail as hl
-import pandas as pd
-from cloudpathlib import AnyPath
-from cpg_utils.hail_batch import (
-    # output_path,
-    init_batch,
-)
+
 
 
 def filter_joint_call_mt(
@@ -27,6 +21,10 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
+    import hail as hl
+    import pandas as pd
+    from cpg_utils.hail_batch import init_batch
+    from cloudpathlib import AnyPath
 
     if AnyPath(output_path).exists() and not force:
         return output_path
