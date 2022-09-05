@@ -155,45 +155,45 @@ def main(
             input_files_prefix, 'covariates_files', f'{cell_type}_peer_factors_file.txt'
         )
 
-        for chromosome in chromosomes:
-
-            eqtl_outputs = generate_eqtl_spearman(
-                batch=batch,
-                # constants
-                force=force,
-                job_prefix=f'{cell_type}_chr{chromosome}_',
-                cell_type=cell_type,
-                chromosome=chromosome,
-                output_prefix=output_path(f'{cell_type}/{chromosome}'),
-                # derived paths
-                filtered_mt_path=filtered_mt_path,
-                gencode_gtf_path=gencode_gtf_path,
-                expression_tsv_path=expression_tsv_path,
-                covariates_tsv_path=covariates_tsv_path,
-                geneloc_tsv_path=os.path.join(
-                    input_files_prefix,
-                    'gene_location_files',
-                    f'GRCh38_geneloc_chr{chromosome}.tsv',
-                ),
-            )
-
-            conditional_outputs = generate_conditional_analysis(
-                batch=batch,
-                # constants
-                force=force,
-                job_prefix=f'{cell_type}_chr{chromosome}_conditional',
-                cell_type=cell_type,
-                chromosome=chromosome,
-                significant_snps_directory=eqtl_outputs['spearman_parquet_directory'],
-                residuals_path=eqtl_outputs['residuals_csv_path'],
-                iterations=conditional_iterations,
-                output_prefix=output_path(f'{cell_type}/{chromosome}'),
-            )
-
-            outputs[cell_type][chromosome] = {
-                **{'eqtl_' + k: v for k, v in eqtl_outputs.items()},
-                **{'conditional_' + k: v for k, v in conditional_outputs.items()},
-            }
+        # for chromosome in chromosomes:
+        #
+        #     eqtl_outputs = generate_eqtl_spearman(
+        #         batch=batch,
+        #         # constants
+        #         force=force,
+        #         job_prefix=f'{cell_type}_chr{chromosome}_',
+        #         cell_type=cell_type,
+        #         chromosome=chromosome,
+        #         output_prefix=output_path(f'{cell_type}/{chromosome}'),
+        #         # derived paths
+        #         filtered_mt_path=filtered_mt_path,
+        #         gencode_gtf_path=gencode_gtf_path,
+        #         expression_tsv_path=expression_tsv_path,
+        #         covariates_tsv_path=covariates_tsv_path,
+        #         geneloc_tsv_path=os.path.join(
+        #             input_files_prefix,
+        #             'gene_location_files',
+        #             f'GRCh38_geneloc_chr{chromosome}.tsv',
+        #         ),
+        #     )
+        #
+        #     conditional_outputs = generate_conditional_analysis(
+        #         batch=batch,
+        #         # constants
+        #         force=force,
+        #         job_prefix=f'{cell_type}_chr{chromosome}_conditional',
+        #         cell_type=cell_type,
+        #         chromosome=chromosome,
+        #         significant_snps_directory=eqtl_outputs['spearman_parquet_directory'],
+        #         residuals_path=eqtl_outputs['residuals_csv_path'],
+        #         iterations=conditional_iterations,
+        #         output_prefix=output_path(f'{cell_type}/{chromosome}'),
+        #     )
+        #
+        #     outputs[cell_type][chromosome] = {
+        #         **{'eqtl_' + k: v for k, v in eqtl_outputs.items()},
+        #         **{'conditional_' + k: v for k, v in conditional_outputs.items()},
+        #     }
 
 
 def get_cell_types_from(expression_files_dir: str):
