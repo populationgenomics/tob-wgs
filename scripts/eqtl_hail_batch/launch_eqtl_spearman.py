@@ -45,8 +45,8 @@ def mainify(obj):
         import __main__
         import inspect
         s = inspect.getsource(obj)
-        co = compile(s, '<string>', 'exec')
-        exec(co, __main__.__dict__)
+        co = compile(s, obj.__name__, 'exec')
+        resp = exec(co, __main__.__dict__)
 
 mainify(filter_joint_call_mt)
 
@@ -87,10 +87,11 @@ def from_cli(
 ):
     chromosomes_list = chromosomes.split(' ')
 
-    backend = hb.ServiceBackend(
-        billing_project=get_config()['hail']['billing_project'],
-        remote_tmpdir=remote_tmpdir(),
-    )
+    # backend = hb.ServiceBackend(
+    #     billing_project=get_config()['hail']['billing_project'],
+    #     remote_tmpdir=remote_tmpdir(),
+    # )
+    backend=None
     batch = hb.Batch(
         name='eqtl_spearman', backend=backend, default_python_image=MULTIPY_IMAGE
     )
@@ -104,7 +105,7 @@ def from_cli(
         conditional_test_subset_genes=conditional_test_subset_genes,
     )
     logging.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
-    batch.run(wait=False)
+    batch.run(dry_run=True)
 
 
 def main(
