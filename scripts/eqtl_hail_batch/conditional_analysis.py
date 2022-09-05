@@ -7,9 +7,6 @@ import os
 import hail as hl
 import hailtop.batch as hb
 import pandas as pd
-import statsmodels.api as sm
-from patsy import dmatrices  # pylint: disable=no-name-in-module
-from scipy.stats import spearmanr
 from cpg_utils.hail_batch import (
     dataset_path,
     output_path,
@@ -30,9 +27,7 @@ FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analys
 FILTERED_MT = output_path('genotype_table.mt', 'tmp')
 
 
-def get_number_of_scatters(
-    residual_df: pd.DataFrame, significant_snps_df: pd.DataFrame
-) -> int:
+def get_number_of_scatters(*, residuals_path: str, significant_snps_path: str) -> int:
     """get index of total number of genes
 
     Input:
@@ -45,6 +40,17 @@ def get_number_of_scatters(
     and taking the top SNP for each gene. This integer number gets fed into the number of
     scatters to run.
     """
+    if any(
+        isinstance(p, hb.PythonResult) for p in (residuals_path, significant_snps_path)
+    ):
+        raise ValueError(
+            'Residuals dir and significant snps MUST be a string, but '
+            'received a hb.PythonResult, this means it\'s an intermediate '
+            'result and cannot be operated on.'
+        )
+
+    residual_df = pd.read_csv(AnyPath(residuals_path))
+    significant_snps_df = pd.read_parquet(AnyPath(significant_snps_path))
 
     # Identify the top eSNP for each eGene
     esnp1 = (
@@ -79,7 +85,7 @@ def get_genotype_df(residual_df, gene_snp_test_df):
     # data (this varies by cell type)
     samples_to_keep = hl.set(list(residual_df.sampleid))
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
-    
+
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
     snps_to_keep = set(gene_snp_test_df.snp_id)
@@ -125,7 +131,10 @@ def get_genotype_df(residual_df, gene_snp_test_df):
 
 
 def calculate_residual_df(
-    residual_path: str, significant_snps_path: str, output_path: str
+    residual_path: str,
+    significant_snps_path: str,
+    output_path: str,
+    force: bool = False,
 ) -> str:
     """calculate residuals for gene list
 
@@ -139,6 +148,14 @@ def calculate_residual_df(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows, which have been conditioned on the lead eSNP.
     """
+
+    if AnyPath(output_path).exists() and not force:
+        return output_path
+
+    # import these here to avoid polluting the global namespace
+    #   (and make testing easier)
+    import statsmodels.api as sm
+    from patsy import dmatrices  # pylint: disable=no-name-in-module
 
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
@@ -157,7 +174,9 @@ def calculate_residual_df(
         .reset_index()
     )
     # add in SNP_ID column
-    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
+    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(
+        lambda row: ':'.join(row.values.astype(str)), axis=1
+    )
 
     # Subset residuals for the genes to be tested
     gene_ids = esnp1['gene_symbol'][
@@ -204,13 +223,14 @@ def calculate_residual_df(
 
 # Run Spearman rank in parallel by sending genes in batches
 def run_computation_in_scatter(
-    iteration,  # pylint: disable=redefined-outer-name
-    idx,
-    residual_path,
-    significant_snps_path,
-    celltype,
-    round_outputdir,
-    sigsnps_outputdir
+    iteration: int,
+    idx: int,
+    residual_path: str,
+    significant_snps_path: str,
+    cell_type: str,
+    round_outputdir: str,
+    sigsnps_outputdir: str,
+    force: bool = False,
 ):
     """Run genes in scatter
 
@@ -228,8 +248,14 @@ def run_computation_in_scatter(
     spearmans rho, and gene information.
     """
 
-    # import multipy here to avoid issues with driver image updates
+    output_path = os.path.join(sigsnps_outputdir, f'sig-snps-{idx}.parquet')
+
+    if AnyPath(output_path).exists() and not force:
+        return output_path
+
+    # import these here to avoid polluting the global namespace
     from multipy.fdr import qvalue
+    from scipy.stats import spearmanr
 
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
@@ -260,7 +286,9 @@ def run_computation_in_scatter(
         .reset_index()
     )
     # add in SNP_ID column
-    esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)
+    esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(
+        lambda row: ':'.join(row.values.astype(str)), axis=1
+    )
 
     # for each gene, get esnps_to_test
     gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
@@ -330,7 +358,7 @@ def run_computation_in_scatter(
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
     # add celltype id
-    celltype_id = celltype.lower()
+    celltype_id = cell_type.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
@@ -339,10 +367,9 @@ def run_computation_in_scatter(
     fdr_values = pd.DataFrame(list(qvals))
     adjusted_spearman_df = adjusted_spearman_df.assign(fdr=fdr_values)
     adjusted_spearman_df['fdr'] = adjusted_spearman_df.fdr.astype(float)
-    adjusted_spearman_df['cell_type_id'] = celltype
+    adjusted_spearman_df['cell_type_id'] = cell_type
 
     # Save file
-    output_path = os.path.join(sigsnps_outputdir, f'sig-snps-{idx}.parquet')
     adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
@@ -370,47 +397,78 @@ def run_computation_in_scatter(
     type=int,
     help='Test with {test_subset_genes} genes, often = 5.',
 )
-def main(
+def from_cli(
     significant_snps: str,
     residuals,
     iterations=4,
     test_subset_genes=None,
 ):
-    """
-    Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
-    scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
-    """
 
     # get chromosome and cell type info
     residual_list = residuals.split('/')
     residual_list = residual_list[:-1]
     chrom = residual_list[-1]
-    celltype = residual_list[-2]
-    output_prefix = output_path(f'{celltype}/{chrom}')
+    cell_type = residual_list[-2]
 
     backend = hb.ServiceBackend(
         billing_project=get_config()['hail']['billing_project'],
         remote_tmpdir=remote_tmpdir(),
     )
     batch = hb.Batch(
-        name=celltype,
+        name=f'Conditional analysis: {cell_type}/{chrom}',
         backend=backend,
         default_python_image=get_config()['workflow']['driver_image'],
     )
 
-    if test_subset_genes:
-        n_genes = test_subset_genes
-    else:
-        # these are needed directly to calculate number_of_scatters
-        residual_df = pd.read_csv(residuals)
-        significant_snps_df = pd.read_parquet(significant_snps)
-        n_genes = test_subset_genes or get_number_of_scatters(
-            residual_df, significant_snps_df
-        )
+    main(
+        batch=batch,
+        job_prefix='',
+        significant_snps_directory=significant_snps,
+        residuals_path=residuals,
+        chromosome=chrom,
+        iterations=iterations,
+        test_subset_genes=test_subset_genes,
+        cell_type=cell_type,
+        output_prefix=output_path(f'{cell_type}/{chrom}'),
+    )
+
+
+def main(
+    batch: hb.Batch,
+    *,
+    job_prefix: str,
+    cell_type: str,
+    chromosome: str,
+    significant_snps_directory: str,
+    residuals_path,
+    iterations: int = 4,
+    output_prefix: str,
+    test_subset_genes: int = 5,
+    force: bool = False,
+):
+    """
+    Creates a Hail Batch pipeline for calculating eQTLs using {iterations} iterations,
+    scattered across the number of genes. Note, iteration 1 is completed in `generate_eqtl_spearan.py`.
+    """
+
+    # TODO: This isn't possible because residuals_path and significant_snps_directory_path
+    #   are not available at runtime (they are intermediate outputs). This is currently not
+    #   possible in Hail Batch. ** IF: this is the same number of scatters for this
+    #   gene / chr pair as eqtl_spearman, we can calculate it up front in launch, and pass
+    #   it down to here. If not, :
+    #       - we need to work out another mechanism for determining it up-front
+    #       - OR this must be a completely separate batch.
+    #       - OR we wait for open batches
+    n_genes = test_subset_genes or get_number_of_scatters(
+        residuals_path=residuals_path,
+        significant_snps_path=significant_snps_directory,
+    )
 
     # these are now PATHS, that we'll load and unload each bit
-    previous_sig_snps_directory = significant_snps  # pylint: disable=invalid-name
-    previous_residual_path = residuals  # pylint: disable=invalid-name
+    previous_sig_snps_directory = (
+        significant_snps_directory  # pylint: disable=invalid-name
+    )
+    previous_residual_path = residuals_path  # pylint: disable=invalid-name
 
     sig_snps_dependencies: list[Any] = []
 
@@ -419,16 +477,16 @@ def main(
     # the iteration at 2 (from a 0 index)
     for iteration in range(2, iterations + 2):
 
-        calc_resid_df_job = batch.new_python_job(f'calculate-resid-df-iter-{iteration}')
+        calc_resid_df_job = batch.new_python_job(
+            f'{job_prefix}calculate-resid-df-iter-{iteration}'
+        )
         calc_resid_df_job.depends_on(*sig_snps_dependencies)
         calc_resid_df_job.cpu(2)
         calc_resid_df_job.memory('8Gi')
         calc_resid_df_job.storage('2Gi')
         copy_common_env(calc_resid_df_job)
 
-        round_dir = os.path.join(
-            output_prefix, f'round{iteration}/'
-        )
+        round_dir = os.path.join(output_prefix, f'round{iteration}/')
 
         # this calculate_residual_df will also write an output that is useful later
         # if we assign previous_residual_path to the result of the call, we get the job dependency we actually want
@@ -438,20 +496,17 @@ def main(
             calculate_residual_df,
             previous_residual_path,
             previous_sig_snps_directory,
-            output_path=os.path.join(
-                round_dir, f'residual_results.csv'
-            ),
+            output_path=os.path.join(round_dir, f'residual_results.csv'),
+            force=force,
         )
 
         sig_snps_component_paths = []
 
-        new_sig_snps_directory = os.path.join(
-            round_dir, 'sigsnps/'
-        )
+        new_sig_snps_directory = os.path.join(round_dir, 'sigsnps/')
         sink_jobs = []
         for gene_idx in range(n_genes):
             j = batch.new_python_job(
-                name=f'calculate_spearman_iter_{iteration}_job_{gene_idx}'
+                name=f'{job_prefix}calculate_spearman_iter_{iteration}_job_{gene_idx}'
             )
             j.cpu(2)
             j.memory('8Gi')
@@ -465,9 +520,10 @@ def main(
                 gene_idx,
                 previous_residual_path,
                 previous_sig_snps_directory,
-                celltype,
+                cell_type,
                 round_outputdir=round_dir,
-                sigsnps_outputdir=new_sig_snps_directory
+                sigsnps_outputdir=new_sig_snps_directory,
+                force=force,
             )
             sig_snps_component_paths.append(gene_result_path)
             sink_jobs.append(j)
@@ -475,7 +531,20 @@ def main(
         previous_sig_snps_directory = new_sig_snps_directory
         sig_snps_dependencies = sink_jobs
 
-    batch.run(wait=False)
+    # create a fake job to avoid having to carry dependencies outside this script
+    def return_value(value):
+        return value
+
+    fake_sink = batch.new_python_job(f'{job_prefix}sink')
+    fake_sink.depends_on(*sig_snps_dependencies)
+    sinked_sig_snps_directory = fake_sink.call(
+        return_value, previous_sig_snps_directory
+    )
+
+    return {
+        'sig_snps_parquet_directory': sinked_sig_snps_directory,
+        'residuals_csv_path': previous_residual_path,
+    }
 
 
 def fake_dependency(argument):
@@ -484,4 +553,4 @@ def fake_dependency(argument):
 
 if __name__ == '__main__':
     # pylint: disable=no-value-for-parameter
-    main()
+    from_cli()
