@@ -92,7 +92,8 @@ def from_cli(
         force=force,
         conditional_test_subset_genes=conditional_test_subset_genes,
     )
-    batch.run(wait=False, dry_run=True)
+    logging.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
+    batch.run(wait=False)
 
 
 def main(
