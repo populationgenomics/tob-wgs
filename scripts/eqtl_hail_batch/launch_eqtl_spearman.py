@@ -46,7 +46,7 @@ def mainify(obj):
         import inspect
         s = inspect.getsource(obj)
         co = compile(s, obj.__name__, 'exec')
-        resp = exec(co, __main__.__dict__)
+        exec(co, __main__.__dict__)
 
 mainify(filter_joint_call_mt)
 
@@ -105,7 +105,7 @@ def from_cli(
         conditional_test_subset_genes=conditional_test_subset_genes,
     )
     logging.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
-    batch.run(dry_run=True)
+    batch.run(wait=False)
 
 
 def main(
