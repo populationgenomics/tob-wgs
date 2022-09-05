@@ -28,10 +28,10 @@ def filter_joint_call_mt(
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
 
-    init_batch()
     if AnyPath(output_path).exists() and not force:
         return output_path
 
+    init_batch()
     mt = hl.read_matrix_table(joint_mt_path)
     samples = mt.s.collect()
     n_samples = len(samples)
