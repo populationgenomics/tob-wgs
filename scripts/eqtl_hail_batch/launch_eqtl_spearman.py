@@ -45,6 +45,7 @@ from constants import (
     MULTIPY_IMAGE,
 )
 
+logging.basicConfig()
 
 # region FILTER_JOINT_CALL_MT
 
@@ -69,7 +70,7 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig(level=logging.ERROR)
     logger = logging.getLogger('filter_joint_call_mt')
     logger.setLevel(level=logging.INFO)
     if AnyPath(output_path).exists() and not force:
@@ -905,7 +906,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
 def calculate_conditional_residuals(
     residual_path: str,
     significant_snps_path: str,
-    output_path: str,
+    output_location: str,
     filtered_matrix_table_path: str,
     force: bool = False,
 ) -> str:
@@ -921,15 +922,16 @@ def calculate_conditional_residuals(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows, which have been conditioned on the lead eSNP.
     """
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig()
+
     logger = logging.getLogger('calculate_residual_df')
     logger.setLevel(level=logging.INFO)
 
     logger.info(f'Got paths: {residual_path} / {significant_snps_path}')
 
-    if AnyPath(output_path).exists() and not force:
-        logger.info(f'Reusing residuals result from {output_path}')
-        return output_path
+    if AnyPath(output_location).exists() and not force:
+        logger.info(f'Reusing residuals result from {output_location}')
+        return output_location
 
     # import these here to avoid polluting the global namespace
     #   (and make testing easier)
@@ -988,9 +990,19 @@ def calculate_conditional_residuals(
         test_df.columns = ['sampleid', 'expression', 'genotype']
 
         y, x = dmatrices('expression ~ genotype', test_df)
-        model = sm.OLS(y, x)
-        residuals = list(model.fit().resid)
-        return residuals
+        try:
+            model = sm.OLS(y, x)
+            residuals = list(model.fit().resid)
+            return residuals
+        except Exception as e:
+            logger.info(f'y = {y}, x = {x}')
+            raise Exception(f'Error during calculate_adjusted_residuals for {gene_id}') from e
+
+    # DEBUG
+    tmp_residual_output = output_path(os.path.basename(output_location) + '.genotype-intermediate.tsv', 'tmp')
+    logger.info(f'Writing genotype_df before calculation to {tmp_residual_output}')
+    genotype_df.to_csv(tmp_residual_output)
+    # END DEBUG
 
     adjusted_residual_mat = pd.DataFrame(
         list(map(calculate_adjusted_residuals, gene_ids))
@@ -998,8 +1010,8 @@ def calculate_conditional_residuals(
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
 
-    adjusted_residual_mat.to_csv(output_path, index=False)
-    return output_path
+    adjusted_residual_mat.to_csv(output_location, index=False)
+    return output_location
 
 
 # Run Spearman rank in parallel by sending genes in batches
