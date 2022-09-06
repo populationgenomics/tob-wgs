@@ -801,8 +801,8 @@ def generate_conditional_analysis(
         #    previous_residual_path = <output_path>
         previous_residual_path = calc_resid_df_job.call(
             calculate_residual_df,
-            previous_residual_path,
-            previous_sig_snps_directory,
+            residual_path=previous_residual_path,
+            significant_snps_path=previous_sig_snps_directory,
             output_path=os.path.join(round_dir, f'residual_results.csv'),
             filtered_matrix_table_path=filtered_matrix_table_path,
             force=force,
@@ -824,11 +824,12 @@ def generate_conditional_analysis(
             copy_common_env(j)
             gene_result_path: hb.resource.PythonResult = j.call(
                 run_scattered_conditional_analysis,
-                iteration,
-                gene_idx,
-                previous_residual_path,
-                previous_sig_snps_directory,
-                cell_type,
+                iteration=iteration,
+                idx=gene_idx,
+                residual_path=previous_residual_path,
+                significant_snps_path=previous_sig_snps_directory,
+                filtered_matrix_table_path=filtered_matrix_table_path,
+                cell_type=cell_type,
                 round_outputdir=round_dir,
                 sigsnps_outputdir=new_sig_snps_directory,
                 force=force,
@@ -977,6 +978,9 @@ def calculate_residual_df(
     # reassign sample ids
     residual_df = residual_df.assign(sampleid=sample_ids.to_list())
 
+    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(
+        lambda row: ':'.join(row.values.astype(str)), axis=1
+    )
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         residual_df=residual_df,
@@ -1020,6 +1024,7 @@ def run_scattered_conditional_analysis(
     idx: int,
     residual_path: str,
     significant_snps_path: str,
+filtered_matrix_table_path: str,
     cell_type: str,
     round_outputdir: str,
     sigsnps_outputdir: str,
@@ -1091,7 +1096,7 @@ def run_scattered_conditional_analysis(
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
     # Subset genotype file for the significant SNPs
-    genotype_df = get_genotype_df(residual_df, gene_snp_test_df)
+    genotype_df = get_genotype_df(residual_df=residual_df, gene_snp_test_df=gene_snp_test_df, filtered_matrix_table_path=filtered_matrix_table_path)
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
