@@ -37,10 +37,6 @@ import hail as hl
 import numpy as np
 import pandas as pd
 
-
-# from genotype_info import filter_joint_call_mt
-# from generate_eqtl_spearman import main as generate_eqtl_spearman
-# from conditional_analysis import main as generate_conditional_analysis
 from constants import (
     DEFAULT_JOINT_CALL_TABLE_PATH,
     DEFAULT_FREQUENCY_TABLE_PATH,
@@ -158,7 +154,7 @@ def generate_eqtl_spearman(
     calculate_residuals_job = batch.new_python_job(f'{job_prefix}calculate-residuals')
     copy_common_env(calculate_residuals_job)
     residuals_csv_path = calculate_residuals_job.call(
-        calculate_residuals,
+        calculate_eqtl_residuals,
         output_prefix=output_prefix,
         expression_tsv_path=expression_tsv_path,
         covariates_tsv_path=covariates_tsv_path,
@@ -254,33 +250,6 @@ def remove_sc_outliers(df):
     df = df[-df.sampleid.isin(outliers)]
 
     return df
-
-
-def get_number_of_scatters(*, expression_tsv_path, geneloc_tsv_path):
-    """get index of total number of genes
-
-    Input:
-    expression_df: a data frame with samples as rows and genes as columns,
-    containing normalised expression values (i.e., the average number of molecules
-    for each gene detected in each person).
-    geneloc_df: a data frame with the gene location (chromosome, start, and
-    end locations as columns) specified for each gene (rows).
-
-    Returns:
-    The number of genes (as an int) after filtering for lowly expressed genes.
-    This integer number gets fed into the number of scatters to run.
-    """
-    # TODO: remove this
-    return 296
-
-    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
-    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
-
-    expression_df = filter_lowly_expressed_genes(expression_df)
-    gene_ids = list(expression_df.columns.values)[1:]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-
-    return len(geneloc_df.index)
 
 
 def get_log_expression(expression_df):
@@ -404,7 +373,7 @@ def generate_log_cpm_output(
     return data_summary_path.as_uri()
 
 
-def calculate_residuals(
+def calculate_eqtl_residuals(
     expression_tsv_path: str,
     covariates_tsv_path: str,
     output_prefix: str,
@@ -533,7 +502,7 @@ def run_spearman_correlation_scatter(
         AnyPath(parquet_output_dir) / f'correlation_results_{gene}.parquet'
     )
     if spearman_parquet_path.exists() and not force:
-        return spearman_parquet_path
+        return spearman_parquet_path.as_uri()
 
     chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
@@ -811,7 +780,7 @@ def generate_conditional_analysis(
         # as opposed to saying the following, which means there's actually no job dependency (bad):
         #    previous_residual_path = <output_path>
         previous_residual_path = calc_resid_df_job.call(
-            calculate_residual_df,
+            calculate_conditional_residuals,
             residual_path=previous_residual_path,
             significant_snps_path=previous_sig_snps_directory,
             output_path=os.path.join(round_dir, f'residual_results.csv'),
@@ -933,7 +902,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     return genotype_df
 
 
-def calculate_residual_df(
+def calculate_conditional_residuals(
     residual_path: str,
     significant_snps_path: str,
     output_path: str,
@@ -967,8 +936,6 @@ def calculate_residual_df(
     import statsmodels.api as sm
     from patsy import dmatrices  # pylint: disable=no-name-in-module
 
-
-
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
 
@@ -986,7 +953,9 @@ def calculate_residual_df(
         .reset_index()
     )
     # add in SNP_ID column
-
+    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(
+        lambda row: ':'.join(row.values.astype(str)), axis=1
+    )
     # Subset residuals for the genes to be tested
     gene_ids = esnp1['gene_symbol'][
         esnp1['gene_symbol'].isin(residual_df.columns)
@@ -996,10 +965,6 @@ def calculate_residual_df(
     residual_df = residual_df[gene_ids]
     # reassign sample ids
     residual_df = residual_df.assign(sampleid=sample_ids.to_list())
-
-    esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(
-        lambda row: ':'.join(row.values.astype(str)), axis=1
-    )
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         residual_df=residual_df,
@@ -1279,12 +1244,11 @@ def main(
 
     if cell_types is None or len(cell_types) == 0:
         # not provided (ie: use all cell types)
-        expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
-        cell_types = get_cell_types_from(expression_files_dir)
+        cell_types = get_cell_types_from(input_files_prefix)
         logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
 
         if len(cell_types) == 0:
-            raise ValueError(f'No cell types found at: {expression_files_dir}')
+            raise ValueError(f'No cell types found at: {input_files_prefix}')
 
     # ideally this would come from metamist :(
     keys_tsv_path = os.path.join(input_files_prefix, 'OneK1K_CPG_IDs.tsv')
@@ -1362,17 +1326,17 @@ def main(
             }
 
 
-def list_dir(directory: str, filter_):
+def list_dir(directory: str, filter_=None):
     if directory.startswith("gs://"):
         cs_client = storage.Client()
         bucket_name, bucket_path = directory.split('gs://')[1].split('/', maxsplit=1)
         bucket = cs_client.get_bucket(bucket_name)
 
         blobs = bucket.list_blobs(prefix=bucket_path + '/', delimiter='/')
-        return [b.name for b in blobs if not filter or filter_(b.name)]
+        return [b.name for b in blobs if not filter_ or filter_(b.name)]
 
     if os.path.exists(directory):
-        return [fn for fn in os.listdir(directory) if not filter or filter(fn)]
+        return [fn for fn in os.listdir(directory) if not filter_ or filter_(fn)]
 
     raise ValueError(f'Unrecognised directory type: {directory}')
 
@@ -1381,21 +1345,21 @@ def get_chromosomes(input_files_prefix: str):
     """
     Get all chromosomes for which gene_location_files exist
     """
-    # gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv
     pattern = re.compile('GRCh38_geneloc_chr(.+)\.tsv$')
     files = list_dir(
         os.path.join(input_files_prefix, 'gene_location_files'),
         filter_=lambda el: pattern.search(el),
     )
     chromosomes = set(pattern.search(fn).groups()[0] for fn in files)
-    return sorted(chromosomes, key=lambda chromosome: int(chromosome))
+    return sorted(chromosomes)
 
 
-def get_cell_types_from(expression_files_dir: str):
+def get_cell_types_from(input_files_prefix: str):
     """
     we can infer the cell types from the 'expression_files' subdirectory
         eg: {cell_type}_expression.tsv
     """
+    expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
     logging.info(f'Going to fetch cell types from {expression_files_dir}')
     ending = '_expression.tsv'
     return [
@@ -1418,8 +1382,8 @@ def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
-    # TODO: remove this
-    return 296
+    # DEBUG
+    # return 296
 
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
