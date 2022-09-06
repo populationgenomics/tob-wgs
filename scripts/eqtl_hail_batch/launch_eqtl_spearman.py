@@ -73,8 +73,11 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
+    logging.basicConfig(level=logging.WARN)
+    logger = logging.getLogger('filter_joint_call_mt')
+    logger.setLevel(level=logging.INFO)
     if AnyPath(output_path).exists() and not force:
-        logging.info(f'Reusing existing filtered mt: {output_path}')
+        logger.info(f'Reusing existing filtered mt: {output_path}')
         return output_path
 
     init_batch()
@@ -333,9 +336,13 @@ def generate_log_cpm_output(
     Returns:
     Counts per million mapped reads
     """
+    logging.basicConfig(level=logging.WARN)
+    logger = logging.getLogger('generate_log_cpm_output')
+    logger.setLevel(level=logging.INFO)
+
     data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
     if data_summary_path.exists() and not force:
-        logging.info(f'Reusing results from {data_summary_path.as_uri()}')
+        logger.info(f'Reusing results from {data_summary_path.as_uri()}')
         return data_summary_path.as_uri()
 
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
@@ -415,10 +422,14 @@ def calculate_residuals(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows.
     """
+    logging.basicConfig(level=logging.WARN)
+
+    logger = logging.getLogger('calculate_residuals')
+    logger.setLevel(level=logging.INFO)
 
     residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
     if residual_path.exists() and not force:
-        logging.info(f'Reusing prevous results from {residual_path.as_uri()}')
+        logger.info(f'Reusing previous results from {residual_path.as_uri()}')
         return residual_path.as_uri()
 
     # import these here to avoid polluting the global namespace
@@ -941,14 +952,22 @@ def calculate_residual_df(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows, which have been conditioned on the lead eSNP.
     """
+    logging.basicConfig(level=logging.WARN)
+    logger = logging.getLogger('calculate_residual_df')
+    logger.setLevel(level=logging.INFO)
+
+    logger.info(f'Got paths: {residual_path} / {significant_snps_path}')
 
     if AnyPath(output_path).exists() and not force:
+        logger.info(f'Reusing residuals result from {output_path}')
         return output_path
 
     # import these here to avoid polluting the global namespace
     #   (and make testing easier)
     import statsmodels.api as sm
     from patsy import dmatrices  # pylint: disable=no-name-in-module
+
+
 
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
@@ -1024,7 +1043,7 @@ def run_scattered_conditional_analysis(
     idx: int,
     residual_path: str,
     significant_snps_path: str,
-filtered_matrix_table_path: str,
+    filtered_matrix_table_path: str,
     cell_type: str,
     round_outputdir: str,
     sigsnps_outputdir: str,
@@ -1096,7 +1115,11 @@ filtered_matrix_table_path: str,
         gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
     ]
     # Subset genotype file for the significant SNPs
-    genotype_df = get_genotype_df(residual_df=residual_df, gene_snp_test_df=gene_snp_test_df, filtered_matrix_table_path=filtered_matrix_table_path)
+    genotype_df = get_genotype_df(
+        residual_df=residual_df,
+        gene_snp_test_df=gene_snp_test_df,
+        filtered_matrix_table_path=filtered_matrix_table_path,
+    )
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -1171,10 +1194,6 @@ filtered_matrix_table_path: str,
     adjusted_spearman_df.to_parquet(output_path)
 
     return output_path
-
-
-def fake_dependency(argument):
-    return argument
 
 
 # endregion CONDITIONAL_ANALYSIS
@@ -1414,18 +1433,3 @@ def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
 
 if __name__ == '__main__':
     from_cli()
-
-    # backend = None
-    # # backend = hb.ServiceBackend(
-    # #     billing_project=get_config()['hail']['billing_project'],
-    # #     remote_tmpdir=remote_tmpdir(),
-    # # )
-    # batch = hb.Batch(name='eqtl_spearman', backend=backend)
-    #
-    # _ = main(
-    #     batch,
-    #     input_files_prefix='gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files',
-    #     chromosomes=['22'],
-    #     cell_types=['B_intermediate'],
-    # )
-    # batch.run(dry_run=True)
