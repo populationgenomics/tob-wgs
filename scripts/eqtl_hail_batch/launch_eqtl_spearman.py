@@ -56,7 +56,7 @@ def filter_joint_call_mt(
     joint_mt_path: str,
     frequency_table_path: str,
     vep_annotation_path: str,
-    output_path: str,
+    output_location: str,
     force: bool = False,
 ):
     """Filter hail matrix table
@@ -73,9 +73,9 @@ def filter_joint_call_mt(
     logging.basicConfig(level=logging.ERROR)
     logger = logging.getLogger('filter_joint_call_mt')
     logger.setLevel(level=logging.INFO)
-    if AnyPath(output_path).exists() and not force:
-        logger.info(f'Reusing existing filtered mt: {output_path}')
-        return output_path
+    if AnyPath(output_location).exists() and not force:
+        logger.info(f'Reusing existing filtered mt: {output_location}')
+        return output_location
 
     init_batch()
     mt = hl.read_matrix_table(joint_mt_path)
@@ -119,9 +119,9 @@ def filter_joint_call_mt(
     mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
     # repartition to save overhead cost
     mt = mt.naive_coalesce(1000)
-    mt.write(output_path)
+    mt.write(output_location)
 
-    return output_path
+    return output_location
 
 
 # endregion FILTER_JOINT_CALL_MT
@@ -784,7 +784,7 @@ def generate_conditional_analysis(
             calculate_conditional_residuals,
             residual_path=previous_residual_path,
             significant_snps_path=previous_sig_snps_directory,
-            output_path=os.path.join(round_dir, f'residual_results.csv'),
+            output_location=os.path.join(round_dir, f'residual_results.csv'),
             filtered_matrix_table_path=filtered_matrix_table_path,
             force=force,
         )
@@ -1276,7 +1276,7 @@ def main(
         joint_mt_path=joint_call_table_path,
         frequency_table_path=frequency_table_path,
         vep_annotation_path=vep_annotation_table_path,
-        output_path=output_path('genotype_table.mt', 'tmp'),
+        output_location=output_path('genotype_table.mt', 'tmp'),
         force=force,
     )
 
