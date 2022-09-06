@@ -74,6 +74,7 @@ def filter_joint_call_mt(
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
     if AnyPath(output_path).exists() and not force:
+        logging.info(f'Reusing existing filtered mt: {output_path}')
         return output_path
 
     init_batch()
@@ -158,6 +159,7 @@ def generate_eqtl_spearman(
         output_prefix=output_prefix,
         expression_tsv_path=expression_tsv_path,
         covariates_tsv_path=covariates_tsv_path,
+        force=force,
     )
     # calculate and save log cpm values
     generate_log_cpm_output_job = batch.new_python_job(
@@ -171,6 +173,7 @@ def generate_eqtl_spearman(
         output_prefix=output_prefix,
         expression_tsv_path=expression_tsv_path,
         gencode_gtf_path=gencode_gtf_path,
+        force=force,
     )
 
     spearman_output_directory = os.path.join(output_prefix, 'parquet')
@@ -193,7 +196,7 @@ def generate_eqtl_spearman(
             geneloc_tsv_path=geneloc_tsv_path,
             residuals_csv_path=residuals_csv_path,
             filtered_mt_path=filtered_mt_path,
-            celltype=cell_type,
+            cell_type=cell_type,
             parquet_output_dir=spearman_output_directory,
             force=force,
         )
@@ -318,6 +321,7 @@ def generate_log_cpm_output(
     cell_type: str,
     expression_tsv_path: str,
     gencode_gtf_path: str,
+    force: bool = False,
 ):
     """Calculate log cpm for each cell type and chromosome
 
@@ -329,6 +333,10 @@ def generate_log_cpm_output(
     Returns:
     Counts per million mapped reads
     """
+    data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
+    if data_summary_path.exists() and not force:
+        logging.info(f'Reusing results from {data_summary_path.as_uri()}')
+        return data_summary_path.as_uri()
 
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     log_cpm = calculate_log_cpm(expression_df)
@@ -383,14 +391,18 @@ def generate_log_cpm_output(
     ).gene_id
 
     # Save file
-    data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
     with data_summary_path.open('wb') as fp:
         data_summary.to_parquet(fp)
 
     return data_summary_path.as_uri()
 
 
-def calculate_residuals(expression_tsv_path, covariates_tsv_path, output_prefix):
+def calculate_residuals(
+    expression_tsv_path: str,
+    covariates_tsv_path: str,
+    output_prefix: str,
+    force: bool = False,
+):
     """Calculate residuals for each gene in scatter
 
     Input:
@@ -403,6 +415,12 @@ def calculate_residuals(expression_tsv_path, covariates_tsv_path, output_prefix)
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows.
     """
+
+    residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
+    if residual_path.exists() and not force:
+        logging.info(f'Reusing prevous results from {residual_path.as_uri()}')
+        return residual_path.as_uri()
+
     # import these here to avoid polluting the global namespace
     #   (and make testing easier)
     import statsmodels.api as sm
@@ -440,7 +458,7 @@ def calculate_residuals(expression_tsv_path, covariates_tsv_path, output_prefix)
     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
     residual_df.columns = gene_ids
     residual_df = residual_df.assign(sampleid=list(sample_ids))
-    residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
+
     with residual_path.open('w') as fp:
         residual_df.to_csv(fp, index=False)
 
@@ -1279,7 +1297,7 @@ def main(
 
             n_genes = get_number_of_genes(
                 expression_tsv_path=expression_tsv_path,
-                geneloc_tsv_path=geneloc_tsv_path
+                geneloc_tsv_path=geneloc_tsv_path,
             )
 
             eqtl_outputs = generate_eqtl_spearman(
@@ -1360,6 +1378,7 @@ def get_cell_types_from(expression_files_dir: str):
         os.path.basename(fn)[: -len(ending)]
         for fn in list_dir(expression_files_dir, lambda el: el.endswith(ending))
     ]
+
 
 def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
     """get index of total number of genes
