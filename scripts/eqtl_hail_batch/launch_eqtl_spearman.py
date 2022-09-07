@@ -45,7 +45,7 @@ from constants import (
     MULTIPY_IMAGE,
 )
 
-logging.basicConfig()
+logging.getLogger().setLevel(level=logging.ERROR)
 
 # region FILTER_JOINT_CALL_MT
 
@@ -70,7 +70,7 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
-    logging.basicConfig(level=logging.ERROR)
+    logging.getLogger().setLevel(level=logging.ERROR)
     logger = logging.getLogger('filter_joint_call_mt')
     logger.setLevel(level=logging.INFO)
     if AnyPath(output_location).exists() and not force:
@@ -306,7 +306,7 @@ def generate_log_cpm_output(
     Returns:
     Counts per million mapped reads
     """
-    logging.basicConfig(level=logging.WARN)
+    logging.getLogger().setLevel(level=logging.WARN)
     logger = logging.getLogger('generate_log_cpm_output')
     logger.setLevel(level=logging.INFO)
 
@@ -392,7 +392,7 @@ def calculate_eqtl_residuals(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows.
     """
-    logging.basicConfig(level=logging.WARN)
+    logging.getLogger().setLevel(level=logging.WARN)
 
     logger = logging.getLogger('calculate_residuals')
     logger.setLevel(level=logging.INFO)
@@ -922,7 +922,9 @@ def calculate_conditional_residuals(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows, which have been conditioned on the lead eSNP.
     """
-    logging.basicConfig()
+
+    # set default logger to ERROR only
+    logging.getLogger().setLevel(level=logging.ERROR)
 
     logger = logging.getLogger('calculate_residual_df')
     logger.setLevel(level=logging.INFO)
@@ -1392,9 +1394,6 @@ def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
-    # DEBUG
-    # return 296
-
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
 
