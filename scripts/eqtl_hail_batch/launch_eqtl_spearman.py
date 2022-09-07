@@ -976,11 +976,13 @@ def calculate_conditional_residuals(
 
     # Find residuals after adjustment of lead SNP
     def calculate_adjusted_residuals(gene_id):
-        gene = gene_id
         # select gene to regress
-        exprs_val = residual_df[['sampleid', gene]]
-        # select SNP to add
-        snp = esnp1.snp_id[esnp1.gene_symbol == gene].to_string(index=False)
+        exprs_val = residual_df[['sampleid', gene_id]]
+        # select SNP to add, get the first value
+        rows_for_gene = esnp1.snp_id[esnp1.gene_symbol == gene_id].values
+        if len(rows_for_gene) == 0:
+            raise ValueError(f'Selected gene {gene_id} was not found in esnp1')
+        snp = rows_for_gene[0]
         snp_genotype = genotype_df[genotype_df.snp_id == snp][
             ['sampleid', 'n_alt_alleles']
         ]
@@ -999,9 +1001,9 @@ def calculate_conditional_residuals(
             raise Exception(f'Error during calculate_adjusted_residuals for {gene_id}') from e
 
     # DEBUG
-    tmp_residual_output = output_path(os.path.basename(output_location) + '.genotype-intermediate.tsv', 'tmp')
-    logger.info(f'Writing genotype_df before calculation to {tmp_residual_output}')
-    genotype_df.to_csv(tmp_residual_output)
+    tmp_genotype_output = output_path(os.path.basename(output_location) + '.genotype-intermediate.csv', 'tmp')
+    logger.info(f'Writing genotype_df before calculation to {tmp_genotype_output}')
+    genotype_df.to_csv(tmp_genotype_output)
     # END DEBUG
 
     adjusted_residual_mat = pd.DataFrame(
