@@ -1321,7 +1321,7 @@ def main(
                 batch=batch,
                 # constants
                 force=force,
-                job_prefix=f'{cell_type}_chr{chromosome}_conditional',
+                job_prefix=f'{cell_type}_chr{chromosome}_conditional_',
                 n_genes=n_genes,
                 cell_type=cell_type,
                 chromosome=chromosome,
