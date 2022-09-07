@@ -1066,7 +1066,7 @@ def run_scattered_conditional_analysis(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}.tsv'
+    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}_{idx}.tsv'
     # if this succeeds, and the following code fails, then this will fail with
     # an 'cloudpathlib.exceptions.OverwriteNewerCloudError', so force overwrite
     with esnp1_path.open('w+', force_overwrite_to_cloud=True) as fp:
