@@ -1000,12 +1000,6 @@ def calculate_conditional_residuals(
             logger.info(f'y = {y}, x = {x}')
             raise Exception(f'Error during calculate_adjusted_residuals for {gene_id}') from e
 
-    # DEBUG
-    tmp_genotype_output = output_path(os.path.basename(output_location) + '.genotype-intermediate.csv', 'tmp')
-    logger.info(f'Writing genotype_df before calculation to {tmp_genotype_output}')
-    genotype_df.to_csv(tmp_genotype_output)
-    # END DEBUG
-
     adjusted_residual_mat = pd.DataFrame(
         list(map(calculate_adjusted_residuals, gene_ids))
     ).T
@@ -1071,7 +1065,9 @@ def run_scattered_conditional_analysis(
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
     esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}.tsv'
-    with esnp1_path.open('w') as fp:
+    # if this succeeds, and the following code fails, then this will fail with
+    # an 'cloudpathlib.exceptions.OverwriteNewerCloudError', so force overwrite
+    with esnp1_path.open('w+', force_overwrite_to_cloud=True) as fp:
         esnp1.to_csv(fp, index=False)
 
     # Remaning eSNPs to test
