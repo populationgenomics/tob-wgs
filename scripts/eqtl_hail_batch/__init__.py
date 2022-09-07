@@ -1,1 +1,0 @@
-import genotype_info
