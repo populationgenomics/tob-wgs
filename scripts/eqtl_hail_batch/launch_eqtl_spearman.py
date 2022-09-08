@@ -829,7 +829,7 @@ def generate_conditional_analysis(
                 _logger.info(f'Reusing conditionals result from {residuals_output_path}')
             else:
                 j = batch.new_python_job(
-                    name=f'{job_prefix}calculate_spearman_iter_{iteration}_{gene_name}'
+                    name=f'{job_prefix}calculate_spearman_round_{iteration}_{gene_name}'
                 )
                 j.cpu(2)
                 j.memory('8Gi')
@@ -1201,9 +1201,9 @@ def run_scattered_conditional_analysis(
     adjusted_spearman_df['cell_type_id'] = cell_type
 
     # Save file
-    adjusted_spearman_df.to_parquet(output_path)
+    adjusted_spearman_df.to_parquet(output_location)
 
-    return output_path
+    return output_location
 
 
 # endregion CONDITIONAL_ANALYSIS
@@ -1301,17 +1301,21 @@ def main(
     outputs = defaultdict(dict)
 
     # do the genotype_info stuff
-    filter_mt_job = batch.new_python_job(f'filter_mt')
-    copy_common_env(filter_mt_job)
-    filtered_mt_path = filter_mt_job.call(
-        filter_joint_call_mt,
-        keys_path=keys_tsv_path,
-        joint_mt_path=joint_call_table_path,
-        frequency_table_path=frequency_table_path,
-        vep_annotation_path=vep_annotation_table_path,
-        output_location=output_path('genotype_table.mt', 'tmp'),
-        force=force,
-    )
+    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
+    if AnyPath(filtered_mt_path).exists() and not force:
+        _logger.info(f'Reusing filtered_mt path: {filtered_mt_path}')
+    else:
+        filter_mt_job = batch.new_python_job(f'filter_mt')
+        copy_common_env(filter_mt_job)
+        filtered_mt_path = filter_mt_job.call(
+            filter_joint_call_mt,
+            keys_path=keys_tsv_path,
+            joint_mt_path=joint_call_table_path,
+            frequency_table_path=frequency_table_path,
+            vep_annotation_path=vep_annotation_table_path,
+            output_location=filtered_mt_path,
+            force=force,
+        )
 
     for cell_type in cell_types:
         expression_tsv_path = os.path.join(
