@@ -22,6 +22,7 @@ def main(mt: str, vep_version: str):
     hl.init(default_reference='GRCh38')
 
     mt = hl.read_matrix_table(mt)
+    mt = mt.head(100)
     ht = mt.rows()
     # filter to biallelic loci only
     ht = ht.filter(hl.len(ht.alleles) == 2)
