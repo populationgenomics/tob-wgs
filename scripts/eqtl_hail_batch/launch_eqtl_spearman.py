@@ -1076,7 +1076,10 @@ def run_scattered_conditional_analysis(
     spearmans rho, and gene information.
     """
 
+    logger = setup_logger('run_scattered_conditional_analysis')
+
     if AnyPath(output_location).exists() and not force:
+        logger.info(f'Reuse conditional output {output_location}')
         return output_location
 
     # import these here to avoid polluting the global namespace
