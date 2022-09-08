@@ -11,10 +11,32 @@ For example:
         --chromosomes '1 2' \
         --genes B_intermediate
 """
-
 import os
-import re
 import logging
+
+
+def setup_logger(name):
+    loggers_to_silence = [
+        'urllib3.connectionpool',
+        'urllib3.util.retry',
+        'google.auth._default',
+        'google.auth.transport.requests',
+        'fsspec',
+        'gcsfs',
+        'gcsfs.credentials',
+    ]
+    for logger_name in loggers_to_silence:
+        logging.getLogger(logger_name).setLevel(level=logging.WARN)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level=logging.INFO)
+
+    return logger
+
+
+_logger = setup_logger(os.path.basename(__file__))
+
+import re
 from collections import defaultdict
 from typing import Any
 
@@ -27,8 +49,6 @@ from cpg_utils.hail_batch import (
     output_path,
     copy_common_env,
     init_batch,
-    dataset_path,
-    reference_path,
 )
 from google.cloud import storage
 
@@ -45,7 +65,6 @@ from constants import (
     MULTIPY_IMAGE,
 )
 
-logging.getLogger().setLevel(level=logging.ERROR)
 
 # region FILTER_JOINT_CALL_MT
 
@@ -70,9 +89,8 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
-    logging.getLogger().setLevel(level=logging.ERROR)
-    logger = logging.getLogger('filter_joint_call_mt')
-    logger.setLevel(level=logging.INFO)
+    
+    logger = setup_logger('filter_joint_call_mt')
     if AnyPath(output_location).exists() and not force:
         logger.info(f'Reusing existing filtered mt: {output_location}')
         return output_location
@@ -140,7 +158,7 @@ def generate_eqtl_spearman(
     covariates_tsv_path: str,
     output_prefix: str,
     # can be derived, but better to pass
-    n_genes: int,
+    genes: list[str],
     cell_type: str,
     chromosome: str,
     force: bool = False,
@@ -148,42 +166,56 @@ def generate_eqtl_spearman(
     """
     Creates a Hail Batch pipeline for calculating EQTLs
     """
-    if n_genes == 0:
+    if len(genes) == 0:
         # only run batch jobs if there are test genes in the chromosome
         raise ValueError('No genes for eqtl spearman analysis')
 
-    calculate_residuals_job = batch.new_python_job(f'{job_prefix}calculate-residuals')
-    copy_common_env(calculate_residuals_job)
-    residuals_csv_path = calculate_residuals_job.call(
-        calculate_eqtl_residuals,
-        output_prefix=output_prefix,
-        expression_tsv_path=expression_tsv_path,
-        covariates_tsv_path=covariates_tsv_path,
-        force=force,
-    )
+    residuals_csv_path = os.path.join(output_prefix, 'log_residuals.csv')
+    if AnyPath(residuals_csv_path).exists() and not force:
+        _logger.info(f'Reusing results for eqtl_residuals: {residuals_csv_path}')
+    else:
+        calculate_residuals_job = batch.new_python_job(f'{job_prefix}calculate-residuals')
+        copy_common_env(calculate_residuals_job)
+        residuals_csv_path = calculate_residuals_job.call(
+            calculate_eqtl_residuals,
+            output_location=residuals_csv_path,
+            expression_tsv_path=expression_tsv_path,
+            covariates_tsv_path=covariates_tsv_path,
+            force=force,
+        )
     # calculate and save log cpm values
-    generate_log_cpm_output_job = batch.new_python_job(
-        f'{job_prefix}generate_log_cpm_output'
-    )
-    generate_log_cpm_output_job.memory('8Gi')
-    copy_common_env(generate_log_cpm_output_job)
-    generate_log_cpm_output_job.call(
-        generate_log_cpm_output,
-        cell_type=cell_type,
-        output_prefix=output_prefix,
-        expression_tsv_path=expression_tsv_path,
-        gencode_gtf_path=gencode_gtf_path,
-        force=force,
-    )
+    data_summary_path = os.path.join(output_prefix, 'gene_expression.parquet')
+    if AnyPath(data_summary_path).exists() and not force:
+        _logger.info(f'Reusing results for log_cpm: {data_summary_path}')
+    else:
+        generate_log_cpm_output_job = batch.new_python_job(
+            f'{job_prefix}generate_log_cpm_output'
+        )
+        generate_log_cpm_output_job.memory('8Gi')
+        copy_common_env(generate_log_cpm_output_job)
+        generate_log_cpm_output_job.call(
+            generate_log_cpm_output,
+            cell_type=cell_type,
+            output_location=data_summary_path,
+            expression_tsv_path=expression_tsv_path,
+            gencode_gtf_path=gencode_gtf_path,
+            force=force,
+        )
 
     spearman_output_directory = os.path.join(output_prefix, 'parquet')
     spearman_output_dependencies = []
 
-    for idx in range(n_genes):
+    for gene_name in genes:
+
+        spearman_output = os.path.join(spearman_output_directory, f'correlation_results_{gene_name}.parquet')
+
+        if AnyPath(spearman_output).exists() and not force:
+            _logger.info(f'Reusing results for eqtl_spearman_correlation_{gene_name}: {residuals_csv_path}')
+            continue
+
         j = batch.new_python_job(
-            name=f'{job_prefix}calculate_spearman_correlation_{idx}'
+            name=f'{job_prefix}calculate_spearman_correlation_{gene_name}'
         )
-        j.depends_on(calculate_residuals_job)
         j.cpu(2)
         j.memory('8Gi')
         j.storage('2Gi')
@@ -191,25 +223,29 @@ def generate_eqtl_spearman(
         copy_common_env(j)
         j.call(
             run_spearman_correlation_scatter,
-            idx=idx,
+            gene_name=gene_name,
             expression_tsv_path=expression_tsv_path,
             geneloc_tsv_path=geneloc_tsv_path,
             residuals_csv_path=residuals_csv_path,
             filtered_mt_path=filtered_mt_path,
             cell_type=cell_type,
-            parquet_output_dir=spearman_output_directory,
+            output_location=spearman_output,
             force=force,
         )
         # we'll track job dependencies with an explicit sink
         spearman_output_dependencies.append(j)
 
-    # create a fake job to avoid having to carry dependencies outside this script
-    def return_value(value):
-        return value
+    if len(spearman_output_dependencies) == 0:
+        # we've reused results the whole way, so no need for "fake" sink
+        sinked_output_dir = spearman_output_directory
+    else:
+        # create a fake job to avoid having to carry dependencies outside this script
+        def return_value(value):
+            return value
 
-    fake_sink = batch.new_python_job(f'{job_prefix}sink')
-    fake_sink.depends_on(*spearman_output_dependencies)
-    sinked_output_dir = fake_sink.call(return_value, spearman_output_directory)
+        fake_sink = batch.new_python_job(f'{job_prefix}sink')
+        fake_sink.depends_on(*spearman_output_dependencies)
+        sinked_output_dir = fake_sink.call(return_value, spearman_output_directory)
 
     return {
         'spearman_parquet_directory': sinked_output_dir,
@@ -290,8 +326,8 @@ def calculate_log_cpm(expression_df):
 
 def generate_log_cpm_output(
     *,
-    output_prefix: str,
     cell_type: str,
+    output_location: str,
     expression_tsv_path: str,
     gencode_gtf_path: str,
     force: bool = False,
@@ -306,14 +342,11 @@ def generate_log_cpm_output(
     Returns:
     Counts per million mapped reads
     """
-    logging.getLogger().setLevel(level=logging.WARN)
-    logger = logging.getLogger('generate_log_cpm_output')
-    logger.setLevel(level=logging.INFO)
+    logger = setup_logger('generate_log_cpm_output')
 
-    data_summary_path = AnyPath(output_prefix) / 'gene_expression.parquet'
-    if data_summary_path.exists() and not force:
-        logger.info(f'Reusing results from {data_summary_path.as_uri()}')
-        return data_summary_path.as_uri()
+    if AnyPath(output_location).exists() and not force:
+        logger.info(f'Reusing results from {output_location}')
+        return output_location
 
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     log_cpm = calculate_log_cpm(expression_df)
@@ -368,16 +401,16 @@ def generate_log_cpm_output(
     ).gene_id
 
     # Save file
-    with data_summary_path.open('wb') as fp:
+    with AnyPath(output_location).open('wb+', force_overwrite_to_cloud=True) as fp:
         data_summary.to_parquet(fp)
 
-    return data_summary_path.as_uri()
+    return output_location
 
 
 def calculate_eqtl_residuals(
     expression_tsv_path: str,
     covariates_tsv_path: str,
-    output_prefix: str,
+    output_location: str,
     force: bool = False,
 ):
     """Calculate residuals for each gene in scatter
@@ -392,15 +425,12 @@ def calculate_eqtl_residuals(
     Returns: a dataframe of expression residuals, with genes as columns and samples
     as rows.
     """
-    logging.getLogger().setLevel(level=logging.WARN)
 
-    logger = logging.getLogger('calculate_residuals')
-    logger.setLevel(level=logging.INFO)
+    logger = setup_logger('calculate_residuals')
 
-    residual_path = AnyPath(output_prefix) / 'log_residuals.csv'
-    if residual_path.exists() and not force:
-        logger.info(f'Reusing previous results from {residual_path.as_uri()}')
-        return residual_path.as_uri()
+    if AnyPath(output_location).exists() and not force:
+        logger.info(f'Reusing previous results from {output_location}')
+        return output_location
 
     # import these here to avoid polluting the global namespace
     #   (and make testing easier)
@@ -440,22 +470,22 @@ def calculate_eqtl_residuals(
     residual_df.columns = gene_ids
     residual_df = residual_df.assign(sampleid=list(sample_ids))
 
-    with residual_path.open('w') as fp:
+    with AnyPath(output_location).open('w+', force_overwrite_to_cloud=True) as fp:
         residual_df.to_csv(fp, index=False)
 
-    return residual_path.as_uri()
+    return calculate_eqtl_residuals
 
 
 # Run Spearman rank in parallel by sending genes in batches
 def run_spearman_correlation_scatter(
-    idx,
     *,
     expression_tsv_path,
     geneloc_tsv_path,
     residuals_csv_path,
     filtered_mt_path,
     cell_type,
-    parquet_output_dir: str,
+    gene_name: str,
+    output_location: str,
     force: bool = False,
 ):  # pylint: disable=too-many-locals
     """Run genes in scatter
@@ -478,6 +508,10 @@ def run_spearman_correlation_scatter(
     spearmans rho, and gene information.
     """
 
+    # checkpoint
+    if AnyPath(output_location).exists() and not force:
+        return output_location
+
     # import multipy here to avoid issues with driver image updates
     from multipy.fdr import qvalue
     from scipy.stats import spearmanr
@@ -489,23 +523,16 @@ def run_spearman_correlation_scatter(
 
     # Get 1Mb sliding window around each gene
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
-    gene_ids = list(log_expression_df.columns.values)[1:]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
-    geneloc_df = geneloc_df.assign(left=geneloc_df.start - 1000000)
-    geneloc_df = geneloc_df.assign(right=geneloc_df.end + 1000000)
+    gene_infos = geneloc_df[geneloc_df.gene_name == gene_name]
+    if len(gene_infos) == 0:
+        raise ValueError(f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}')
+    gene_info = gene_infos.iloc[0]
+    gene_info.start -= 1e7
+    gene_info.end += 1e7
+    chromosome = gene_info.chr
 
     # perform correlation in chunks by gene
-    gene_info = geneloc_df.iloc[idx]
-    gene = gene_info.gene_name
 
-    # checkpoint
-    spearman_parquet_path = (
-        AnyPath(parquet_output_dir) / f'correlation_results_{gene}.parquet'
-    )
-    if spearman_parquet_path.exists() and not force:
-        return spearman_parquet_path.as_uri()
-
-    chromosome = gene_info.chr
     # get all SNPs which are within 1Mb of each gene
     init_batch(driver_cores=8, worker_cores=8)
     mt = hl.read_matrix_table(filtered_mt_path)
@@ -653,11 +680,11 @@ def run_spearman_correlation_scatter(
 
         return pd.DataFrame.from_dict(snp_gt_summary_data)
 
-    association_effect_data = get_association_effect_data(gene)
+    association_effect_data = get_association_effect_data(gene_name)
 
     # Save file (just temporarily for inspection)
     path = AnyPath(
-        output_path(f'{cell_type}_{chromosome}/eqtl_effect_{gene}.parquet', 'tmp')
+        output_path(f'{cell_type}_{chromosome}/eqtl_effect_{gene_name}.parquet', 'tmp')
     )
     with path.open('wb') as fp:
         association_effect_data.to_parquet(fp)
@@ -722,10 +749,10 @@ def run_spearman_correlation_scatter(
     spearman_df['fdr'] = spearman_df.fdr.astype(float)
 
     # Save file
-    with spearman_parquet_path.open('wb') as fp:
+    with AnyPath(output_location).open('wb+', force_overwrite_to_cloud=True) as fp:
         spearman_df.to_parquet(fp)
 
-    return spearman_parquet_path
+    return output_location
 
 
 # endregion EQTL_SPEARMAN
@@ -742,7 +769,7 @@ def generate_conditional_analysis(
     filtered_matrix_table_path: str,
     significant_snps_directory: str,
     residuals_path: str,
-    n_genes: int,
+    genes: list[str],
     iterations: int = 4,
     output_prefix: str,
     force: bool = False,
@@ -764,72 +791,83 @@ def generate_conditional_analysis(
     # note, iteration 1 is performed in generate_eqtl_spearman.py, which requires starting
     # the iteration at 2 (from a 0 index)
     for iteration in range(2, iterations + 2):
-
-        calc_resid_df_job = batch.new_python_job(
-            f'{job_prefix}calculate-resid-df-iter-{iteration}'
-        )
-        calc_resid_df_job.depends_on(*sig_snps_dependencies)
-        calc_resid_df_job.cpu(2)
-        calc_resid_df_job.memory('8Gi')
-        calc_resid_df_job.storage('2Gi')
-        copy_common_env(calc_resid_df_job)
-
         round_dir = os.path.join(output_prefix, f'round{iteration}/')
+        residuals_output_path = os.path.join(round_dir, f'residual_results.csv')
 
-        # this calculate_residual_df will also write an output that is useful later
-        # if we assign previous_residual_path to the result of the call, we get the job dependency we actually want
-        # as opposed to saying the following, which means there's actually no job dependency (bad):
-        #    previous_residual_path = <output_path>
-        previous_residual_path = calc_resid_df_job.call(
-            calculate_conditional_residuals,
-            residual_path=previous_residual_path,
-            significant_snps_path=previous_sig_snps_directory,
-            output_location=os.path.join(round_dir, f'residual_results.csv'),
-            filtered_matrix_table_path=filtered_matrix_table_path,
-            force=force,
-        )
+        if AnyPath(residuals_output_path).exists() and not force:
+            _logger.info(f'Reusing residuals result from {residuals_output_path}')
+            previous_residual_path = residuals_output_path
+        else:
+            calc_resid_df_job = batch.new_python_job(
+                f'{job_prefix}calculate-resid-df-iter-{iteration}'
+            )
+            calc_resid_df_job.depends_on(*sig_snps_dependencies)
+            calc_resid_df_job.cpu(2)
+            calc_resid_df_job.memory('8Gi')
+            calc_resid_df_job.storage('2Gi')
+            copy_common_env(calc_resid_df_job)
 
-        sig_snps_component_paths = []
+            # this calculate_residual_df will also write an output that is useful later
+            # if we assign previous_residual_path to the result of the call, we get the job dependency we actually want
+            # as opposed to saying the following, which means there's actually no job dependency (bad):
+            #    previous_residual_path = <output_path>
+            previous_residual_path = calc_resid_df_job.call(
+                calculate_conditional_residuals,
+                residual_path=previous_residual_path,
+                significant_snps_path=previous_sig_snps_directory,
+                output_location=os.path.join(round_dir, f'residual_results.csv'),
+                filtered_matrix_table_path=filtered_matrix_table_path,
+                force=force,
+            )
 
         new_sig_snps_directory = os.path.join(round_dir, 'sigsnps/')
         sink_jobs = []
-        for gene_idx in range(n_genes):
-            j = batch.new_python_job(
-                name=f'{job_prefix}calculate_spearman_iter_{iteration}_job_{gene_idx}'
-            )
-            j.cpu(2)
-            j.memory('8Gi')
-            j.storage('2Gi')
-            j.image(MULTIPY_IMAGE)
-            j.depends_on(*sig_snps_dependencies)
-            copy_common_env(j)
-            gene_result_path: hb.resource.PythonResult = j.call(
-                run_scattered_conditional_analysis,
-                iteration=iteration,
-                idx=gene_idx,
-                residual_path=previous_residual_path,
-                significant_snps_path=previous_sig_snps_directory,
-                filtered_matrix_table_path=filtered_matrix_table_path,
-                cell_type=cell_type,
-                round_outputdir=round_dir,
-                sigsnps_outputdir=new_sig_snps_directory,
-                force=force,
-            )
-            sig_snps_component_paths.append(gene_result_path)
-            sink_jobs.append(j)
+        for gene_name in genes:
+            conditional_output_path = os.path.join(new_sig_snps_directory, f'sig-snps-{gene_name}.parquet')
+
+            if AnyPath(conditional_output_path).exists() and not force:
+                _logger.info(f'Reusing conditionals result from {residuals_output_path}')
+            else:
+                j = batch.new_python_job(
+                    name=f'{job_prefix}calculate_spearman_iter_{iteration}_{gene_name}'
+                )
+                j.cpu(2)
+                j.memory('8Gi')
+                j.storage('2Gi')
+                j.image(MULTIPY_IMAGE)
+                copy_common_env(j)
+                j.call(
+                    run_scattered_conditional_analysis,
+                    iteration=iteration,
+                    cell_type=cell_type,
+                    gene_name=gene_name,
+                    residual_path=previous_residual_path,
+                    significant_snps_path=previous_sig_snps_directory,
+                    filtered_matrix_table_path=filtered_matrix_table_path,
+                    round_outputdir=round_dir,
+                    output_location=conditional_output_path,
+                    force=force,
+                )
+                if sig_snps_dependencies:
+                    j.depends_on(*sig_snps_dependencies)
+                sink_jobs.append(j)
 
         previous_sig_snps_directory = new_sig_snps_directory
         sig_snps_dependencies = sink_jobs
 
-    # create a fake job to avoid having to carry dependencies outside this script
-    def return_value(value):
-        return value
+    if len(sig_snps_dependencies) == 0:
+        # we've reused results the whole way, so no need for "fake" sink
+        sinked_sig_snps_directory = previous_sig_snps_directory
+    else:
+        # create a fake job to avoid having to carry dependencies outside this script
+        def return_value(value):
+            return value
 
-    fake_sink = batch.new_python_job(f'{job_prefix}sink')
-    fake_sink.depends_on(*sig_snps_dependencies)
-    sinked_sig_snps_directory = fake_sink.call(
-        return_value, previous_sig_snps_directory
-    )
+        fake_sink = batch.new_python_job(f'{job_prefix}sink')
+        fake_sink.depends_on(*sig_snps_dependencies)
+        sinked_sig_snps_directory = fake_sink.call(
+            return_value, previous_sig_snps_directory
+        )
 
     return {
         'sig_snps_parquet_directory': sinked_sig_snps_directory,
@@ -924,10 +962,8 @@ def calculate_conditional_residuals(
     """
 
     # set default logger to ERROR only
-    logging.getLogger().setLevel(level=logging.ERROR)
 
-    logger = logging.getLogger('calculate_residual_df')
-    logger.setLevel(level=logging.INFO)
+    logger = setup_logger('calculate_residual_df')
 
     logger.info(f'Got paths: {residual_path} / {significant_snps_path}')
 
@@ -1015,13 +1051,13 @@ def calculate_conditional_residuals(
 # Run Spearman rank in parallel by sending genes in batches
 def run_scattered_conditional_analysis(
     iteration: int,
-    idx: int,
+    cell_type: str,
+    gene_name: int,
     residual_path: str,
     significant_snps_path: str,
     filtered_matrix_table_path: str,
-    cell_type: str,
     round_outputdir: str,
-    sigsnps_outputdir: str,
+    output_location: str = None,
     force: bool = False,
 ):
     """Run genes in scatter
@@ -1040,10 +1076,8 @@ def run_scattered_conditional_analysis(
     spearmans rho, and gene information.
     """
 
-    output_path = os.path.join(sigsnps_outputdir, f'sig-snps-{idx}.parquet')
-
-    if AnyPath(output_path).exists() and not force:
-        return output_path
+    if AnyPath(output_location).exists() and not force:
+        return output_location
 
     # import these here to avoid polluting the global namespace
     from multipy.fdr import qvalue
@@ -1066,7 +1100,7 @@ def run_scattered_conditional_analysis(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}_{idx}.tsv'
+    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}_{gene_name}.tsv'
     # if this succeeds, and the following code fails, then this will fail with
     # an 'cloudpathlib.exceptions.OverwriteNewerCloudError', so force overwrite
     with esnp1_path.open('w+', force_overwrite_to_cloud=True) as fp:
@@ -1085,11 +1119,10 @@ def run_scattered_conditional_analysis(
     )
 
     # for each gene, get esnps_to_test
-    gene_ids = esnp1['gene_symbol'][esnp1['gene_symbol'].isin(residual_df.columns)]
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
     gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
     gene_snp_test_df = gene_snp_test_df[
-        gene_snp_test_df['gene_symbol'] == gene_ids.iloc[idx]
+        gene_snp_test_df['gene_symbol'] == gene_name
     ]
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
@@ -1225,7 +1258,7 @@ def from_cli(
         cell_types=cell_types,
         force=force,
     )
-    logging.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
+    _logger.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
     batch.run(**run_args)
 
 
@@ -1257,7 +1290,7 @@ def main(
     if cell_types is None or len(cell_types) == 0:
         # not provided (ie: use all cell types)
         cell_types = get_cell_types_from(input_files_prefix)
-        logging.info(f'Found {len(cell_types)} cell types: {cell_types}')
+        _logger.info(f'Found {len(cell_types)} cell types: {cell_types}')
 
         if len(cell_types) == 0:
             raise ValueError(f'No cell types found at: {input_files_prefix}')
@@ -1295,7 +1328,7 @@ def main(
                 f'GRCh38_geneloc_chr{chromosome}.tsv',
             )
 
-            n_genes = get_number_of_genes(
+            genes = get_genes_for_chromosome(
                 expression_tsv_path=expression_tsv_path,
                 geneloc_tsv_path=geneloc_tsv_path,
             )
@@ -1308,7 +1341,7 @@ def main(
                 cell_type=cell_type,
                 chromosome=chromosome,
                 output_prefix=output_path(f'{cell_type}/{chromosome}'),
-                n_genes=n_genes,
+                genes=genes,
                 # derived paths
                 filtered_mt_path=filtered_mt_path,
                 gencode_gtf_path=gencode_gtf_path,
@@ -1322,7 +1355,7 @@ def main(
                 # constants
                 force=force,
                 job_prefix=f'{cell_type}_chr{chromosome}_conditional_',
-                n_genes=n_genes,
+                genes=genes,
                 cell_type=cell_type,
                 chromosome=chromosome,
                 filtered_matrix_table_path=filtered_mt_path,
@@ -1372,7 +1405,7 @@ def get_cell_types_from(input_files_prefix: str):
         eg: {cell_type}_expression.tsv
     """
     expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
-    logging.info(f'Going to fetch cell types from {expression_files_dir}')
+    _logger.info(f'Going to fetch cell types from {expression_files_dir}')
     ending = '_expression.tsv'
     return [
         os.path.basename(fn)[: -len(ending)]
@@ -1380,7 +1413,7 @@ def get_cell_types_from(input_files_prefix: str):
     ]
 
 
-def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
+def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[str]:
     """get index of total number of genes
 
     Input:
@@ -1394,14 +1427,15 @@ def get_number_of_genes(*, expression_tsv_path, geneloc_tsv_path):
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
+    # return ['single-gene']
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
 
     expression_df = filter_lowly_expressed_genes(expression_df)
-    gene_ids = list(expression_df.columns.values)[1:]
-    geneloc_df = geneloc_df[geneloc_df.gene_name.isin(gene_ids)]
+    gene_ids = set(list(expression_df.columns.values)[1:])
 
-    return len(geneloc_df.index)
+    geneloc_df = set(geneloc_df.gene_names).intersection(gene_ids)
+    return list(geneloc_df)
 
 
 if __name__ == '__main__':
