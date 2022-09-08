@@ -137,7 +137,7 @@ def filter_joint_call_mt(
     mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
     # repartition to save overhead cost
     mt = mt.naive_coalesce(1000)
-    mt.write(output_location)
+    mt.write(output_location, overwrite=True)
 
     return output_location
 
@@ -686,7 +686,7 @@ def run_spearman_correlation_scatter(
     path = AnyPath(
         output_path(f'{cell_type}_{chromosome}/eqtl_effect_{gene_name}.parquet', 'tmp')
     )
-    with path.open('wb') as fp:
+    with path.open('wb+', force_overwrite_to_cloud=True) as fp:
         association_effect_data.to_parquet(fp)
 
     # define spearman correlation function, then compute for each SNP
@@ -1434,7 +1434,7 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = set(list(expression_df.columns.values)[1:])
 
-    geneloc_df = set(geneloc_df.gene_names).intersection(gene_ids)
+    geneloc_df = set(geneloc_df.gene_name).intersection(gene_ids)
     return list(geneloc_df)
 
 
