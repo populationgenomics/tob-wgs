@@ -799,7 +799,7 @@ def generate_conditional_analysis(
             previous_residual_path = residuals_output_path
         else:
             calc_resid_df_job = batch.new_python_job(
-                f'{job_prefix}calculate-resid-df-iter-{iteration}'
+                f'{job_prefix}calculate-residual-round-{iteration}'
             )
             calc_resid_df_job.depends_on(*sig_snps_dependencies)
             calc_resid_df_job.cpu(2)
@@ -1117,12 +1117,12 @@ def run_scattered_conditional_analysis(
         .reset_index()
     )
     # add in SNP_ID column
+    esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
     esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(
         lambda row: ':'.join(row.values.astype(str)), axis=1
     )
 
     # for each gene, get esnps_to_test
-    esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
     gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
     gene_snp_test_df = gene_snp_test_df[
         gene_snp_test_df['gene_symbol'] == gene_name
@@ -1133,17 +1133,16 @@ def run_scattered_conditional_analysis(
         gene_snp_test_df=gene_snp_test_df,
         filtered_matrix_table_path=filtered_matrix_table_path,
     )
+    res_val = residual_df[['sampleid', gene_name]]
 
     def spearman_correlation(df):
         """get Spearman rank correlation"""
-        gene_symbol = df.gene_symbol
         gene_id = df.gene_id
         a1 = df.a1
         a2 = df.a2
         snp = df.snp_id
         gt = genotype_df[genotype_df.snp_id == snp][['sampleid', 'n_alt_alleles']]
 
-        res_val = residual_df[['sampleid', gene_symbol]]
         test_df = res_val.merge(gt, on='sampleid', how='right')
         test_df.columns = ['sampleid', 'residual', 'SNP']
         # Remove SNPs with NA values. This is due to some individuals having NA genotype values when
@@ -1152,12 +1151,23 @@ def run_scattered_conditional_analysis(
         spearmans_rho, p = spearmanr(
             test_df['SNP'], test_df['residual'], nan_policy='omit'
         )
-        return gene_symbol, gene_id, a1, a2, snp, spearmans_rho, p
+        return gene_name, gene_id, a1, a2, snp, spearmans_rho, p
 
     # calculate spearman correlation
     adjusted_spearman_df = pd.DataFrame(
         list(gene_snp_test_df.apply(spearman_correlation, axis=1))
     )
+    # let's output adjusted_spearman_df, gene_snp_test_df, genotype_df
+    tmp_outputs = [
+        ('adjusted_spearman_df', adjusted_spearman_df),
+        ('gene_snp_df', gene_snp_test_df),
+        ('genotype_df', genotype_df)
+    ]
+    for n, df in tmp_outputs:
+        tmp_output = output_path(f'conditional-residual/{os.path.basename(output_location)}.{n}.csv', 'tmp')
+        logging.info(f'Writing {n} to: {tmp_output}')
+        df.to_csv(tmp_output)
+
     adjusted_spearman_df.columns = [
         'gene_symbol',
         'gene_id',
