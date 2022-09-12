@@ -89,7 +89,7 @@ def filter_joint_call_mt(
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
     4) call rate of 0.8, and 5) variants with MAF <= 0.01.
     """
-    
+
     logger = setup_logger('filter_joint_call_mt')
     if AnyPath(output_location).exists() and not force:
         logger.info(f'Reusing existing filtered mt: {output_location}')
@@ -174,7 +174,9 @@ def generate_eqtl_spearman(
     if AnyPath(residuals_csv_path).exists() and not force:
         _logger.info(f'Reusing results for eqtl_residuals: {residuals_csv_path}')
     else:
-        calculate_residuals_job = batch.new_python_job(f'{job_prefix}calculate-residuals')
+        calculate_residuals_job = batch.new_python_job(
+            f'{job_prefix}calculate-residuals'
+        )
         copy_common_env(calculate_residuals_job)
         residuals_csv_path = calculate_residuals_job.call(
             calculate_eqtl_residuals,
@@ -207,10 +209,14 @@ def generate_eqtl_spearman(
 
     for gene_name in genes:
 
-        spearman_output = os.path.join(spearman_output_directory, f'correlation_results_{gene_name}.parquet')
+        spearman_output = os.path.join(
+            spearman_output_directory, f'correlation_results_{gene_name}.parquet'
+        )
 
         if AnyPath(spearman_output).exists() and not force:
-            _logger.info(f'Reusing results for eqtl_spearman_correlation_{gene_name}: {residuals_csv_path}')
+            _logger.info(
+                f'Reusing results for eqtl_spearman_correlation_{gene_name}: {residuals_csv_path}'
+            )
             continue
 
         j = batch.new_python_job(
@@ -525,7 +531,9 @@ def run_spearman_correlation_scatter(
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
     gene_infos = geneloc_df[geneloc_df.gene_name == gene_name]
     if len(gene_infos) == 0:
-        raise ValueError(f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}')
+        raise ValueError(
+            f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}'
+        )
     gene_info = gene_infos.iloc[0]
     gene_info.start -= 1e7
     gene_info.end += 1e7
@@ -823,10 +831,14 @@ def generate_conditional_analysis(
         new_sig_snps_directory = os.path.join(round_dir, 'sigsnps/')
         sink_jobs = []
         for gene_name in genes:
-            conditional_output_path = os.path.join(new_sig_snps_directory, f'sig-snps-{gene_name}.parquet')
+            conditional_output_path = os.path.join(
+                new_sig_snps_directory, f'sig-snps-{gene_name}.parquet'
+            )
 
             if AnyPath(conditional_output_path).exists() and not force:
-                _logger.info(f'Reusing conditionals result from {residuals_output_path}')
+                _logger.info(
+                    f'Reusing conditionals result from {residuals_output_path}'
+                )
             else:
                 j = batch.new_python_job(
                     name=f'{job_prefix}calculate_spearman_round_{iteration}_{gene_name}'
@@ -1036,7 +1048,9 @@ def calculate_conditional_residuals(
             return residuals
         except Exception as e:
             logger.info(f'y = {y}, x = {x}')
-            raise Exception(f'Error during calculate_adjusted_residuals for {gene_id}') from e
+            raise Exception(
+                f'Error during calculate_adjusted_residuals for {gene_id}'
+            ) from e
 
     adjusted_residual_mat = pd.DataFrame(
         list(map(calculate_adjusted_residuals, gene_ids))
@@ -1103,7 +1117,9 @@ def run_scattered_conditional_analysis(
         .reset_index()
     )
     # save esnp1 for front-end use on which SNPs have been conditioned on
-    esnp1_path = AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}_{gene_name}.tsv'
+    esnp1_path = (
+        AnyPath(round_outputdir) / f'conditioned_esnps_{iteration}_{gene_name}.tsv'
+    )
     # if this succeeds, and the following code fails, then this will fail with
     # an 'cloudpathlib.exceptions.OverwriteNewerCloudError', so force overwrite
     with esnp1_path.open('w+', force_overwrite_to_cloud=True) as fp:
@@ -1124,9 +1140,7 @@ def run_scattered_conditional_analysis(
 
     # for each gene, get esnps_to_test
     gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
-    gene_snp_test_df = gene_snp_test_df[
-        gene_snp_test_df['gene_symbol'] == gene_name
-    ]
+    gene_snp_test_df = gene_snp_test_df[gene_snp_test_df['gene_symbol'] == gene_name]
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         residual_df=residual_df,
@@ -1161,10 +1175,12 @@ def run_scattered_conditional_analysis(
     tmp_outputs = [
         ('adjusted_spearman_df', adjusted_spearman_df),
         ('gene_snp_df', gene_snp_test_df),
-        ('genotype_df', genotype_df)
+        ('genotype_df', genotype_df),
     ]
     for n, df in tmp_outputs:
-        tmp_output = output_path(f'conditional-residual/{os.path.basename(output_location)}.{n}.csv', 'tmp')
+        tmp_output = output_path(
+            f'conditional-residual/{os.path.basename(output_location)}.{n}.csv', 'tmp'
+        )
         logging.info(f'Writing {n} to: {tmp_output}')
         df.to_csv(tmp_output)
 
@@ -1179,6 +1195,12 @@ def run_scattered_conditional_analysis(
     ]
     # remove any NA values (i.e., individuals with zero variance in their genotypes)
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
+    if len(adjusted_spearman_df):
+        raise ValueError(
+            f'All SNPs in {gene_name} had a constant array; '
+            f'hence the correlation coefficient was not defined for any SNPs.'
+        )
+
     # add in locus and chromosome information to get global position in hail
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
         ':'.join, axis=1
@@ -1241,6 +1263,9 @@ def run_scattered_conditional_analysis(
     help='List of cell types to test. All available cell types can be found in '
     '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
 )
+@click.option(
+    '--limit-genes-to-test', help='Limit number of genes to test with (number)'
+)
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
 def from_cli(
@@ -1249,6 +1274,7 @@ def from_cli(
     cell_types: list[str] | None,
     force: bool = False,
     local_debug: bool = False,
+    limit_genes_to_test: int = None,
 ):
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
     if local_debug:
@@ -1270,6 +1296,7 @@ def from_cli(
         chromosomes=chromosomes_list,
         cell_types=cell_types,
         force=force,
+        limit_genes_to_test=limit_genes_to_test,
     )
     _logger.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
     batch.run(**run_args)
@@ -1286,6 +1313,7 @@ def main(
     frequency_table_path: str = DEFAULT_FREQUENCY_TABLE_PATH,
     vep_annotation_table_path: str = DEFAULT_VEP_ANNOTATION_TABLE_PATH,
     gencode_gtf_path: str = DEFAULT_GENCODE_GTF_PATH,
+    limit_genes_to_test: int = None,
     force: bool = False,
 ):
     """Run association script for all chromosomes and cell types"""
@@ -1349,6 +1377,9 @@ def main(
                 expression_tsv_path=expression_tsv_path,
                 geneloc_tsv_path=geneloc_tsv_path,
             )
+
+            if limit_genes_to_test and limit_genes_to_test < len(genes):
+                genes = genes[:limit_genes_to_test]
 
             eqtl_outputs = generate_eqtl_spearman(
                 batch=batch,
