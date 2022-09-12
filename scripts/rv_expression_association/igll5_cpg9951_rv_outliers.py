@@ -46,3 +46,7 @@ donor_mt = mt.filter_cols(mt.s == sample)
 donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
 
 print(np.nanmin(donor_mt.variant_qc.AF[1].collect()))
+
+donor_mt0 = donor_mt.filter_rows(donor_mt.variant_qc.AF[1] < 0.05)
+
+print(donor_mt0.count())
