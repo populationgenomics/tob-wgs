@@ -3,7 +3,7 @@
 import hail as hl
 import numpy as np
 import pandas as pd
-from cpg_utils.hail_batch import dataset_path
+from cpg_utils.hail_batch import dataset_path, init_batch
 from cloudpathlib import AnyPath
 
 MT = dataset_path('mt/v7.mt')
