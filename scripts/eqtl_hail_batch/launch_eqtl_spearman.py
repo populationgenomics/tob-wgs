@@ -1475,6 +1475,9 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     The number of genes (as an int) after filtering for lowly expressed genes.
     This integer number gets fed into the number of scatters to run.
     """
+    return [
+        "ADA2",  "ATP6V1E1",   "BCL2L13",     "HDHD5",    "IL17RA",
+    ]
     # return ['single-gene']
     expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
     geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
@@ -1482,8 +1485,8 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     expression_df = filter_lowly_expressed_genes(expression_df)
     gene_ids = set(list(expression_df.columns.values)[1:])
 
-    geneloc_df = set(geneloc_df.gene_name).intersection(gene_ids)
-    return list(geneloc_df)
+    genes = set(geneloc_df.gene_name).intersection(gene_ids)
+    return list(sorted(genes))
 
 
 if __name__ == '__main__':
