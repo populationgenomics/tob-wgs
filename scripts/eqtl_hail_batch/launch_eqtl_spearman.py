@@ -518,6 +518,9 @@ def run_spearman_correlation_scatter(
     if AnyPath(output_location).exists() and not force:
         return output_location
 
+    # silences GCSFS messages
+    logger = setup_logger('run_spearman_correlation_scatter')
+
     # import multipy here to avoid issues with driver image updates
     from multipy.fdr import qvalue
     from scipy.stats import spearmanr
@@ -695,6 +698,7 @@ def run_spearman_correlation_scatter(
         output_path(f'{cell_type}_{chromosome}/eqtl_effect_{gene_name}.parquet', 'tmp')
     )
     with path.open('wb+', force_overwrite_to_cloud=True) as fp:
+        logger.info(f'Writing association effect data temporarily: {path}')
         association_effect_data.to_parquet(fp)
 
     # define spearman correlation function, then compute for each SNP
