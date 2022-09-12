@@ -44,7 +44,8 @@ mt = hl.filter_intervals(
     [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')],
 )
 
-sample = 'CPG9951'
+# sample = 'CPG9951'
+sample = 'CPG1057'
 donor_mt = mt.filter_cols(mt.s == sample)
 donor_mt = donor_mt.filter_rows(hl.agg.any(donor_mt.GT.is_non_ref()))
 
