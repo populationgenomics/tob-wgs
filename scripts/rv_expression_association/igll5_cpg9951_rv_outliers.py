@@ -44,6 +44,8 @@ mt = hl.filter_intervals(
     [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')],
 )
 
+print(mt.count())
+
 # sample = 'CPG9951'
 sample = 'CPG1057'
 donor_mt = mt.filter_cols(mt.s == sample)
@@ -54,3 +56,4 @@ print(np.nanmin(donor_mt.variant_qc.AF[1].collect()))
 donor_mt0 = donor_mt.filter_rows(donor_mt.variant_qc.AF[1] < 0.05)
 
 print(donor_mt0.count())
+print(donor_mt0.variant_qc.AF.show())
