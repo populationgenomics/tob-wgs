@@ -479,7 +479,7 @@ def calculate_eqtl_residuals(
     with AnyPath(output_location).open('w+', force_overwrite_to_cloud=True) as fp:
         residual_df.to_csv(fp, index=False)
 
-    return calculate_eqtl_residuals
+    return output_location
 
 
 # Run Spearman rank in parallel by sending genes in batches
@@ -523,12 +523,12 @@ def run_spearman_correlation_scatter(
     from scipy.stats import spearmanr
 
     # calculate log expression values
-    residuals_df = pd.read_csv(AnyPath(residuals_csv_path))
-    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
-    log_expression_df = get_log_expression(expression_df)
+    residuals_df = pd.read_csv(residuals_csv_path)
+    expression_df = pd.read_csv(expression_tsv_path, sep='\t')
+    # log_expression_df = get_log_expression(expression_df)
 
     # Get 1Mb sliding window around each gene
-    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
+    geneloc_df = pd.read_csv(geneloc_tsv_path, sep='\t')
     gene_infos = geneloc_df[geneloc_df.gene_name == gene_name]
     if len(gene_infos) == 0:
         raise ValueError(
@@ -722,6 +722,7 @@ def run_spearman_correlation_scatter(
         'spearmans_rho',
         'p_value',
     ]
+
     # add in locus and chromosome information to get global position in hail
     locus = spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(':'.join, axis=1)
     chrom = locus.str.split(':', expand=True)[0]
