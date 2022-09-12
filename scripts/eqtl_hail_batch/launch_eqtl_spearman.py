@@ -1264,7 +1264,7 @@ def run_scattered_conditional_analysis(
     '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
 )
 @click.option(
-    '--limit-genes-to-test', help='Limit number of genes to test with (number)'
+    '--limit-genes-to-test', type=int, help='Limit number of genes to test with (number)'
 )
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
