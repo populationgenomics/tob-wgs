@@ -1200,7 +1200,7 @@ def run_scattered_conditional_analysis(
     ]
     # remove any NA values (i.e., individuals with zero variance in their genotypes)
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
-    if len(adjusted_spearman_df):
+    if len(adjusted_spearman_df) == 0:
         raise ValueError(
             f'All SNPs in {gene_name} had a constant array; '
             f'hence the correlation coefficient was not defined for any SNPs.'
