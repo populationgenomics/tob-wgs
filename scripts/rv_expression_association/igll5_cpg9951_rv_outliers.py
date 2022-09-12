@@ -8,6 +8,7 @@ from cloudpathlib import AnyPath
 
 MT = dataset_path('mt/v7.mt')
 
+init_batch()
 mt = hl.read_matrix_table(MT)
 mt = mt.filter_rows(mt.locus.contig == 'chr22')
 mt = hl.experimental.densify(mt)
