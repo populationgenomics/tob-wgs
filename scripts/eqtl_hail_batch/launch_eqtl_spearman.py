@@ -582,7 +582,7 @@ def run_spearman_correlation_scatter(
     )
     position_table = position_table.to_pandas()
     snps_within_region = position_table[
-        position_table['position'].between(gene_info['left'], gene_info['right'])
+        position_table['position'].between(gene_info.left, gene_info.right)
     ]
     gene_snp_df = snps_within_region.assign(
         gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
