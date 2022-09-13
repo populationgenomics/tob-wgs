@@ -538,8 +538,8 @@ def run_spearman_correlation_scatter(
             f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}'
         )
     gene_info = gene_infos.iloc[0]
-    gene_info.left = int(gene_info.start - 1e7)
-    gene_info.right = int(gene_info.end + 1e7)
+    gene_info.left = int(gene_info.start - 1e6)
+    gene_info.right = int(gene_info.end + 1e6)
     chromosome = gene_info.chr
 
     # perform correlation in chunks by gene
