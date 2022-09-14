@@ -1216,8 +1216,9 @@ def run_scattered_conditional_analysis(
         # This is an error case, the correlation coefficient is not defined
         # for any SNPs in this gene. So instead, lets:
         #   - Not write anything to the output directory (filtered out for next round)
-        #   - Write a file somewhere to easily track that this failed roung
-        failed_marker = output_path('failed', os.path.basename(output_location))
+        #   - Write a file somewhere to easily track that this failed round
+        logger.error(f'All residuals for {gene_name} are 0, returning nothing')
+        failed_marker = output_path(os.path.join('failed', os.path.basename(output_location)))
         with AnyPath(failed_marker).open(mode='w+', force_overwrite_to_cloud=True) as f:
             f.write(f'All residuals for {gene_name} are 0')
         return None
