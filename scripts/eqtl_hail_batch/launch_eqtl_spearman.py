@@ -1033,11 +1033,13 @@ def calculate_conditional_residuals(
     def calculate_adjusted_residuals(gene_id):
         # select gene to regress
         exprs_val = residual_df[['sampleid', gene_id]]
-        # select SNP to add, get the first value
-        rows_for_gene = esnp1.snp_id[esnp1.gene_symbol == gene_id].values
-        if len(rows_for_gene) == 0:
+        # In selecting the top esnp, let's double check the gene is in the esnp1
+        esnps_for_gene = esnp1.snp_id[esnp1.gene_symbol == gene_id].values
+        if len(esnps_for_gene) == 0:
+            # throw an error if the gene (for some reason) isn't in esnp1
             raise ValueError(f'Selected gene {gene_id} was not found in esnp1')
-        snp = rows_for_gene[0]
+        # get top esnp for the gene
+        snp = esnps_for_gene[0]
         snp_genotype = genotype_df[genotype_df.snp_id == snp][
             ['sampleid', 'n_alt_alleles']
         ]
@@ -1107,6 +1109,14 @@ def run_scattered_conditional_analysis(
 
     residual_df = pd.read_csv(residual_path)
     significant_snps_df = pd.read_parquet(significant_snps_path)
+    significant_snps_df = significant_snps_df[
+        significant_snps_df.gene_symbol == gene_name
+    ]
+
+    if len(significant_snps_df) == 0:
+        # previous round failed, because this gene is NOT in the previous significant_snps
+        logger.warning("This is skipped, because there's no data from previous rounds")
+        return None
 
     # make sure 'gene_symbol' is the first column
     # otherwise, error thrown when using reset_index
@@ -1146,6 +1156,7 @@ def run_scattered_conditional_analysis(
     # for each gene, get esnps_to_test
     gene_snp_test_df = esnps_to_test[['snp_id', 'gene_symbol', 'gene_id', 'a1', 'a2']]
     gene_snp_test_df = gene_snp_test_df[gene_snp_test_df['gene_symbol'] == gene_name]
+
     # Subset genotype file for the significant SNPs
     genotype_df = get_genotype_df(
         residual_df=residual_df,
@@ -1201,10 +1212,14 @@ def run_scattered_conditional_analysis(
     # remove any NA values (i.e., individuals with zero variance in their genotypes)
     adjusted_spearman_df = adjusted_spearman_df.dropna(axis=0, how='any')
     if len(adjusted_spearman_df) == 0:
-        raise ValueError(
-            f'All SNPs in {gene_name} had a constant array; '
-            f'hence the correlation coefficient was not defined for any SNPs.'
-        )
+        # This is an error case, the correlation coefficient is not defined
+        # for any SNPs in this gene. So instead, lets:
+        #   - Not write anything to the output directory (filtered out for next round)
+        #   - Write a file somewhere to easily track that this failed roung
+        failed_marker = output_path('failed', os.path.basename(output_location))
+        with AnyPath(failed_marker).open(mode='w+', force_overwrite_to_cloud=True) as f:
+            f.write(f'All residuals for {gene_name} are 0')
+        return None
 
     # add in locus and chromosome information to get global position in hail
     locus = adjusted_spearman_df.snp_id.str.split(':', expand=True)[[0, 1]].agg(
@@ -1269,7 +1284,9 @@ def run_scattered_conditional_analysis(
     '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
 )
 @click.option(
-    '--limit-genes-to-test', type=int, help='Limit number of genes to test with (number)'
+    '--limit-genes-to-test',
+    type=int,
+    help='Limit number of genes to test with (number)',
 )
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
