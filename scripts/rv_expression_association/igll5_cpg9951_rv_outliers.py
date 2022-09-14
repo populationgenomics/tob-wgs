@@ -2,7 +2,7 @@
 
 import hail as hl
 import numpy as np
-import pandas as pd
+# import pandas as pd
 from cpg_utils.hail_batch import dataset_path, init_batch
 from cloudpathlib import AnyPath
 
@@ -13,6 +13,7 @@ init_batch()
 mt = hl.read_matrix_table(MT)
 # mt = mt.filter_rows(mt.locus.contig == 'chr22')
 mt = hl.experimental.densify(mt)
+print(mt.count())
 
 mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
 mt = hl.variant_qc(mt)
