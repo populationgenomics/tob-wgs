@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Create a Hail Batch workflow for all the EQTL analysis, including:
 
