@@ -1,3 +1,4 @@
+# pylint: skip-file
 """Change the CRAM directory structure from versions to batches."""
 
 import os

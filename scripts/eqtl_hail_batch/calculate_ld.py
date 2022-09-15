@@ -1,7 +1,7 @@
 """Read in correlation results and claculate ld values"""
 
-import hail as hl
 import click
+import hail as hl
 import pandas as pd
 
 
