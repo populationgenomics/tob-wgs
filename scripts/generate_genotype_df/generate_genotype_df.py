@@ -3,7 +3,7 @@
 """Generate genotype dfs for the association analysis"""
 
 import hail as hl
-from cpg_utils.hail import dataset_path, output_path
+from cpg_utils.hail_batch import dataset_path, output_path
 
 TOB_WGS = dataset_path('mt/v7.mt/')
 FREQ_TABLE = dataset_path('joint-calling/v7/variant_qc/frequencies.ht/', 'analysis')
