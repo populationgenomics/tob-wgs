@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# flake8: noqa: E402
 """
 Create a Hail Batch workflow for all the EQTL analysis, including:
 
@@ -8,7 +9,7 @@ Create a Hail Batch workflow for all the EQTL analysis, including:
 For example:
 
     python3 scripts/hail_batch/eqtl_hail_batch/launch_eqtl_spearman.py \
-        --input-files-prefix "gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files" \
+        --input-files-prefix 'gs://cpg-tob-wgs-test/scrna_seq/grch38_association_files' \
         --chromosomes '1 2' \
         --genes B_intermediate
 """
@@ -243,7 +244,7 @@ def generate_eqtl_spearman(
         spearman_output_dependencies.append(j)
 
     if len(spearman_output_dependencies) == 0:
-        # we've reused results the whole way, so no need for "fake" sink
+        # we've reused results the whole way, so no need for 'fake' sink
         sinked_output_dir = spearman_output_directory
     else:
         # create a fake job to avoid having to carry dependencies outside this script
@@ -400,7 +401,7 @@ def generate_log_cpm_output(
     gtf = hl.experimental.import_gtf(
         gencode_gtf_path, reference_genome='GRCh38', skip_invalid_contigs=True
     )
-    # convert int to str in order to avoid "int() argument must be a string, a bytes-like object or a number, not 'NoneType'"
+    # convert int to str in order to avoid 'int() argument must be a string, a bytes-like object or a number, not 'NoneType''
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
     gtf = gtf.to_pandas()
     data_summary['ensembl_ids'] = data_summary.merge(
@@ -874,7 +875,7 @@ def generate_conditional_analysis(
         sig_snps_dependencies = sink_jobs
 
     if len(sig_snps_dependencies) == 0:
-        # we've reused results the whole way, so no need for "fake" sink
+        # we've reused results the whole way, so no need for 'fake' sink
         sinked_sig_snps_directory = previous_sig_snps_directory
     else:
         # create a fake job to avoid having to carry dependencies outside this script
@@ -1070,7 +1071,6 @@ def calculate_conditional_residuals(
     return output_location
 
 
-# Run Spearman rank in parallel by sending genes in batches
 def run_scattered_conditional_analysis(
     iteration: int,
     cell_type: str,
@@ -1079,7 +1079,7 @@ def run_scattered_conditional_analysis(
     significant_snps_path: str,
     filtered_matrix_table_path: str,
     round_outputdir: str,
-    output_location: str = None,
+    output_location: str,
     force: bool = False,
 ):
     """Run genes in scatter
@@ -1116,7 +1116,7 @@ def run_scattered_conditional_analysis(
 
     if len(significant_snps_df) == 0:
         # previous round failed, because this gene is NOT in the previous significant_snps
-        logger.warning("This is skipped, because there's no data from previous rounds")
+        logger.warning('This is skipped, because there is no data from previous rounds')
         return None
 
     # make sure 'gene_symbol' is the first column
@@ -1218,7 +1218,9 @@ def run_scattered_conditional_analysis(
         #   - Not write anything to the output directory (filtered out for next round)
         #   - Write a file somewhere to easily track that this failed round
         logger.error(f'All residuals for {gene_name} are 0, returning nothing')
-        failed_marker = output_path(os.path.join('failed', os.path.basename(output_location)))
+        failed_marker = output_path(
+            os.path.join('failed', os.path.basename(output_location))
+        )
         with AnyPath(failed_marker).open(mode='w+', force_overwrite_to_cloud=True) as f:
             f.write(f'All residuals for {gene_name} are 0')
         return None
@@ -1261,6 +1263,9 @@ def run_scattered_conditional_analysis(
     adjusted_spearman_df.to_parquet(output_location)
 
     return output_location
+
+
+# Run Spearman rank in parallel by sending genes in batches
 
 
 # endregion CONDITIONAL_ANALYSIS
@@ -1330,7 +1335,7 @@ def main(
     batch: hb.Batch,
     *,
     input_files_prefix: str,
-    chromosomes: list[str],
+    chromosomes: list[str] | None,
     cell_types: list[str] = None,
     conditional_iterations: int = 4,
     joint_call_table_path: str = DEFAULT_JOINT_CALL_TABLE_PATH,
@@ -1343,7 +1348,7 @@ def main(
     """Run association script for all chromosomes and cell types"""
 
     if not any(
-        input_files_prefix.startswith(prefix) for prefix in ("gs://", '/', 'https://')
+        input_files_prefix.startswith(prefix) for prefix in ('gs://', '/', 'https://')
     ):
         input_files_prefix = output_path(input_files_prefix)
     if not chromosomes:
@@ -1357,13 +1362,13 @@ def main(
         cell_types = get_cell_types_from(input_files_prefix)
         _logger.info(f'Found {len(cell_types)} cell types: {cell_types}')
 
-        if len(cell_types) == 0:
-            raise ValueError(f'No cell types found at: {input_files_prefix}')
+    if not cell_types:
+        raise ValueError(f'No cell types found at: {input_files_prefix}')
 
     # ideally this would come from metamist :(
     keys_tsv_path = os.path.join(input_files_prefix, 'OneK1K_CPG_IDs.tsv')
 
-    outputs = defaultdict(dict)
+    outputs: dict[str, dict[str, Any]] = defaultdict(dict)
 
     # do the genotype_info stuff
     filtered_mt_path = output_path('genotype_table.mt', 'tmp')
@@ -1444,7 +1449,7 @@ def main(
 
 
 def list_dir(directory: str, filter_=None):
-    if directory.startswith("gs://"):
+    if directory.startswith('gs://'):
         cs_client = storage.Client()
         bucket_name, bucket_path = directory.split('gs://')[1].split('/', maxsplit=1)
         bucket = cs_client.get_bucket(bucket_name)
@@ -1462,16 +1467,19 @@ def get_chromosomes(input_files_prefix: str):
     """
     Get all chromosomes for which gene_location_files exist
     """
-    pattern = re.compile('GRCh38_geneloc_chr(.+)\.tsv$')
+    pattern = re.compile(r'GRCh38_geneloc_chr(.+)\.tsv$')
     files = list_dir(
         os.path.join(input_files_prefix, 'gene_location_files'),
         filter_=lambda el: pattern.search(el),
     )
-    chromosomes = set(pattern.search(fn).groups()[0] for fn in files)
+    searches = [pattern.search(fn) for fn in files]
+    chromosomes = set(
+        file_search.groups()[0] for file_search in searches if file_search
+    )
     return sorted(chromosomes)
 
 
-def get_cell_types_from(input_files_prefix: str):
+def get_cell_types_from(input_files_prefix: str) -> list[str]:
     """
     we can infer the cell types from the 'expression_files' subdirectory
         eg: {cell_type}_expression.tsv
