@@ -695,14 +695,6 @@ def run_spearman_correlation_scatter(
 
     association_effect_data = get_association_effect_data(gene_name)
 
-    # Save file (just temporarily for inspection)
-    path = AnyPath(
-        output_path(f'{cell_type}_{chromosome}/eqtl_effect_{gene_name}.parquet', 'tmp')
-    )
-    with path.open('wb+', force_overwrite_to_cloud=True) as fp:
-        logger.info(f'Writing association effect data temporarily: {path}')
-        association_effect_data.to_parquet(fp)
-
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
         """get Spearman rank correlation"""
@@ -1188,18 +1180,6 @@ def run_scattered_conditional_analysis(
     adjusted_spearman_df = pd.DataFrame(
         list(gene_snp_test_df.apply(spearman_correlation, axis=1))
     )
-    # let's output adjusted_spearman_df, gene_snp_test_df, genotype_df
-    tmp_outputs = [
-        ('adjusted_spearman_df', adjusted_spearman_df),
-        ('gene_snp_df', gene_snp_test_df),
-        ('genotype_df', genotype_df),
-    ]
-    for n, df in tmp_outputs:
-        tmp_output = output_path(
-            f'conditional-residual/{os.path.basename(output_location)}.{n}.csv', 'tmp'
-        )
-        logging.info(f'Writing {n} to: {tmp_output}')
-        df.to_csv(tmp_output)
 
     adjusted_spearman_df.columns = [
         'gene_symbol',
