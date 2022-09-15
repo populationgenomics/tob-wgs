@@ -5,5 +5,5 @@ This runs a Hail query script in Dataproc using Hail Batch in order to export th
 ```sh
 analysis-runner --dataset tob-wgs \
 --access-level standard --output-dir "scrna-seq/grch38_association_files/genotype_files/" \
---description "TOB parquet" python3 main.py
+--description "TOB parquet" python3 generate_genotype_df_batch.py
 ```
