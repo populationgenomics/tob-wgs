@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # flake8: noqa: E402
+# pylint: disable=import-outside-toplevel,too-many-locals,import-error,wrong-import-position,too-many-lines,invalid-unary-operand-type,too-many-statements
 """
 Create a Hail Batch workflow for all the EQTL analysis, including:
 
@@ -18,6 +19,7 @@ import logging
 
 
 def setup_logger(name):
+    """Get a logger, and silence other common ones"""
     loggers_to_silence = [
         'urllib3.connectionpool',
         'urllib3.util.retry',
@@ -47,10 +49,11 @@ import hailtop.batch as hb
 from cloudpathlib import AnyPath
 from cpg_utils.config import get_config
 from cpg_utils.hail_batch import (
-    remote_tmpdir,
-    output_path,
     copy_common_env,
+    dataset_path,
     init_batch,
+    output_path,
+    remote_tmpdir,
 )
 from google.cloud import storage
 
@@ -59,13 +62,14 @@ import hail as hl
 import numpy as np
 import pandas as pd
 
-from constants import (
-    DEFAULT_JOINT_CALL_TABLE_PATH,
-    DEFAULT_FREQUENCY_TABLE_PATH,
-    DEFAULT_VEP_ANNOTATION_TABLE_PATH,
-    DEFAULT_GENCODE_GTF_PATH,
-    MULTIPY_IMAGE,
+DEFAULT_JOINT_CALL_TABLE_PATH = dataset_path('mt/v7.mt/')
+DEFAULT_FREQUENCY_TABLE_PATH = dataset_path(
+    'joint-calling/v7/variant_qc/frequencies.ht/', 'analysis'
 )
+DEFAULT_VEP_ANNOTATION_TABLE_PATH = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
+DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'  # reference_path('gencode_gtf'),
+
+MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
 
 
 # region FILTER_JOINT_CALL_MT
@@ -162,7 +166,7 @@ def generate_eqtl_spearman(
     # can be derived, but better to pass
     genes: list[str],
     cell_type: str,
-    chromosome: str,
+    chromosome: str,  # pylint: disable=unused-argument
     force: bool = False,
 ):
     """
@@ -290,7 +294,9 @@ def filter_lowly_expressed_genes(expression_df):
 
 
 def remove_sc_outliers(df):
-    # remove outlier samples, as identified by sc analysis
+    """
+    Remove outlier samples, as identified by sc analysis
+    """
     outliers = ['966_967', '88_88']
     df = df[-df.sampleid.isin(outliers)]
 
@@ -322,6 +328,10 @@ def get_log_expression(expression_df):
 
 
 def calculate_log_cpm(expression_df):
+    """
+    Remove sampleid column and get log expression
+    this can only be done on integers
+    """
     expression_df = filter_lowly_expressed_genes(expression_df)
     # remove sampleid column and get log expression
     # this can only be done on integers
@@ -521,7 +531,7 @@ def run_spearman_correlation_scatter(
         return output_location
 
     # silences GCSFS messages
-    logger = setup_logger('run_spearman_correlation_scatter')
+    _ = setup_logger('run_spearman_correlation_scatter')
 
     # import multipy here to avoid issues with driver image updates
     from multipy.fdr import qvalue
@@ -694,6 +704,19 @@ def run_spearman_correlation_scatter(
         return pd.DataFrame.from_dict(snp_gt_summary_data)
 
     association_effect_data = get_association_effect_data(gene_name)
+    # write association effect data
+    association_effect_path = output_path(
+        os.path.join(
+            'association-effect-data',
+            cell_type,
+            str(chromosome),
+            f'eqtl_effect_{gene_name}.parquet',
+        )
+    )
+    with AnyPath(association_effect_path).open(
+        'wb', force_overwrite_to_cloud=True
+    ) as fp:
+        association_effect_data.to_parquet(fp)
 
     # define spearman correlation function, then compute for each SNP
     def spearman_correlation(df):
@@ -772,7 +795,7 @@ def generate_conditional_analysis(
     *,
     job_prefix: str,
     cell_type: str,
-    chromosome: str,
+    chromosome: str,  # pylint: disable=unused-argument
     filtered_matrix_table_path: str,
     significant_snps_directory: str,
     residuals_path: str,
@@ -1250,6 +1273,84 @@ def run_scattered_conditional_analysis(
 
 # endregion CONDITIONAL_ANALYSIS
 
+# region GENERIC
+
+
+def list_dir(directory: str, filter_=None):
+    """Generic list_dir implementation with ability to filter"""
+    if directory.startswith('gs://'):
+        cs_client = storage.Client()
+        bucket_name, bucket_path = directory.split('gs://')[1].split('/', maxsplit=1)
+        bucket = cs_client.get_bucket(bucket_name)
+
+        blobs = bucket.list_blobs(prefix=bucket_path + '/', delimiter='/')
+        return [b.name for b in blobs if not filter_ or filter_(b.name)]
+
+    if os.path.exists(directory):
+        return [fn for fn in os.listdir(directory) if not filter_ or filter_(fn)]
+
+    raise ValueError(f'Unrecognised directory type: {directory}')
+
+
+def get_chromosomes(input_files_prefix: str):
+    """
+    Get all chromosomes for which gene_location_files exist
+    """
+    pattern = re.compile(r'GRCh38_geneloc_chr(.+)\.tsv$')
+    files = list_dir(
+        os.path.join(input_files_prefix, 'gene_location_files'),
+        # check if the pattern matches
+        filter_=pattern.search,
+    )
+    searches = [pattern.search(fn) for fn in files]
+    chromosomes = set(
+        file_search.groups()[0] for file_search in searches if file_search
+    )
+    return sorted(chromosomes)
+
+
+def get_cell_types_from(input_files_prefix: str) -> list[str]:
+    """
+    we can infer the cell types from the 'expression_files' subdirectory
+        eg: {cell_type}_expression.tsv
+    """
+    expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
+    _logger.info(f'Going to fetch cell types from {expression_files_dir}')
+    ending = '_expression.tsv'
+    return [
+        os.path.basename(fn)[: -len(ending)]
+        for fn in list_dir(expression_files_dir, lambda el: el.endswith(ending))
+    ]
+
+
+def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[str]:
+    """get index of total number of genes
+
+    Input:
+    expression_df: a data frame with samples as rows and genes as columns,
+    containing normalised expression values (i.e., the average number of molecules
+    for each gene detected in each person).
+    geneloc_df: a data frame with the gene location (chromosome, start, and
+    end locations as columns) specified for each gene (rows).
+
+    Returns:
+    The number of genes (as an int) after filtering for lowly expressed genes.
+    This integer number gets fed into the number of scatters to run.
+    """
+    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
+    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
+
+    expression_df = filter_lowly_expressed_genes(expression_df)
+    gene_ids = set(list(expression_df.columns.values)[1:])
+
+    genes = set(geneloc_df.gene_name).intersection(gene_ids)
+    return list(sorted(genes))
+
+
+# endregion GENERIC
+
+# region DRIVER
+
 
 @click.command()
 @click.option(
@@ -1285,6 +1386,7 @@ def from_cli(
     local_debug: bool = False,
     limit_genes_to_test: int = None,
 ):
+    """Run the EQTL analysis from command line arguments"""
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
     if local_debug:
         backend = None
@@ -1299,7 +1401,7 @@ def from_cli(
     batch = hb.Batch(
         name='eqtl_spearman', backend=backend, default_python_image=MULTIPY_IMAGE
     )
-    _ = main(
+    main(
         batch,
         input_files_prefix=input_files_prefix,
         chromosomes=chromosomes_list,
@@ -1307,6 +1409,7 @@ def from_cli(
         force=force,
         limit_genes_to_test=limit_genes_to_test,
     )
+    # pylint: disable=protected-access
     _logger.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
     batch.run(**run_args)
 
@@ -1428,74 +1531,8 @@ def main(
             }
 
 
-def list_dir(directory: str, filter_=None):
-    if directory.startswith('gs://'):
-        cs_client = storage.Client()
-        bucket_name, bucket_path = directory.split('gs://')[1].split('/', maxsplit=1)
-        bucket = cs_client.get_bucket(bucket_name)
-
-        blobs = bucket.list_blobs(prefix=bucket_path + '/', delimiter='/')
-        return [b.name for b in blobs if not filter_ or filter_(b.name)]
-
-    if os.path.exists(directory):
-        return [fn for fn in os.listdir(directory) if not filter_ or filter_(fn)]
-
-    raise ValueError(f'Unrecognised directory type: {directory}')
-
-
-def get_chromosomes(input_files_prefix: str):
-    """
-    Get all chromosomes for which gene_location_files exist
-    """
-    pattern = re.compile(r'GRCh38_geneloc_chr(.+)\.tsv$')
-    files = list_dir(
-        os.path.join(input_files_prefix, 'gene_location_files'),
-        filter_=lambda el: pattern.search(el),
-    )
-    searches = [pattern.search(fn) for fn in files]
-    chromosomes = set(
-        file_search.groups()[0] for file_search in searches if file_search
-    )
-    return sorted(chromosomes)
-
-
-def get_cell_types_from(input_files_prefix: str) -> list[str]:
-    """
-    we can infer the cell types from the 'expression_files' subdirectory
-        eg: {cell_type}_expression.tsv
-    """
-    expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
-    _logger.info(f'Going to fetch cell types from {expression_files_dir}')
-    ending = '_expression.tsv'
-    return [
-        os.path.basename(fn)[: -len(ending)]
-        for fn in list_dir(expression_files_dir, lambda el: el.endswith(ending))
-    ]
-
-
-def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[str]:
-    """get index of total number of genes
-
-    Input:
-    expression_df: a data frame with samples as rows and genes as columns,
-    containing normalised expression values (i.e., the average number of molecules
-    for each gene detected in each person).
-    geneloc_df: a data frame with the gene location (chromosome, start, and
-    end locations as columns) specified for each gene (rows).
-
-    Returns:
-    The number of genes (as an int) after filtering for lowly expressed genes.
-    This integer number gets fed into the number of scatters to run.
-    """
-    expression_df = pd.read_csv(AnyPath(expression_tsv_path), sep='\t')
-    geneloc_df = pd.read_csv(AnyPath(geneloc_tsv_path), sep='\t')
-
-    expression_df = filter_lowly_expressed_genes(expression_df)
-    gene_ids = set(list(expression_df.columns.values)[1:])
-
-    genes = set(geneloc_df.gene_name).intersection(gene_ids)
-    return list(sorted(genes))
+# endregion DRIVER
 
 
 if __name__ == '__main__':
-    from_cli()
+    from_cli()  # pylint: disable=no-value-for-parameter
