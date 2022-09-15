@@ -5,9 +5,9 @@ analysis-runner --dataset tob-wgs \
 --description "TOB metadata" python3 create_metadata_sheet.py
 """
 
-import pandas as pd
 import logging
-from cpg_utils.hail import output_path
+import pandas as pd
+from cpg_utils.hail_batch import output_path
 
 METADATA = (
     'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/metadata/metadata.csv'

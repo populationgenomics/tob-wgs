@@ -8,12 +8,15 @@ import setuptools
 
 PKG = 'tob-wgs'
 
+with open('./README.md', encoding='UTF-8') as readme:
+    long_description = readme.read()
+
 setuptools.setup(
     name=PKG,
     packages=[PKG],
     version='0.0.1',  # automatically updated by bump2version
     description=f'Python analysis modules for {PKG}.',
-    long_description=open('./README.md').read(),
+    long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/populationgenomics/{PKG}',
     license='MIT',
