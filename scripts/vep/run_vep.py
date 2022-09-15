@@ -12,16 +12,16 @@ from cpg_utils.hail_batch import output_path
 
 
 @click.command()
-@click.option('--mt', required=True, help='Hail matrix table to run VEP on')
+@click.option('--mt', 'mt_path', required=True, help='Hail matrix table to run VEP on')
 @click.option('--vep-version', help='Version of VEP', default='104.3')
-def main(mt: str, vep_version: str):
+def main(mt_path: str, vep_version: str):
     """
-    Run vep using main.py wrapper
+    Run vep using generate_genotype_df_batch.py wrapper
     """
 
     hl.init(default_reference='GRCh38')
 
-    mt = hl.read_matrix_table(mt)
+    mt = hl.read_matrix_table(mt_path)
     ht = mt.rows()
     # filter to biallelic loci only
     ht = ht.filter(hl.len(ht.alleles) == 2)
