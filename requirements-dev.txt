@@ -4,3 +4,4 @@ pylint
 hail
 click
 cpg-utils >= 4.6.1
+analysis-runner
