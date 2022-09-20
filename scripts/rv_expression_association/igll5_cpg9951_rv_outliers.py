@@ -59,4 +59,4 @@ donor_mt01 = donor_mt.filter_rows(donor_mt.variant_qc.AF[1] < 0.01)
 
 print(donor_mt05.count())
 print(donor_mt01.count())
-print(donor_mt01.variant_qc.AF.show())
+print(donor_mt05.variant_qc.AF.show())
