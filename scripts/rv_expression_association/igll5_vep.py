@@ -2,7 +2,7 @@
 
 import hail as hl
 from hail.methods import export_plink
-from cpg_utils.hail_batch import dataset_path, init_batch, reference_path
+from cpg_utils.hail_batch import dataset_path, init_batch#, reference_path
 
 # object containing variants within a 50K window on either side of the IGLL5 gene
 MT = dataset_path('v0/IGLL5_50K_window.mt')
@@ -23,7 +23,7 @@ def main():
     mt = mt.filter_rows(hl.is_snp(mt.alleles[0], mt.alleles[1]))
 
     # annotate using VEP
-    vep_ht = reference_path('v0/IGLL5_50K_window_vep.ht')
+    vep_ht = dataset_path('v0/IGLL5_50K_window_vep.ht')
     mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
 
     print(mt.count())

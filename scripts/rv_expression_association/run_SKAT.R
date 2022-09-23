@@ -11,25 +11,42 @@ gcs_auth(token = token)
 googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 
 # get genotype files (plink format)
-G <- 
+File.Bed <- googleCloudStorageR::gcs_get_object("v0/expression_outliers/CPG9951_IGLL5.csv")
+File.Bim
+File.Fam
+
+File.SSD <- "IGLL5_50K_RV_VEP.SSD"
+File.Info <- "IGLL5_50K_RV_VEP.Info"
+
+# generate SSD file
+SSD <- Generate_SSD_SetID(File.Bed, File.Bim, File.Fam, File.SetID, File.SSD, File.Info)
 
 # get expression file (pseudobulk)
 E <- 
 
 # get covariates
-X <- 
+X <- 1  # intercept only
 
 # set up SKAT
 Z <-  G
 y.c <- 
 
-# run null model
+# run null model (no Kinship)
 obj <- SKAT_Null_Model(y.c ~ X, out_type = "C")
-
 
 # get all three p-values
 pv_skat <- SKAT(Z, obj)$p.value  # SKAT
 pv_burden <- SKAT(Z, obj, r.corr = 1)$p.value  # burden
 pv_skat_o <- SKAT(Z, obj, method="SKATO")$p.value  # SKAT-O
 
-print(paste0("SKAT: ", pv_skat, ", burden: ", pv_burden, ", SKAT-O: ", pv_skat_o))
+print(paste0("no Kinship p-values, SKAT: ", pv_skat, ", burden: ", pv_burden, ", SKAT-O: ", pv_skat_o))
+
+# run null model (with Kinship matrix)
+obj_K <- SKAT_NULL_emmaX(y ~ X, K = K, out_type = "C")
+
+# get all three p-values
+pv_skat <- SKAT(Z, obj_K)$p.value  # SKAT
+pv_burden <- SKAT(Z, obj_K, r.corr = 1)$p.value  # burden
+pv_skat_o <- SKAT(Z, obj_K, method="SKATO")$p.value  # SKAT-O
+
+print(paste0("no Kinship p-values, SKAT: ", pv_skat, ", burden: ", pv_burden, ", SKAT-O: ", pv_skat_o))
