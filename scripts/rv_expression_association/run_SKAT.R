@@ -11,15 +11,17 @@ gcs_auth(token = token)
 googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 
 # get genotype files (plink format)
-File.Bed <- googleCloudStorageR::gcs_get_object("v0/expression_outliers/CPG9951_IGLL5.csv")
-File.Bim
-File.Fam
+File.Bed <- googleCloudStorageR::gcs_get_object("v0/plink_files/igll5_rare_regulatory.bed")
+File.Bim <- googleCloudStorageR::gcs_get_object("v0/plink_files/igll5_rare_regulatory.bim")
+File.Fam <- googleCloudStorageR::gcs_get_object("plink_files/igll5_rare_regulatory.fam")
+
+File.SetID <- googleCloudStorageR::gcs_get_object("v0/skat/igll5_rare_regulatory.SetID")
 
 File.SSD <- "IGLL5_50K_RV_VEP.SSD"
 File.Info <- "IGLL5_50K_RV_VEP.Info"
 
 # generate SSD file
-SSD <- Generate_SSD_SetID(File.Bed, File.Bim, File.Fam, File.SetID, File.SSD, File.Info)
+ssd <- Generate_SSD_SetID(File.Bed, File.Bim, File.Fam, File.SetID, File.SSD, File.Info)
 
 # get expression file (pseudobulk)
 E <- 
@@ -28,7 +30,7 @@ E <-
 X <- 1  # intercept only
 
 # set up SKAT
-Z <-  G
+Z <- Get_Genotypes_SSD(ssd)
 y.c <- 
 
 # run null model (no Kinship)

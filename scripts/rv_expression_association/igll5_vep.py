@@ -6,6 +6,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch#, reference_path
 
 # object containing variants within a 50K window on either side of the IGLL5 gene
 MT = dataset_path('v0/IGLL5_50K_window.mt')
+VEP_HT = dataset_path('v0/IGLL5_50K_window_vep.ht')
 
 def main():
     # read and densify object
@@ -23,7 +24,7 @@ def main():
     mt = mt.filter_rows(hl.is_snp(mt.alleles[0], mt.alleles[1]))
 
     # annotate using VEP
-    vep_ht = dataset_path('v0/IGLL5_50K_window_vep.ht')
+    vep_ht = hl.read_table(VEP_HT)
     mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
 
     print(mt.count())
@@ -40,6 +41,8 @@ def main():
 
     # export MT object to PLINK
     export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
+
+    # generate SetID file
 
 if __name__ == '__main__':
     main()
