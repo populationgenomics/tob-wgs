@@ -36,11 +36,11 @@ def main():
     print(rv_mt.count())
 
     # filter variants found to have regulatory effects
-    filtered_mt = rv_mt.filtered_mt(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
+    filtered_mt = rv_mt.filter_rows(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
     print(filtered_mt.count())
 
     # export MT object to PLINK
-    export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
+    # export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
 
     # generate SetID file
 
