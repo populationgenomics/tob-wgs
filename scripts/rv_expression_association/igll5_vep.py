@@ -21,9 +21,9 @@ mt = mt.filter_rows(hl.is_snp(mt.alleles[0], mt.alleles[1]))
 
 # annotate using VEP
 vep_ht = reference_path('tob_wgs_vep/104/vep104.3_GRCh38.ht')
-mt = mt.annotate_rows(vep = vep_ht[mt.row_key].vep)
+mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
 
-# filter rare variants only (MAF <5%)
+# filter rare variants only (MAF < 5%)
 mt = hl.variant_qc(mt)
 rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
 
@@ -31,4 +31,4 @@ rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
 filtered_mt = rv_mt.filtered_mt(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
 
 # export MT object to PLINK
-export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id = mt.s)
+export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
