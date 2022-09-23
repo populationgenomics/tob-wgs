@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import hail as hl
+import numpy as np
+import pandas as pd
 from hail.methods import export_plink
 from cpg_utils.hail_batch import dataset_path, init_batch#, reference_path
 
@@ -38,6 +40,15 @@ def main():
     # filter variants found to have regulatory effects
     filtered_mt = rv_mt.filter_rows(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
     print(filtered_mt.count())
+
+    biotypes = pd.Series(filtered_mt.vep.regulatory_feature_consequences['biotype'].collect())
+    print(biotypes.value_counts())
+
+    mafs = pd.Series(filtered_mt.variant_qc.AF[1].collect())
+    
+    print(np.nanmin(mafs))
+    print(np.nanmax(mafs))
+    print(np.nanmean(mafs))
 
     # export MT object to PLINK
     # export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
