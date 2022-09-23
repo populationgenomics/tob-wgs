@@ -64,7 +64,7 @@ def main(
     mat_df = pd.DataFrame(
         data=mat.T, index=adata.raw.var.index, columns=adata.obs.index
     )
-    print(mar_df.head())
+    print(mat_df.head())
     # turn into xr array
     # phenotype = xr.DataArray(
     #     mat_df.values,
