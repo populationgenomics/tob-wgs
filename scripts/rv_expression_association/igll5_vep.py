@@ -2,7 +2,7 @@
 
 import hail as hl
 from hail.methods import export_plink
-from cpg_utils.hail_batch import dataset_path, init_batch, reference_patch
+from cpg_utils.hail_batch import dataset_path, init_batch, reference_path
 
 # object containing variants within a 50K window on either side of the IGLL5 gene
 MT = dataset_path('v0/IGLL5_50K_window.mt')
