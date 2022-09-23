@@ -60,7 +60,7 @@ def main():
     print(np.nanmean(mafs))
 
     # export MT object to PLINK
-    export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id=mt.s)
+    export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id = filtered_mt.s)
 
     # generate SetID file
 
