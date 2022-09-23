@@ -25,10 +25,6 @@ def main(
     # output_folder: str,
     # # n_contexts: int = 10,
 ):
-"""
-Prepare input files to be run using SKAT
-"""
-
     ######################################
     ###### sample mapping file (SMF) #####
     ######################################
