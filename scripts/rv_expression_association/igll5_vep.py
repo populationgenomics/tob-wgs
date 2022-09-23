@@ -44,6 +44,9 @@ def main():
     filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
     print(filtered_rrv_mt.count())
 
+    filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
+    print(filtered_0maf_mt.count())
+
     # print out stats
     # types of regulatory variants
     biotypes = pd.Series(filtered_mt.vep.regulatory_feature_consequences['biotype'].collect())
