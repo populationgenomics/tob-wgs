@@ -108,9 +108,7 @@ Prepare input files to be run using SKAT
     ############ genotype file ###########
     ######################################
 
-    #### TO DO: create two different files 
-    # low frequency, MAF between 1 and 5%
-    # rare, MAF less than 1%
+    #### TO DO: create matrix from plink (no need to expand?)
 
     ## read in genotype file (plink format)
     G = read_plink1_bin(genotype_file)

@@ -33,7 +33,7 @@ def main():
 
     # filter rare variants only (MAF < 5%)
     mt = hl.variant_qc(mt)
-    rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
+    rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05 and mt.variant_qc.AF[1] > 0)
 
     print(rv_mt.count())
 
