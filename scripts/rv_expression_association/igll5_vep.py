@@ -2,10 +2,7 @@
 
 import hail as hl
 from hail.methods import export_plink
-# import numpy as np
-# import pandas as pd
 from cpg_utils.hail_batch import dataset_path, init_batch, reference_patch
-# from cloudpathlib import AnyPath
 
 # object containing variants within a 50K window on either side of the IGLL5 gene
 MT = dataset_path('v0/IGLL5_50K_window.mt')
@@ -33,4 +30,5 @@ rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
 # filter variants found to have regulatory effects
 filtered_mt = rv_mt.filtered_mt(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
 
+# export MT object to PLINK
 export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id = mt.s)
