@@ -41,7 +41,7 @@ def main():
     filtered_mt = rv_mt.filter_rows(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
     print(filtered_mt.count())
 
-    filtered_rrv_mt = filtered_mt.filter_rows(mt.variant_qc.AF[1] < 0.01)
+    filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
     print(filtered_rrv_mt.count())
 
     # print out stats
