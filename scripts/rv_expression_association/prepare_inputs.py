@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 import scanpy as sc
 import xarray as xr
+from cloudpathlib import AnyPath
 from pandas_plink import read_plink1_bin
 from limix.qc import quantile_gaussianize
 
@@ -53,7 +54,12 @@ Prepare input files to be run using SKAT
     #### TO DO: create pseudobulk
 
     # open anndata
-    adata = sc.read(phenotype_file)
+    # parse the phenotype from the file (via write to temp)
+    with open('i_am_a_temporary.h5ad', 'w', encoding='utf-8') as handle:
+        handle.write(AnyPath(phenotype_file).read_text())
+    adata = sc.read('i_am_a_temporary.h5ad')
+    # adata = sc.read(phenotype_file)
+
     # sparse to dense
     mat = adata.raw.X.todense()
     # make pandas dataframe
