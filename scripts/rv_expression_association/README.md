@@ -1,5 +1,12 @@
 ## Analysis plan
 
+The overall goal of these scripts is to run a gene-set association test to test for an association between i) a number of rare genetic variants located around a gene and ii) the expression level of the gene itself (in a given cell type).
+
+At first, I am testing specifically one gene (IGLL5) on chromosome 22, in naive B cells.
+I consider variants located at most 50kb up or down-stream of the gene body (including those within the gene itself).
+Later, I'll want to run this for many genes.
+
+### Overview
 This folder contains three scripts:
 * [igll5_vep.py](igll5_vep.py) is a Python script which takes a MT + HT object, filters relevant variants (detail below) and exports to plink files
 * [prepare_inputs.py](prepare_inputs.py) is a Python script which takes in genotype and expression files and prepares the input files to run SKAT
