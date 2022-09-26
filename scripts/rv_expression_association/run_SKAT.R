@@ -37,9 +37,9 @@ googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 
 
 # get input files generated elsewhere
-Z <- 
-y.c <- 
-K <- 
+# Z <- 
+# y.c <- 
+# K <- 
 X <- 1  # intercept only
 
 # run null model (no Kinship)
