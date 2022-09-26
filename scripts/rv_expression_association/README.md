@@ -29,7 +29,7 @@ Then, it creates plink files (.bed, .bim, .fam) for those variants only.
 To run this, use:
 ```
 analysis-runner --dataset "tob-wgs" \
-    --description "get set of variants for a gene convert to plink" \
+    --description "get set of variants for a gene, convert to plink" \
     --access-level "test" \
     --output-dir "v0" \
     igll5_vep.p
@@ -50,7 +50,7 @@ To run:
 analysis-runner --dataset "tob-wgs" \
     --description "open adata using scanpy" \
     --access-level "test" \
-    --output-dir "tob_wgs_rv/expression_outliers" \
+    --output-dir "v0" \
     prepare_inputs.py
 ```
 
@@ -60,4 +60,5 @@ This is an R script that run SKAT-O in multiple modes:
 * with and without the kinship matrix
 * reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests.
 
+To run (??):
 ```Rscript run_SKAT.R``` 
