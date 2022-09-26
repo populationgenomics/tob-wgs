@@ -66,6 +66,10 @@ def main(
 
     # sparse to dense
     mat = adata.raw.X.todense()
+
+    # create pseudobulk
+    pseudobulk = mat[cells[0]].X.mean(axis=0)
+
     # make pandas dataframe
     mat_df = pd.DataFrame(
         data=mat.T, index=adata.raw.var.index, columns=adata.obs.index
