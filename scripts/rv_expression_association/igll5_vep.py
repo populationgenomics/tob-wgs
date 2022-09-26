@@ -61,7 +61,7 @@ def main():
 
     # export MT object to PLINK
     filtered_mt_path = output_path('plink_files/igll5_rare_regulatory')
-    export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id = filtered_mt.s)
+    export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
 
     # generate SetID file
 
