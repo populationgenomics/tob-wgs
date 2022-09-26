@@ -3,8 +3,8 @@
 import subprocess
 import sys
 
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.9.1'], check=True)
-# subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.9.1'], check=True)  # 1.7.3?
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True)
 
 import logging
@@ -43,7 +43,7 @@ def main(
     ##### sample mapping file (SMF) #####
     #####################################
 
-    # # this file will map cells to donors
+    # # this file will map cells to donors (and OneK1K ID to CPG ID)
     # sample_mapping = pd.read_csv(
     #     sample_mapping_file,
     #     dtype={
