@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.9.1'], check=True)  # 1.7.3?
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.7.3'], check=True)  
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True)
 
@@ -20,7 +20,7 @@ from limix.qc import quantile_gaussianize
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # sample_mapping_file = 'gs://cpg-tob-wgs-test/v0/skat/smf_Bcells.csv'
-phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
+# phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
 # genotype_file_bed = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bed'
 # genotype_file_bim = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bim'
 # genotype_file_fam = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.fam'
