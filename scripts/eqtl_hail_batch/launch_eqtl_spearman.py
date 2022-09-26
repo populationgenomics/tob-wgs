@@ -1315,7 +1315,7 @@ def get_cell_types_from(input_files_prefix: str) -> list[str]:
         eg: {cell_type}_peer_factors_file.tsv
     """
     covariates_files_dir = os.path.join(input_files_prefix, 'covariates_files')
-    _logger.info(f'Going to fetch cell types from {expression_files_dir}')
+    _logger.info(f'Going to fetch cell types from {covariates_files_dir}')
     ending = '_peer_factors_file.txt'
     return [
         os.path.basename(fn)[: -len(ending)]
