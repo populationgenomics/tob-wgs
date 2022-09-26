@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.7.3'], check=True)
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.9.1'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True)
 
