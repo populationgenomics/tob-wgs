@@ -1319,7 +1319,7 @@ def get_cell_types_from(input_files_prefix: str) -> list[str]:
     ending = '_peer_factors_file.txt'
     return [
         os.path.basename(fn)[: -len(ending)]
-        for fn in list_dir(expression_files_dir, lambda el: el.endswith(ending))
+        for fn in list_dir(covariates_files_dir, lambda el: el.endswith(ending))
     ]
 
 
