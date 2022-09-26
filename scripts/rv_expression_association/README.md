@@ -9,7 +9,11 @@ This folder contains three scripts:
 
 At the moment, I have subsetted both the MT object and the VEP-annotated object manually, using [this script](https://github.com/populationgenomics/analysis-runner/blob/main/scripts/subset_matrix_table.py) to a specific genomic region around this one specific gene (IGLL5), e.g., for the VEP-annotated hail table:
 ```
-analysis-runner --dataset tob-wgs --description "subset vep annotated ht" --output-dir "v0" --access-level standard python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht --chr chr22 --pos 22837780-22946111 --out IGLL5_50K_window_vep
+analysis-runner --dataset tob-wgs \
+    --description "subset vep annotated ht" \
+    --output-dir "v0" --access-level standard \
+    python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht \
+    --chr chr22 --pos 22837780-22946111 --out IGLL5_50K_window_vep
 ```
 in the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or add that to this script.
 
@@ -17,6 +21,11 @@ This step selects QC-passing, biallelic SNP that are rare (alternative allele fr
 Then, it creates plink files (.bed, .bim, .fam) for those variants only.
 To run this, use:
 ```
+analysis-runner --dataset "tob-wgs" \
+    --description "get set of variants for a gene convert to plink" \
+    --access-level "test" \
+    --output-dir "v0" \
+    igll5_vep.p
 ```
 
 ### Step 2 - prepare input files for SKAT
@@ -43,3 +52,5 @@ analysis-runner --dataset "tob-wgs" \
 This is an R script that run SKAT-O in multiple modes:
 * with and without the kinship matrix
 * reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests.
+
+```Rscript run_SKAT.R``` 
