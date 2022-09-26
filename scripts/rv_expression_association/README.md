@@ -30,7 +30,7 @@ analysis-runner --dataset "tob-wgs" \
 
 ### Step 2 - prepare input files for SKAT
 
-[SKAT]() is an R package to run gene-set association tests.
+[SKAT](https://github.com/leelabsg/SKAT) is an R package to run gene-set association tests.
 It requires as inputs:
 * a genotype matrix (Z), samples X genetic variants
 * a phenotype vector (y.c), samples X 1 (in my case, this will be the expression level of a gene across samples, see below)
