@@ -12,6 +12,7 @@ from cpg_utils import to_path
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+# sample_mapping_file = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/all_B_cells/test_inputs/head_100_smf_Bcells.csv'
 phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
 # genotype_file_bed = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bed'
 # genotype_file_bim = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bim'
