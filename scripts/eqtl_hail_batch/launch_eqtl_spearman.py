@@ -1311,15 +1311,15 @@ def get_chromosomes(input_files_prefix: str):
 
 def get_cell_types_from(input_files_prefix: str) -> list[str]:
     """
-    we can infer the cell types from the 'expression_files' subdirectory
-        eg: {cell_type}_expression.tsv
+    we can infer the cell types from the 'covariates_files' subdirectory
+        eg: {cell_type}_peer_factors_file.tsv
     """
-    expression_files_dir = os.path.join(input_files_prefix, 'expression_files')
-    _logger.info(f'Going to fetch cell types from {expression_files_dir}')
-    ending = '_expression.tsv'
+    covariates_files_dir = os.path.join(input_files_prefix, 'covariates_files')
+    _logger.info(f'Going to fetch cell types from {covariates_files_dir}')
+    ending = '_peer_factors_file.txt'
     return [
         os.path.basename(fn)[: -len(ending)]
-        for fn in list_dir(expression_files_dir, lambda el: el.endswith(ending))
+        for fn in list_dir(covariates_files_dir, lambda el: el.endswith(ending))
     ]
 
 
