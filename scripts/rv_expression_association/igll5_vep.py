@@ -4,7 +4,7 @@ import hail as hl
 import numpy as np
 import pandas as pd
 from hail.methods import export_plink
-from cpg_utils.hail_batch import dataset_path, init_batch#, reference_path
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path #, reference_path
 
 # object containing variants within a 50K window on either side of the IGLL5 gene
 MT = dataset_path('v0/IGLL5_50K_window.mt')
@@ -60,6 +60,7 @@ def main():
     print(np.nanmean(mafs))
 
     # export MT object to PLINK
+    filtered_mt_path = output_path('plink_files/igll5_rare_regulatory')
     export_plink(filtered_mt, 'plink_files/igll5_rare_regulatory', ind_id = filtered_mt.s)
 
     # generate SetID file
