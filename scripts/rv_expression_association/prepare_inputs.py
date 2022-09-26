@@ -30,25 +30,25 @@ def main(
     # output_folder: str,
     # # n_contexts: int = 10,
 ):
-    ######################################
-    ###### sample mapping file (SMF) #####
-    ######################################
+    #####################################
+    ##### sample mapping file (SMF) #####
+    #####################################
 
-    ## this file will map cells to donors
-    # sample_mapping = pd.read_csv(
-    #     sample_mapping_file,
-    #     dtype={
-    #         "individual_long": str,
-    #         "genotype_individual_id": str,
-    #         "phenotype_sample_id": str,
-    #     },
-    #     index_col=0,
-    # )
+    # this file will map cells to donors
+    sample_mapping = pd.read_csv(
+        sample_mapping_file,
+        dtype={
+            "individual_long": str,
+            "genotype_individual_id": str,
+            "phenotype_sample_id": str,
+        },
+        index_col=0,
+    )
 
-    # ## extract unique individuals
-    # donors0 = sample_mapping["genotype_individual_id"].unique()
-    # donors0.sort()
-    # logging.info("Number of unique donors: {}".format(len(donors0)))
+    ## extract unique individuals
+    donors0 = sample_mapping["genotype_individual_id"].unique()
+    donors0.sort()
+    logging.info("Number of unique donors: {}".format(len(donors0)))
 
     ######################################
     ########### phenotype file ###########
