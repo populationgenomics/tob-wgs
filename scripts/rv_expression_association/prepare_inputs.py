@@ -10,12 +10,12 @@ from cpg_utils import to_path
 # from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
-logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-phenotype_file = "gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad"
-# genotype_file_bed = "gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bed"
-# genotype_file_bim = "gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bim"
-# genotype_file_fam = "gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.fam"
+phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
+# genotype_file_bed = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bed'
+# genotype_file_bim = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bim'
+# genotype_file_fam = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.fam'
 
 
 def main(
@@ -38,17 +38,17 @@ def main(
     # sample_mapping = pd.read_csv(
     #     sample_mapping_file,
     #     dtype={
-    #         "individual_long": str,
-    #         "genotype_individual_id": str,
-    #         "phenotype_sample_id": str,
+    #         'individual_long': str,
+    #         'genotype_individual_id': str,
+    #         'phenotype_sample_id': str,
     #     },
     #     index_col=0,
     # )
 
     # ## extract unique individuals
-    # donors0 = sample_mapping["genotype_individual_id"].unique()
+    # donors0 = sample_mapping['genotype_individual_id'].unique()
     # donors0.sort()
-    # logging.info("Number of unique donors: {}".format(len(donors0)))
+    # logging.info('Number of unique donors: {}'.format(len(donors0)))
 
     ######################################
     ########### phenotype file ###########
@@ -73,10 +73,10 @@ def main(
     # turn into xr array
     phenotype = xr.DataArray(
         mat_df.values,
-        dims=["trait", "cell"],
-        coords={"trait": mat_df.index.values, "cell": mat_df.columns.values},
+        dims=['trait', 'cell'],
+        coords={'trait': mat_df.index.values, 'cell': mat_df.columns.values},
     )
-    phenotype = phenotype.sel(cell=sample_mapping["phenotype_sample_id"].values)
+    # phenotype = phenotype.sel(cell=sample_mapping['phenotype_sample_id'].values)
 
     # delete large files to free up memory
     del mat
@@ -95,17 +95,17 @@ def main(
 
     # ## read in GRM (genotype relationship matrix; kinship matrix)
     # K = pd.read_csv(kinship_file, index_col=0)
-    # K.index = K.index.astype("str")
+    # K.index = K.index.astype('str')
     # assert all(K.columns == K.index)  # symmetric matrix, donors x donors
 
     # K = xr.DataArray(
     #     K.values,
-    #     dims=["sample_0", "sample_1"],
-    #     coords={"sample_0": K.columns, "sample_1": K.index},
+    #     dims=['sample_0', 'sample_1'],
+    #     coords={'sample_0': K.columns, 'sample_1': K.index},
     # )
-    # K = K.sortby("sample_0").sortby("sample_1")
+    # K = K.sortby('sample_0').sortby('sample_1')
     # donors = sorted(set(list(K.sample_0.values)).intersection(donors0))
-    # logging.info("Number of donors after kinship intersection: {}".format(len(donors)))
+    # logging.info('Number of donors after kinship intersection: {}'.format(len(donors)))
 
     # ## subset to relevant donors
     # K = K.sel(sample_0=donors, sample_1=donors)
@@ -141,12 +141,12 @@ def main(
     
     # ## select relavant SNPs based on feature variant filter file
     # fvf = pd.read_csv(feature_variant_file, index_col=0)
-    # set_variants = fvf[fvf["feature"] == gene_name]["snp_id"].unique()
-    # G_sel = G[:, G["snp"].isin(set_variants)]
+    # set_variants = fvf[fvf['feature'] == gene_name]['snp_id'].unique()
+    # G_sel = G[:, G['snp'].isin(set_variants)]
 
-    # Z = G_sel.sel(sample=sample_mapping["individual_long"].values)
+    # Z = G_sel.sel(sample=sample_mapping['individual_long'].values)
     # # expand out genotypes from cells to donors (and select relevant donors in the same step)
-    # # G_expanded = G_sel.sel(sample=sample_mapping["individual_long"].values)
+    # # G_expanded = G_sel.sel(sample=sample_mapping['individual_long'].values)
     # # assert all(hK_expanded.sample.values == G_expanded.sample.values)
 
     # # delete large files to free up memory
@@ -155,5 +155,5 @@ def main(
 
     ### ouputs: y.c, Z, K (optional: X)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
