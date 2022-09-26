@@ -1314,7 +1314,7 @@ def get_cell_types_from(input_files_prefix: str) -> list[str]:
     we can infer the cell types from the 'covariates_files' subdirectory
         eg: {cell_type}_peer_factors_file.tsv
     """
-    expression_files_dir = os.path.join(input_files_prefix, 'covariates_files')
+    covariates_files_dir = os.path.join(input_files_prefix, 'covariates_files')
     _logger.info(f'Going to fetch cell types from {expression_files_dir}')
     ending = '_peer_factors_file.txt'
     return [
