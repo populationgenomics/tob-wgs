@@ -6,17 +6,18 @@ import scanpy as sc
 import xarray as xr
 # from cloudpathlib import AnyPath
 from cpg_utils import to_path
-# from pandas_plink import read_plink1_bin
-# from limix.qc import quantile_gaussianize
+from pandas_plink import read_plink1_bin
+from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-# sample_mapping_file = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/all_B_cells/test_inputs/head_100_smf_Bcells.csv'
+# sample_mapping_file = 'gs://cpg-tob-wgs-test/v0/skat/smf_Bcells.csv'
 phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
-# genotype_file_bed = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bed'
-# genotype_file_bim = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.bim'
-# genotype_file_fam = 'gs://cpg-tob-wgs-main/scrna-seq/CellRegMap_input_files/plink_files/plink_chr22.fam'
+# genotype_file_bed = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bed'
+# genotype_file_bim = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bim'
+# genotype_file_fam = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.fam'
+# kinship_file = 'gs://cpg-tob-wgs-test/v0/skat/grm_wide.csv'
 
 
 def main(
