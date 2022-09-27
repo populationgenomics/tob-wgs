@@ -634,8 +634,8 @@ def run_spearman_correlation_scatter(
         global_bp=t.locus.global_position(),
         a1=t.alleles[0],
         a2=t.alleles[1],
+        snpid=get_t_snp_id(t),
     )
-    t = t.annotate(snpid=get_t_snp_id(t))
 
     # only keep SNPs where all samples have an alt_allele value
     # (argument must be a string, a bytes-like object or a number)
