@@ -583,7 +583,6 @@ def run_spearman_correlation_scatter(
         keep=False,
     )
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
-    # TODO: mfranklin to check mt.persist, as mt.rows() is called twice
     mt = mt.persist('MEMORY_AND_DISK')
 
     position_table = mt.rows().select()
@@ -607,6 +606,26 @@ def run_spearman_correlation_scatter(
     # the spearman correlation function
     t = mt.entries()
     t = t.key_by()
+
+    # leave this as a computed value to avoid annotating for the whole
+    # table, then mostly discarding - hopefully should save memory
+    def get_t_snp_id(_t):
+        return (
+            hl.str(_t.contig)
+            + ':'
+            + hl.str(_t.position)
+            + ':'
+            + hl.str(_t.a1)
+            + ':'
+            + hl.str(_t.a2)
+        )
+
+    # Do this only on SNPs contained within gene_snp_df to save time
+    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
+    t = t.filter(snps_to_keep.contains(get_t_snp_id(t)))
+
+    # hopefully we've filtered enough now we can annotate
+
     t = t.select(
         n_alt_alleles=t.GT.n_alt_alleles(),
         sampleid=t.onek1k_id,
@@ -616,19 +635,8 @@ def run_spearman_correlation_scatter(
         a1=t.alleles[0],
         a2=t.alleles[1],
     )
-    t = t.annotate(
-        snpid=hl.str(t.contig)
-        + ':'
-        + hl.str(t.position)
-        + ':'
-        + hl.str(t.a1)
-        + ':'
-        + hl.str(t.a2)
-    )
-    # Do this only on SNPs contained within gene_snp_df to save on
-    # computational time
-    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
-    t = t.filter(snps_to_keep.contains(t['snpid']))
+    t = t.annotate(snpid=get_t_snp_id(t))
+
     # only keep SNPs where all samples have an alt_allele value
     # (argument must be a string, a bytes-like object or a number)
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
