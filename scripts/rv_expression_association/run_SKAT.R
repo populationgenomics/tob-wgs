@@ -1,3 +1,5 @@
+#!/usr/bin/env R
+
 install.packages("googleCloudStorageR")
 install.packages("SKAT")
 
