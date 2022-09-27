@@ -3,124 +3,63 @@
 import subprocess
 import sys
 
-# subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.7.3'], check=True)  
-# subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True)
 
 import logging
 import pandas as pd
-# import scanpy as sc
-# import xarray as xr
-# from cloudpathlib import AnyPath
+import xarray as xr
+from cloudpathlib import AnyPath
 from cpg_utils import to_path
 from pandas_plink import read_plink1_bin
-# from limix.qc import quantile_gaussianize
+from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-# sample_mapping_file = 'gs://cpg-tob-wgs-test/v0/skat/smf_Bcells.csv'
-phenotype_file = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv'
-# genotype_file_bed = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bed'
-# genotype_file_bim = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bim'
-# genotype_file_fam = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.fam'
-# kinship_file = 'gs://cpg-tob-wgs-test/v0/skat/grm_wide.csv'
 
 @click.command()
-# @click.option("--chrom", required=True, help="More info here")
-# @click.option("--gene-name", required=True)
-# @click.option("--sample-mapping-file", required=True)
-@click.option("--genotype-file-bed", required=True)
-@click.option("--genotype-file-bim", required=True)
-@click.option("--genotype-file-fam", required=True)
-@click.option("--phenotype-file", required=True)
-# @click.option("--context-file", required=True)
-# @click.option("--kinship-file", required=True)
-# @click.option("--feature-variant-file", required=True)
-# @click.option(
-#     "--output-folder", required=False, default=""
-# )  # by default current directory, where you are running your script from
-# @click.option("--n-contexts", required=False, type=int)
+@click.option("--cell-type", required=True, help="More info here")
+@click.option("--gene-name", required=True)            # 'VPREB3'
+@click.option("--sample-mapping-file", required=True)  # 'scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
+@click.option("--genotype-file-bed", required=True)    # 'v0/plink_files/vpreb3_rare_promoter.bed'
+@click.option("--genotype-file-bim", required=True)    # 'v0/plink_files/vpreb3_rare_promoter.bim'
+@click.option("--genotype-file-fam", required=True)    # 'v0/plink_files/vpreb3_rare_promoter.fam'
+@click.option("--phenotype-file", required=True)       # 'scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv'
+# @click.option("--kinship-file", required=True)         # 'v0/skat/grm_wide.csv'
+@click.option(
+    "--output-folder", required=False, default=""
+)  # by default current directory, where you are running your script from
 def main(
-    # chrom: str,
-    # gene_name: str,
-    # sample_mapping_file: str,
+    cell_type: str,
+    gene_name: str,
+    sample_mapping_file: str,
     genotype_file_bed: str,
     genotype_file_bim: str,
     genotype_file_fam: str,
     phenotype_file: str,
-    # # context_file: str,
     # kinship_file: str,
-    # # feature_variant_file: str,
-    # output_folder: str,
-    # # n_contexts: int = 10,
+    output_folder: str,
 ):
-    #####################################
-    ##### sample mapping file (SMF) #####
-    #####################################
 
-    # # this file will map cells to donors (and OneK1K ID to CPG ID)
-    # sample_mapping = pd.read_csv(
-    #     sample_mapping_file,
-    #     dtype={
-    #         'individual_long': str,
-    #         'genotype_individual_id': str,
-    #         'phenotype_sample_id': str,
-    #     },
-    #     index_col=0,
-    # )
-
-    # ## extract unique individuals
-    # donors0 = sample_mapping['genotype_individual_id'].unique()
-    # donors0.sort()
-    # logging.info('Number of unique donors: {}'.format(len(donors0)))
+    expression_filename = AnyPath(output_path(f'{gene_name}_{cell_type}.csv'))
+    genotype_filename = AnyPath(output_path(f'{gene_name}_rare_regulatory.csv'))
 
     ######################################
     ########### phenotype file ###########
     ######################################
 
-    #### TO DO: create pseudobulk
+    phenotype = pd.read_csv(phenotype_file, sep="\t", index_col=0)
 
-    # open anndata
-    with to_path(phenotype_file).open('rb') as handle:
-        data = handle.readlines()
-    with open('temp.h5ad', 'wb') as handle:
-        handle.writelines(data)
-    adata = sc.read('temp.h5ad')
-
-    # sparse to dense
-    mat = adata.raw.X.todense()
-
-    # create pseudobulk
-    pseudobulk = mat[cells[0]].X.mean(axis=0)
-
-    # make pandas dataframe
-    mat_df = pd.DataFrame(
-        data=mat.T, index=adata.raw.var.index, columns=adata.obs.index
-    )
-    print(mat_df.head())
-    # turn into xr array
     phenotype = xr.DataArray(
-        mat_df.values,
-        dims=['trait', 'cell'],
-        coords={'trait': mat_df.index.values, 'cell': mat_df.columns.values},
+        phenotype.values,
+        dims=['sample', 'gene'],
+        coords={'sample': phenotype.index.values, 'gene': phenotype.columns.values},
     )
-    # phenotype = phenotype.sel(cell=sample_mapping['phenotype_sample_id'].values)
 
-    # delete large files to free up memory
-    del mat
-    del mat_df
-
-    # select gene
-    y = phenotype.sel(trait=gene_name)
-    y = quantile_gaussianize(y)
-    y.c = y.values.reshape(y.shape[0], 1)
-
-    del phenotype  # delete to free up memory
-
-    # ######################################
-    # ############ kinship file ############
-    # ######################################
+    # # ######################################
+    # # ############ kinship file ############
+    # # ######################################
 
     # ## read in GRM (genotype relationship matrix; kinship matrix)
     # K = pd.read_csv(kinship_file, index_col=0)
@@ -133,56 +72,104 @@ def main(
     #     coords={'sample_0': K.columns, 'sample_1': K.index},
     # )
     # K = K.sortby('sample_0').sortby('sample_1')
-    # donors = sorted(set(list(K.sample_0.values)).intersection(donors0))
-    # logging.info('Number of donors after kinship intersection: {}'.format(len(donors)))
+
+    # #######################################
+    # ############ genotype files ###########
+    # #######################################
+
+    # read in genotype file (plink format)
+    # bed
+    with to_path(genotype_file_bed).open('rb') as handle:
+        data = handle.readlines()
+    with open('temp.bed', 'wb') as handle:
+        handle.writelines(data)
+    # bim
+    with to_path(genotype_file_bim).open('rb') as handle:
+        data = handle.readlines()
+    with open('temp.bim', 'wb') as handle:
+        handle.writelines(data)
+    # fam
+    with to_path(genotype_file_fam).open('rb') as handle:
+        data = handle.readlines()
+    with open('temp.fam', 'wb') as handle:
+        handle.writelines(data)
+    # read
+    G = read_plink1_bin('temp.bed')
+
+    #####################################
+    ##### sample mapping file (SMF) #####
+    #####################################
+
+    # this file will map different IDs (and OneK1K ID to CPG ID)
+    sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
+
+    ## samples with expression data 
+    donors_onek1k = sample_mapping['OneK1K_ID'].unique()
+    donors_onek1k.sort()
+    donors_exprs = sorted(set(list(phenotype.sample.values)).intersection(donors_onek1k))
+    logging.info('Number of unique donors with expression data: {}'.format(len(donors_exprs)))
+
+    ## samples with genotype data 
+    donors_cpg = sample_mapping['InternalID'].unique()
+    donors_cpg.sort()
+    donors_geno = sorted(set(list(G.sample.values)).intersection(donors_cpg))
+    logging.info('Number of unique donors with genotype data: {}'.format(len(donors_geno)))
+
+    ## samples with both
+    sample_mapping_both = sample_mapping[(sample_mapping['OneK1K_ID'] in donors_exprs) and (sample_mapping['InternalID'] in donors_geno)]
+    donors_e = sample_mapping_both['OneK1K_ID'].unique()
+    donors_g = sample_mapping_both['Internal_ID'].unique()
+    assert(len(donors_e)==len(donors_g))
+
+    logging.info('Number of unique common donors: {}'.format(len(donors_g)))
+
+    # ## samples in kinship
+    # donors_k = sorted(set(list(K.sample_0.values)).intersection(donors_e))
 
     # ## subset to relevant donors
-    # K = K.sel(sample_0=donors, sample_1=donors)
-    # assert all(K.sample_0 == donors)
-    # assert all(K.sample_1 == donors)
+    # K = K.sel(sample_0=donors_k, sample_1=donors_k)
+    # assert all(K.sample_0 == donors_k)
+    # assert all(K.sample_1 == donors_k)
 
     # del K  # delete K to free up memory
 
-    # ######################################
-    # ############ genotype file ###########
-    # ######################################
-
-    #### TO DO: create matrix from plink (no need to expand?)
-
-    ## read in genotype file (plink format)
-    # bed
-    # with to_path(genotype_file_bed).open('rb') as handle:
-    #     data = handle.readlines()
-    # with open('temp.bed', 'wb') as handle:
-    #     handle.writelines(data)
-    # # bim
-    # with to_path(genotype_file_bim).open('rb') as handle:
-    #     data = handle.readlines()
-    # with open('temp.bim', 'wb') as handle:
-    #     handle.writelines(data)
-    # # fam
-    # with to_path(genotype_file_fam).open('rb') as handle:
-    #     data = handle.readlines()
-    # with open('temp.fam', 'wb') as handle:
-    #     handle.writelines(data)
-    # # read
-    # G = read_plink1_bin('temp.bed')
+    #########################################
+    ##### subset files to common samples ####
+    #########################################
     
-    # ## select relavant SNPs based on feature variant filter file
-    # fvf = pd.read_csv(feature_variant_file, index_col=0)
-    # set_variants = fvf[fvf['feature'] == gene_name]['snp_id'].unique()
-    # G_sel = G[:, G['snp'].isin(set_variants)]
+    ###############
+    #### phenotype
+    phenotype = phenotype.sel(sample=donors_e)
 
-    # Z = G_sel.sel(sample=sample_mapping['individual_long'].values)
-    # # expand out genotypes from cells to donors (and select relevant donors in the same step)
-    # # G_expanded = G_sel.sel(sample=sample_mapping['individual_long'].values)
-    # # assert all(hK_expanded.sample.values == G_expanded.sample.values)
+    # select gene
+    y = phenotype.sel(gene=gene_name)
+    y = quantile_gaussianize(y)
 
-    # # delete large files to free up memory
-    # del G
-    # del G_sel
+    del phenotype  # delete to free up memory
 
-    ### ouputs: y.c, Z, K (optional: X)
+    # create pandas dataframe to save
+    y_df = pd.DataFrame(data = y.values.reshape(y.shape[0], 1), index = y.sample.values, columns = [gene_name])
+    
+    ###############
+    #### genotype
+    G = G.sel(sample=donors_g)
+    
+    data = G.values
+    Z_df = pd.DataFrame(data, columns=G.snp.values, index=G.sample.values)
+    Z_df = Z_df.dropna(axis=1)
+
+    # delete large files to free up memory
+    del G
+
+    #########################################
+    ############## save files ###############
+    #########################################
+
+    with expression_filename.open('w') as ef:
+        y_df.to_csv(ef, index=False)
+
+    with genotype_filename.open('w') as ef:
+        Z_df.to_csv(gf, index=False)
 
 if __name__ == '__main__':
     main()
