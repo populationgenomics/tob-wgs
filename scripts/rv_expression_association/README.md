@@ -83,5 +83,11 @@ This is an R script that run SKAT-O in multiple modes:
 * with and without the kinship matrix
 * reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests.
 
-To run (??):
-```Rscript run_SKAT.R``` 
+To run:
+```
+analysis-runner --dataset "tob-wgs" \
+    --description "run SKAT" \
+    --access-level "test" \
+    --output-dir "v0" \
+    Rscript run_SKAT.R
+``` 
