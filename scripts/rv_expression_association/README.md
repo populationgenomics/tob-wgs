@@ -45,10 +45,10 @@ right_boundary = min(interval_end, hl.get_reference('GRCh38').lengths[f'chr{chro
 gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
 gene_interval
 ```
-In the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or 2) add that step to this script.
+In the future, either i) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or ii) add that step to this script.
 
-This step selects QC-passing, biallelic SNP that are rare (alternative allele frequency < 5%) and that are predicted by VEP to have regulatory consequences.
-Then, it creates plink files (.bed, .bim, .fam) for those variants only.
+This step selects QC-passing, biallelic single nucleotide variants (SNVs) that are rare (alternative allele frequency < 5%) and that are predicted by VEP to have regulatory consequences (_e.g._, in promoters, enhancers, transcription factor binding sites..).
+Then, it creates [PLINK](https://zzz.bwh.harvard.edu/plink/) files (.bed, .bim, .fam) for those variants only.
 To run this, use:
 ```
 analysis-runner --dataset "tob-wgs" \
@@ -78,13 +78,13 @@ analysis-runner --dataset "tob-wgs" \
 ```
 
 #### current steps
-for now, considering all regulatory variants (or, e.g. selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression files from Kat's eQTL files.
+for now, considering all regulatory variants (or, _e.g.,_ selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression file (here, donor-level aggregated expression in naive B cells) from Kat's eQTL files.
 
 ### Step 3 - run SKAT
 
 This is an R script that run SKAT-O in multiple modes (after matching sample IDs across objects):
 * with and without the kinship matrix K
-* reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests.
+* reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests. (print only atm, change to saving p-values to file)
 
 To run:
 ```
