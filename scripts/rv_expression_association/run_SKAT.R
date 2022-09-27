@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-# install.packages("googleCloudStorageR")
-# install.packages("SKAT")
+install.packages("googleCloudStorageR", repos='http://cran.csiro.au')
+install.packages("SKAT", repos='http://cran.csiro.au/')
 
 library(googleCloudStorageR)
 library(gargle)
