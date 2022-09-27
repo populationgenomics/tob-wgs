@@ -611,13 +611,13 @@ def run_spearman_correlation_scatter(
     # table, then mostly discarding - hopefully should save memory
     def get_t_snp_id(_t):
         return (
-            hl.str(_t.contig)
+            hl.str(_t.locus.contig)
             + ':'
-            + hl.str(_t.position)
+            + hl.str(_t.locus.position)
             + ':'
-            + hl.str(_t.a1)
+            + hl.str(_t.alleles[0])
             + ':'
-            + hl.str(_t.a2)
+            + hl.str(_t.alleles[1])
         )
 
     # Do this only on SNPs contained within gene_snp_df to save time
