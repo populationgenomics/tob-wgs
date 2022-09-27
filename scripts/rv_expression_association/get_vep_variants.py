@@ -44,14 +44,13 @@ def main():
 
     # filter variants found to have regulatory effects
     filtered_mt = rv_mt.filter_rows(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
-    print(filtered_mt.count())
     logging.info('Number of rare variants (freq<5%) with ergulatory conequences: {}'.format(filtered_mt.count()[0]))
 
     filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
     logging.info('Number of rarer variants (freq<1%): {}'.format(filtered_rrv_mt.count()[0]))
 
     filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
-    print(filtered_0maf_mt.count())
+    logging.info('Check that there are {} variants with freq==0'.format(filtered_0maf_mt.count()[0]))
 
     # print out stats
     # types of regulatory variants
