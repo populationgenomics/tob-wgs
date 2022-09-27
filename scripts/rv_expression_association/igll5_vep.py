@@ -73,7 +73,7 @@ def main():
     # export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
 
     # filter to promoter variants only
-    filtered_mt2 = filtered_mt.filter_rows(filtered_mt.vep.regulatory_feature_consequences['biotype'] == 'promoter')
+    filtered_mt2 = filtered_mt.filter_rows(filtered_mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter')
     print(filtered_mt2.count())
     # export
     filtered_mt_path = output_path('plink_files/vpreb3_rare_promoter')
