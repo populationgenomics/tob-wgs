@@ -5,11 +5,7 @@ import hail as hl
 import numpy as np
 import pandas as pd
 from hail.methods import export_plink
-from cpg_utils.hail_batch import dataset_path, init_batch, output_path #, reference_path
-
-# # object containing variants within a 50K window on either side of the IGLL5 gene
-# MT = dataset_path('v0/IGLL5_50K_window.mt')
-# VEP_HT = dataset_path('v0/IGLL5_50K_window_vep.ht')
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path 
 
 # object containing variants within a 50K window on either side of the VPREB3 gene
 MT = dataset_path('v0/VPREB3_50K_window.mt')
@@ -24,7 +20,7 @@ def main():
     mt = hl.read_matrix_table(MT)
     mt = hl.experimental.densify(mt)
 
-    print(mt.count())
+    logging.info('Number of variants in window: {}'.format(mt.count()[0]))
 
     # filter out low quality variants
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
@@ -37,21 +33,22 @@ def main():
     vep_ht = hl.read_table(VEP_HT)
     mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
 
-    print(mt.count())
+    logging.info('Number of QC-passing, biallelic SNPs: {}'.format(mt.count()[0]))
 
     # filter rare variants only (MAF < 5%)
     mt = hl.variant_qc(mt)
     rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
     rv_mt = rv_mt.filter_rows(rv_mt.variant_qc.AF[1] > 0)
 
-    print(rv_mt.count())
+    logging.info('Number of rare variants (freq<5%): {}'.format(rv_mt.count()[0]))
 
     # filter variants found to have regulatory effects
     filtered_mt = rv_mt.filter_rows(hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0)
     print(filtered_mt.count())
+    logging.info('Number of rare variants (freq<5%) with ergulatory conequences: {}'.format(filtered_mt.count()[0]))
 
     filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
-    print(filtered_rrv_mt.count())
+    logging.info('Number of rarer variants (freq<1%): {}'.format(filtered_rrv_mt.count()[0]))
 
     filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
     print(filtered_0maf_mt.count())
@@ -67,15 +64,14 @@ def main():
     print(np.nanmax(mafs))
     print(np.nanmean(mafs))
 
-    # # export MT object to PLINK
-    # filtered_mt_path = output_path('plink_files/igll5_rare_regulatory')
-    # filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
-    # export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
+    # export MT object to PLINK (all regulatory variants)
+    filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
+    export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
 
     # filter to promoter variants only
     filtered_mt2 = filtered_mt.filter_rows(filtered_mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter')
     print(filtered_mt2.count())
-    # export
+    # export to PLINK
     filtered_mt_path = output_path('plink_files/vpreb3_rare_promoter')
     export_plink(filtered_mt2, filtered_mt_path, ind_id = filtered_mt2.s)
     
