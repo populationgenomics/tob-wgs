@@ -1,4 +1,5 @@
-# install.packages("SKAT")
+install.packages("googleCloudStorageR")
+install.packages("SKAT")
 
 library(googleCloudStorageR)
 library(gargle)
