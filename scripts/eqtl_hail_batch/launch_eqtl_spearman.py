@@ -622,7 +622,17 @@ def run_spearman_correlation_scatter(
 
     # Do this only on SNPs contained within gene_snp_df to save time
     snps_to_keep = hl.literal(set(gene_snp_df.snpid))
-    t = t.filter(snps_to_keep.contains(get_t_snp_id(t)))
+    t = t.filter(
+        snps_to_keep.contains(
+            hl.str(t.locus.contig)
+            + ':'
+            + hl.str(t.locus.position)
+            + ':'
+            + hl.str(t.alleles[0])
+            + ':'
+            + hl.str(t.alleles[1])
+        )
+    )
 
     # hopefully we've filtered enough now we can annotate
 
@@ -634,7 +644,16 @@ def run_spearman_correlation_scatter(
         global_bp=t.locus.global_position(),
         a1=t.alleles[0],
         a2=t.alleles[1],
-        snpid=get_t_snp_id(t),
+    )
+
+    t = t.annotate(
+        snpid=hl.str(t.contig)
+        + ':'
+        + hl.str(t.position)
+        + ':'
+        + hl.str(t.a1)
+        + ':'
+        + hl.str(t.a2)
     )
 
     # only keep SNPs where all samples have an alt_allele value
