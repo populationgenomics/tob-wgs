@@ -7,9 +7,13 @@ import pandas as pd
 from hail.methods import export_plink
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path #, reference_path
 
-# object containing variants within a 50K window on either side of the IGLL5 gene
-MT = dataset_path('v0/IGLL5_50K_window.mt')
-VEP_HT = dataset_path('v0/IGLL5_50K_window_vep.ht')
+# # object containing variants within a 50K window on either side of the IGLL5 gene
+# MT = dataset_path('v0/IGLL5_50K_window.mt')
+# VEP_HT = dataset_path('v0/IGLL5_50K_window_vep.ht')
+
+# object containing variants within a 50K window on either side of the VPREB3 gene
+MT = dataset_path('v0/VPREB3_50K_window.mt')
+VEP_HT = dataset_path('v0/VPREB3_50K_window_vep.ht')
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -63,11 +67,12 @@ def main():
     print(np.nanmax(mafs))
     print(np.nanmean(mafs))
 
-    # export MT object to PLINK
-    filtered_mt_path = output_path('plink_files/igll5_rare_regulatory')
-    export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
+    # # export MT object to PLINK
+    # filtered_mt_path = output_path('plink_files/igll5_rare_regulatory')
+    # export_plink(filtered_mt, filtered_mt_path, ind_id = filtered_mt.s)
 
-    # generate SetID file
+    # export as matrix
+    
 
 if __name__ == '__main__':
     main()
