@@ -14,7 +14,7 @@ This folder contains three scripts:
 
 ### Step 1 - select genetic variants
 
-At the moment, I have subsetted both the MT object and the [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html)-annotated object manually, using [this script](https://github.com/populationgenomics/analysis-runner/blob/main/scripts/subset_matrix_table.py) to a specific genomic region around this one specific gene (IGLL5), _e.g._, for the VEP-annotated hail table:
+At the moment, I have subsetted both the MT object and the [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html)-annotated object manually, using [this script](https://github.com/populationgenomics/analysis-runner/blob/main/scripts/subset_matrix_table.py) to a specific genomic region around this one specific gene (IGLL5), _e.g._, for the VEP-annotated hail table (from local version of populationgenomics/analysis-runner/scripts/):
 ```
 analysis-runner --dataset tob-wgs \
     --description "subset vep annotated ht" \
