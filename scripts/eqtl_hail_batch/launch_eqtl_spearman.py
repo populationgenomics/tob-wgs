@@ -649,7 +649,6 @@ def run_spearman_correlation_scatter(
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
     # Get association effect data, to be used for violin plots for each genotype of each SNP
-    # TODO: remove redefined gene function param
     def get_association_effect_data():
         sampleid = expression_df.sampleid
         log_cpm = calculate_log_cpm(expression_df)
