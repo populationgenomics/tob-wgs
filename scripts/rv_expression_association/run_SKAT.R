@@ -60,4 +60,4 @@ pv_skat <- SKAT(Z, obj_K)$p.value  # SKAT
 pv_burden <- SKAT(Z, obj_K, r.corr = 1)$p.value  # burden
 pv_skat_o <- SKAT(Z, obj_K, method="SKATO")$p.value  # SKAT-O
 
-print(paste0("no Kinship p-values, SKAT: ", pv_skat, ", burden: ", pv_burden, ", SKAT-O: ", pv_skat_o))
+print(paste0("with Kinship p-values, SKAT: ", pv_skat, ", burden: ", pv_burden, ", SKAT-O: ", pv_skat_o))
