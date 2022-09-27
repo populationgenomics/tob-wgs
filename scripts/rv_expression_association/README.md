@@ -22,7 +22,30 @@ analysis-runner --dataset tob-wgs \
     python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht \
     --chr chr22 --pos 22837780-22946111 --out IGLL5_50K_window_vep
 ```
-in the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or add that to this script.
+To get the interval, for now in a notebook:
+```
+import hail as hl
+import pandas as pd
+
+gene_file = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv'
+gene_df = pd.read_csv(gene_file, sep='\t', index_col=0)
+
+chrom = 22
+gene_name = 'IGLL5'
+window_size = 50000
+
+interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(window_size)
+interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(window_size)
+
+# clip to chromosome boundaries
+left_boundary = max(1, interval_start)
+right_boundary = min(interval_end, hl.get_reference('GRCh38').lengths[f'chr{chrom}'])
+
+# get gene-specific genomic interval
+gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
+gene_interval
+```
+In the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or add that to this script.
 
 This step selects QC-passing, biallelic SNP that are rare (alternative allele frequency < 5%) and that are predicted by VEP to have regulatory consequences.
 Then, it creates plink files (.bed, .bim, .fam) for those variants only.
