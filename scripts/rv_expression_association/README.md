@@ -1,26 +1,26 @@
 ## Analysis plan
 
-The overall goal of these scripts is to run a gene-set association test to test for an association between i) a number of rare genetic variants located around a gene and ii) the expression level of the gene itself (in a given cell type).
+The overall goal of these scripts is to run a gene-set association test to test for an association between i) a number of rare genetic variants located in and around a gene and ii) the expression level of the gene itself (in a given cell type).
 
-At first, I am testing specifically one chromosome 22 gene (_IGLL5_), in naive B cells.
+At first, I am testing specifically one chromosome 22 gene (_VPREB3_), in naive B cells.
 I consider variants located at most 50kb up or down-stream of the gene body (including those within the gene itself).
 Later, I'll want to run this for many genes.
 
 ### Overview
 This folder contains three scripts:
-* [igll5_vep.py](igll5_vep.py) is a Python script which takes a MT + HT object, filters relevant variants (detail below) and exports to plink files
+* [get_vep_variants.py](get_vep_variants.py) is a Python script which takes a MT + HT object, filters relevant variants (detail below) and exports to plink files
 * [prepare_inputs.py](prepare_inputs.py) is a Python script which takes in genotype and expression files and prepares the input files to run SKAT
-* [run_SKAT.R](run_SKAT.R) is an R script that runs SKAT using the inputs generated from the previous script
+* [run_SKAT.R](run_SKAT.R) is an R script that runs SKAT using the inputs generated from the previous scripts and returns association p-values
 
 ### Step 1 - select genetic variants
 
-At the moment, I have subsetted both the MT object and the [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html)-annotated object manually, using [this script](https://github.com/populationgenomics/analysis-runner/blob/main/scripts/subset_matrix_table.py) to a specific genomic region around this one specific gene (IGLL5), _e.g._, for the VEP-annotated hail table (from local version of populationgenomics/analysis-runner/scripts/):
+At the moment, I have subsetted both the MT object and the [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html)-annotated object manually, using [this script](https://github.com/populationgenomics/analysis-runner/blob/main/scripts/subset_matrix_table.py) to a specific genomic region around this one specific gene (_VPREB3_), _e.g._, for the VEP-annotated hail table (from local version of populationgenomics/analysis-runner/scripts/):
 ```
 analysis-runner --dataset tob-wgs \
     --description "subset vep annotated ht" \
     --output-dir "v0" --access-level standard \
     python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht \
-    --chr chr22 --pos 22837780-22946111 --out IGLL5_50K_window_vep
+    --chr chr22 --pos 23702743-23804425 --out VPREB3_50K_window_vep
 ```
 To get the interval, for now in a notebook:
 ```
@@ -31,7 +31,7 @@ gene_file = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/gene_locat
 gene_df = pd.read_csv(gene_file, sep='\t', index_col=0)
 
 chrom = 22
-gene_name = 'IGLL5'
+gene_name = 'VPREB3'
 window_size = 50000
 
 interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(window_size)
@@ -45,7 +45,7 @@ right_boundary = min(interval_end, hl.get_reference('GRCh38').lengths[f'chr{chro
 gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
 gene_interval
 ```
-In the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or add that to this script.
+In the future, either 1) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or 2) add that step to this script.
 
 This step selects QC-passing, biallelic SNP that are rare (alternative allele frequency < 5%) and that are predicted by VEP to have regulatory consequences.
 Then, it creates plink files (.bed, .bim, .fam) for those variants only.
@@ -55,7 +55,7 @@ analysis-runner --dataset "tob-wgs" \
     --description "get set of variants for a gene, convert to plink" \
     --access-level "test" \
     --output-dir "v0" \
-    igll5_vep.p
+    get_vep_variants.py
 ```
 
 ### Step 2 - prepare input files for SKAT
@@ -71,16 +71,19 @@ I use this (Python) script to prepare these input files, using similar steps as 
 To run:
 ```
 analysis-runner --dataset "tob-wgs" \
-    --description "open adata using scanpy" \
+    --description "prepare SKAT input files" \
     --access-level "test" \
     --output-dir "v0" \
     prepare_inputs.py
 ```
 
+#### current steps
+for now, considering all regulatory variants (or, e.g. selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression files from Kat's eQTL files.
+
 ### Step 3 - run SKAT
 
-This is an R script that run SKAT-O in multiple modes:
-* with and without the kinship matrix
+This is an R script that run SKAT-O in multiple modes (after matching sample IDs across objects):
+* with and without the kinship matrix K
 * reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests.
 
 To run:
