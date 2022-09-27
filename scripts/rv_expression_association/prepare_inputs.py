@@ -4,35 +4,51 @@ import subprocess
 import sys
 
 # subprocess.run([sys.executable, '-m', 'pip', 'install', 'scanpy==1.7.3'], check=True)  
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
+# subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True)
 
 import logging
 import pandas as pd
-import scanpy as sc
-import xarray as xr
+# import scanpy as sc
+# import xarray as xr
 # from cloudpathlib import AnyPath
 from cpg_utils import to_path
 from pandas_plink import read_plink1_bin
-from limix.qc import quantile_gaussianize
+# from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # sample_mapping_file = 'gs://cpg-tob-wgs-test/v0/skat/smf_Bcells.csv'
-# phenotype_file = 'gs://cpg-tob-wgs-test/v0/skat/sce22.h5ad'
+phenotype_file = 'gs://cpg-tob-wgs-test/scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv'
 # genotype_file_bed = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bed'
 # genotype_file_bim = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.bim'
 # genotype_file_fam = 'gs://cpg-tob-wgs-test/v0/skat/plink_chr22.fam'
 # kinship_file = 'gs://cpg-tob-wgs-test/v0/skat/grm_wide.csv'
 
-
+@click.command()
+# @click.option("--chrom", required=True, help="More info here")
+# @click.option("--gene-name", required=True)
+# @click.option("--sample-mapping-file", required=True)
+@click.option("--genotype-file-bed", required=True)
+@click.option("--genotype-file-bim", required=True)
+@click.option("--genotype-file-fam", required=True)
+@click.option("--phenotype-file", required=True)
+# @click.option("--context-file", required=True)
+# @click.option("--kinship-file", required=True)
+# @click.option("--feature-variant-file", required=True)
+# @click.option(
+#     "--output-folder", required=False, default=""
+# )  # by default current directory, where you are running your script from
+# @click.option("--n-contexts", required=False, type=int)
 def main(
     # chrom: str,
     # gene_name: str,
     # sample_mapping_file: str,
-    # genotype_file: str,
-    # phenotype_file: str,
+    genotype_file_bed: str,
+    genotype_file_bim: str,
+    genotype_file_fam: str,
+    phenotype_file: str,
     # # context_file: str,
     # kinship_file: str,
     # # feature_variant_file: str,
