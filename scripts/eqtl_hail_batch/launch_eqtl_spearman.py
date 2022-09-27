@@ -557,15 +557,14 @@ def run_spearman_correlation_scatter(
     # perform correlation in chunks by gene
 
     # get all SNPs which are within 1Mb of each gene
-    init_batch(driver_cores=8, worker_cores=8)
+    # TODO: can we drop these cores: 8 -> 1
+    init_batch(driver_cores=1, worker_cores=1, driver_memory='highmem')
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     # this is important, since not all individuals have expression/residual
     # data (this varies by cell type)
     # this also filters out any sc sample outliers
     samples_to_keep = hl.literal(list(residuals_df.sampleid))
-    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
-
     # Do this only on SNPs contained within 1Mb gene region to save on
     # computational time
     right_boundary = min(
@@ -583,6 +582,10 @@ def run_spearman_correlation_scatter(
         | (hl.agg.all(mt.GT.n_alt_alleles() == 2)),
         keep=False,
     )
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
+    # TODO: mfranklin to check mt.persist, as mt.rows() is called twice
+    mt = mt.persist(output_path(f'{chromosome}/{gene_name}.mt', 'tmp'))
+
     position_table = mt.rows().select()
     position_table = position_table.annotate(
         position=position_table.locus.position,
@@ -929,7 +932,6 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     # this is important, since not all indivuduals have expression/residual
     # data (this varies by cell type)
     samples_to_keep = hl.set(list(residual_df.sampleid))
-    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
 
     # Do this only on SNPs contained within gene_snp_df to save on
     # computational time
@@ -952,6 +954,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     mt = hl.filter_intervals(
         mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
     )
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     t = mt.entries()
     t = t.annotate(n_alt_alleles=t.GT.n_alt_alleles())
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
@@ -1372,9 +1375,10 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
 )
 @click.option(
-    '--limit-genes-to-test',
-    type=int,
-    help='Limit number of genes to test with (number)',
+    '--gene',
+    type=str,
+    multiple=True,
+    help='Limit to specific genes to test with (name of gene)',
 )
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
@@ -1384,7 +1388,7 @@ def from_cli(
     cell_types: list[str] | None,
     force: bool = False,
     local_debug: bool = False,
-    limit_genes_to_test: int = None,
+    gene: list[str] = None,
 ):
     """Run the EQTL analysis from command line arguments"""
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
@@ -1407,7 +1411,7 @@ def from_cli(
         chromosomes=chromosomes_list,
         cell_types=cell_types,
         force=force,
-        limit_genes_to_test=limit_genes_to_test,
+        genes=gene,
     )
     # pylint: disable=protected-access
     _logger.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
@@ -1425,7 +1429,7 @@ def main(
     frequency_table_path: str = DEFAULT_FREQUENCY_TABLE_PATH,
     vep_annotation_table_path: str = DEFAULT_VEP_ANNOTATION_TABLE_PATH,
     gencode_gtf_path: str = DEFAULT_GENCODE_GTF_PATH,
-    limit_genes_to_test: int = None,
+    genes: list[str] = None,
     force: bool = False,
 ):
     """Run association script for all chromosomes and cell types"""
@@ -1485,13 +1489,10 @@ def main(
                 f'GRCh38_geneloc_chr{chromosome}.tsv',
             )
 
-            genes = get_genes_for_chromosome(
+            _genes = genes or get_genes_for_chromosome(
                 expression_tsv_path=expression_tsv_path,
                 geneloc_tsv_path=geneloc_tsv_path,
             )
-
-            if limit_genes_to_test and limit_genes_to_test < len(genes):
-                genes = genes[:limit_genes_to_test]
 
             eqtl_outputs = generate_eqtl_spearman(
                 batch=batch,
@@ -1501,7 +1502,7 @@ def main(
                 cell_type=cell_type,
                 chromosome=chromosome,
                 output_prefix=output_path(f'{cell_type}/{chromosome}'),
-                genes=genes,
+                genes=_genes,
                 # derived paths
                 filtered_mt_path=filtered_mt_path,
                 gencode_gtf_path=gencode_gtf_path,
@@ -1515,7 +1516,7 @@ def main(
                 # constants
                 force=force,
                 job_prefix=f'{cell_type}_chr{chromosome}_conditional_',
-                genes=genes,
+                genes=_genes,
                 cell_type=cell_type,
                 chromosome=chromosome,
                 filtered_matrix_table_path=filtered_mt_path,
