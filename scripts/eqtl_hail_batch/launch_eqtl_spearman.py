@@ -584,7 +584,7 @@ def run_spearman_correlation_scatter(
     )
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     # TODO: mfranklin to check mt.persist, as mt.rows() is called twice
-    mt = mt.persist(output_path(f'{chromosome}/{gene_name}.mt', 'tmp'))
+    mt = mt.persist('MEMORY_AND_DISK')
 
     position_table = mt.rows().select()
     position_table = position_table.annotate(
