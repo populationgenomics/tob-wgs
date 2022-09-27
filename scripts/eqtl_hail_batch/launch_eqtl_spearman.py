@@ -714,7 +714,7 @@ def run_spearman_correlation_scatter(
 
         return pd.DataFrame.from_dict(snp_gt_summary_data)
 
-    association_effect_data = get_association_effect_data(gene_name)
+    association_effect_data = get_association_effect_data()
     # write association effect data
     association_effect_path = output_path(
         os.path.join(
