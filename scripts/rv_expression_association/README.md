@@ -92,5 +92,6 @@ analysis-runner --dataset "tob-wgs" \
     --description "run SKAT" \
     --access-level "test" \
     --output-dir "v0" \
-    Rscript run_SKAT.R
+    --image australia-southeast1-docker.pkg.dev/analysis-runner/images/driver-r:1.2 \
+    run_SKAT.R
 ``` 
