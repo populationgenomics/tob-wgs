@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-suppressPackageStartupMessages(suppressMessages(install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au', quietly = T))))
-suppressPackageStartupMessages(suppressMessages(install.packages("SKAT", repos = 'http://cran.csiro.au/', quietly = T))))
+suppressPackageStartupMessages(suppressMessages(install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au', quietly = T)))
+suppressPackageStartupMessages(suppressMessages(install.packages("SKAT", repos = 'http://cran.csiro.au/', quietly = T)))
 
 suppressPackageStartupMessages(library(googleCloudStorageR, quietly = T)))
 suppressPackageStartupMessages(library(gargle, quietly = T)))
