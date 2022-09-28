@@ -11,9 +11,12 @@ from cloudpathlib import AnyPath
 from cpg_utils import to_path
 from cpg_utils.hail_batch import output_path
 
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4', 'pandas_plink==2.2.9'], check=True)
+subprocess.run(
+    [sys.executable, '-m', 'pip', 'install', 'limix==3.0.4', 'pandas_plink==2.2.9'],
+    check=True,
+)
 
-from pandas_plink import read_plink1_bin   # pylint: disable=wrong-import-position
+from pandas_plink import read_plink1_bin  # pylint: disable=wrong-import-position
 from limix.qc import quantile_gaussianize  # pylint: disable=wrong-import-position
 
 # use logging to print statements, display at info level
@@ -120,17 +123,13 @@ def main(
     donors_exprs = sorted(
         set(list(phenotype.sample.values)).intersection(donors_onek1k)
     )
-    logging.info(
-        f'Number of unique donors with expression data: {len(donors_exprs)}')
-    )
+    logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
     ## samples with genotype data
     donors_cpg = sample_mapping['InternalID'].unique()
     donors_cpg.sort()
     donors_geno = sorted(set(list(G.sample.values)).intersection(donors_cpg))
-    logging.info(
-        f'Number of unique donors with genotype data: {len(donors_geno)}'
-    )
+    logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
     ## samples with both (can this be done in one step?)
     sample_mapping1 = sample_mapping.loc[sample_mapping['OneK1K_ID'].isin(donors_exprs)]
