@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import click
 import logging
-import re
 import subprocess
 import sys
+import re
+import click
 import pandas as pd
 import xarray as xr
 from cloudpathlib import AnyPath
