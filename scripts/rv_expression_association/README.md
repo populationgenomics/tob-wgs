@@ -8,7 +8,7 @@ Later, I'll want to run this for many genes.
 
 ### Overview
 This folder contains three scripts:
-* [get_vep_variants.py](get_vep_variants.py) is a Python script which takes a MT + HT object, filters relevant variants (detail below) and exports to plink files
+* [get_vep_variants.py](get_vep_variants.py) is a Python script which takes a hail MT + HT object, filters for relevant variants (detailed below), and exports to plink files
 * [prepare_inputs.py](prepare_inputs.py) is a Python script which takes in genotype and expression files and prepares the input files to run SKAT
 * [run_SKAT.R](run_SKAT.R) is an R script that runs SKAT using the inputs generated from the previous scripts and returns association p-values
 
