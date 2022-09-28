@@ -61,9 +61,9 @@ def main(
     genotype_filename = AnyPath(output_path(f'{gene_name}_rare_regulatory.csv'))
     kinship_filename = AnyPath(output_path('kinship_common_samples.csv'))
 
-    ######################################
-    ########### phenotype file ###########
-    ######################################
+    #####################
+    ### phenotype file ##
+    #####################
 
     phenotype = pd.read_csv(phenotype_file, sep='\t', index_col=0)
 
@@ -73,9 +73,9 @@ def main(
         coords={'sample': phenotype.index.values, 'gene': phenotype.columns.values},
     )
 
-    ######################################
-    ############ kinship file ############
-    ######################################
+    ####################
+    ### kinship file ###
+    ####################
 
     ## read in GRM (genotype relationship matrix; kinship matrix)
     K = pd.read_csv(kinship_file, index_col=0)
@@ -89,9 +89,9 @@ def main(
     )
     K = K.sortby('sample_0').sortby('sample_1')
 
-    #######################################
-    ############ genotype files ###########
-    #######################################
+    #####################
+    ### genotype files ##
+    #####################
 
     # read in genotype file (plink format)
     # bed
@@ -112,9 +112,9 @@ def main(
     # read
     G = read_plink1_bin('temp.bed')
 
-    #####################################
-    ##### sample mapping file (SMF) #####
-    #####################################
+    #################################
+    ### sample mapping file (SMF) ###
+    #################################
 
     # this file will map different IDs (and OneK1K ID to CPG ID)
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
@@ -152,9 +152,9 @@ def main(
     donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
     donors_k = sorted(set(list(K.sample_0.values)).intersection(donors_e_short))
 
-    #########################################
-    ##### subset files to common samples ####
-    #########################################
+    ######################################
+    ### subset files to common samples ###
+    ######################################
 
     ###############
     #### phenotype
