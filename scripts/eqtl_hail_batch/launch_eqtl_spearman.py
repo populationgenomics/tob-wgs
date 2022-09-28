@@ -71,11 +71,6 @@ DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gt
 
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
 
-# Limit parallelism to avoid starting too many jobs near the root of the scheduling
-# tree, leaving too few resources for leaf nodes (particularly Hail Query jobs).  This
-# value is fairly small, as we also process chromosomes and cell types in parallel.
-GENE_LEVEL_PARALLELISM = 10
-
 
 # region FILTER_JOINT_CALL_MT
 
@@ -170,6 +165,7 @@ def generate_eqtl_spearman(
     output_prefix: str,
     # can be derived, but better to pass
     genes: list[str],
+    gene_level_parallelism: int,
     cell_type: str,
     chromosome: str,  # pylint: disable=unused-argument
     force: bool = False,
@@ -252,8 +248,8 @@ def generate_eqtl_spearman(
         jobs.append(j)
 
         # Limit parallelism.
-        if len(jobs) >= GENE_LEVEL_PARALLELISM:
-            j.depends_on(jobs[len(jobs) - GENE_LEVEL_PARALLELISM])
+        if len(jobs) >= gene_level_parallelism:
+            j.depends_on(jobs[len(jobs) - gene_level_parallelism])
 
     if len(jobs) == 0:
         # we've reused results the whole way, so no need for 'fake' sink
@@ -811,6 +807,7 @@ def generate_conditional_analysis(
     significant_snps_directory: str,
     residuals_path: str,
     genes: list[str],
+    gene_level_parallelism: int,
     iterations: int = 4,
     output_prefix: str,
     force: bool = False,
@@ -898,8 +895,8 @@ def generate_conditional_analysis(
                 jobs.append(j)
 
                 # Limit parallelism.
-                if len(jobs) >= GENE_LEVEL_PARALLELISM:
-                    j.depends_on(jobs[len(jobs) - GENE_LEVEL_PARALLELISM])
+                if len(jobs) >= gene_level_parallelism:
+                    j.depends_on(jobs[len(jobs) - gene_level_parallelism])
 
         previous_sig_snps_directory = new_sig_snps_directory
         sig_snps_dependencies = jobs
@@ -1392,6 +1389,15 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     multiple=True,
     help='Limit to specific genes to test with (name of gene)',
 )
+@click.option(
+    '--gene-level-parallelism',
+    type=int,
+    default=10,
+    help='The number of genes to process in parallel, for each chromosome and cell type. '
+    'This is useful to avoid starting too many jobs near the root of the scheduling tree, '
+    'leaving too few resources for leaf nodes (particularly Hail Query jobs). The default '
+    'value is fairly small, as we also process chromosomes and cell types in parallel.',
+)
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
 def from_cli(
@@ -1401,6 +1407,7 @@ def from_cli(
     force: bool = False,
     local_debug: bool = False,
     gene: list[str] = None,
+    gene_level_parallelism,
 ):
     """Run the EQTL analysis from command line arguments"""
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
@@ -1422,8 +1429,9 @@ def from_cli(
         input_files_prefix=input_files_prefix,
         chromosomes=chromosomes_list,
         cell_types=cell_types,
-        force=force,
         genes=gene,
+        gene_level_parallelism=gene_level_parallelism,
+        force=force,
     )
     # pylint: disable=protected-access
     _logger.info(f'Got {len(batch._jobs)} jobs in {batch.name}')
@@ -1434,15 +1442,16 @@ def main(
     batch: hb.Batch,
     *,
     input_files_prefix: str,
-    chromosomes: list[str] | None,
-    cell_types: list[str] = None,
+    chromosomes: list[str],
+    cell_types: list[str],
+    genes: list[str],
+    gene_level_parallelism: int,
+    force: bool,
     conditional_iterations: int = 4,
     joint_call_table_path: str = DEFAULT_JOINT_CALL_TABLE_PATH,
     frequency_table_path: str = DEFAULT_FREQUENCY_TABLE_PATH,
     vep_annotation_table_path: str = DEFAULT_VEP_ANNOTATION_TABLE_PATH,
     gencode_gtf_path: str = DEFAULT_GENCODE_GTF_PATH,
-    genes: list[str] = None,
-    force: bool = False,
 ):
     """Run association script for all chromosomes and cell types"""
 
@@ -1515,6 +1524,7 @@ def main(
                 chromosome=chromosome,
                 output_prefix=output_path(f'{cell_type}/{chromosome}'),
                 genes=_genes,
+                gene_level_parallelism=gene_level_parallelism,
                 # derived paths
                 filtered_mt_path=filtered_mt_path,
                 gencode_gtf_path=gencode_gtf_path,
@@ -1529,6 +1539,7 @@ def main(
                 force=force,
                 job_prefix=f'{cell_type}_chr{chromosome}_conditional_',
                 genes=_genes,
+                gene_level_parallelism=gene_level_parallelism,
                 cell_type=cell_type,
                 chromosome=chromosome,
                 filtered_matrix_table_path=filtered_mt_path,
