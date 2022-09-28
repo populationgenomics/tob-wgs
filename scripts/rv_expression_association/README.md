@@ -2,7 +2,7 @@
 
 This runs a gene-set association analysis to test for an association between i) a set of rare genetic variants located in and around (now, up to 50kb up and downstream of) a gene and ii) the expression level of the gene itself (in a given cell type).
 
-At first, I am testing specifically one chromosome 22 gene (_VPREB3_), in naive B cells.
+Testing is done on one gene within chromosome 22, VPREB3, in naive B cells, which will be further expanded to multiple genes.
 I consider variants located at most 50kb up or down-stream of the gene body (including those within the gene itself).
 Later, I'll want to run this for many genes.
 
