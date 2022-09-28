@@ -32,14 +32,15 @@ def main():
     # annotate using VEP
     vep_ht = hl.read_table(VEP_HT)
     mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
-
+    mt_path = output_path('densified_qced_snps_only_vep_annotated.mt', 'tmp')
+    mt = mt.checkpoint(mt_path, overwrite=True)  # add checkpoint to avoid repeat evaluation
     logging.info('Number of QC-passing, biallelic SNPs: {}'.format(mt.count()[0]))
 
     # filter rare variants only (MAF < 5%)
     mt = hl.variant_qc(mt)
-    rv_mt = mt.filter_rows(mt.variant_qc.AF[1] < 0.05)
-    rv_mt = rv_mt.filter_rows(rv_mt.variant_qc.AF[1] > 0)
-
+    rv_mt = mt.filter_rows((mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0))
+    rv_mt_path = output_path('rare_variants.mt', 'tmp')
+    rv_mt = rv_mt.checkpoint(rv_mt_path, overwrite=True)
     logging.info('Number of rare variants (freq<5%): {}'.format(rv_mt.count()[0]))
 
     # filter variants found to have regulatory effects
@@ -75,9 +76,9 @@ def main():
 
     # MAF distribution
     mafs = pd.Series(filtered_mt.variant_qc.AF[1].collect())
-    logging.info('Min frequency in set: {}'.format(np.nanmin(mafs)))
-    logging.info('Max frequency in set: {}'.format(np.nanmax(mafs)))
-    logging.info('Mean frequency in set: {}'.format(np.nanmean(mafs)))
+    logging.info(f'Min frequency in set: {np.nanmin(mafs)}')
+    logging.info(f'Max frequency in set: {np.nanmax(mafs)}')
+    logging.info(f'Mean frequency in set: {np.nanmean(mafs)}')
 
     # export MT object to PLINK (all regulatory variants)
     filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
