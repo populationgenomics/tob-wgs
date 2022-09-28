@@ -1366,15 +1366,15 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
 
 @click.command()
 @click.option(
-    '--chromosomes',
-    help='List of chromosome numbers to run eQTL analysis on. '
-    'Space separated, as one argument (Default: all)',
-)
-@click.option(
     '--input-files-prefix',
     required=True,
     help='A path prefix of where input files are located. eg: gs://MyBucket/folder. '
     'If a relative path is given, it will be from the output-path',
+)
+@click.option(
+    '--chromosomes',
+    help='List of chromosome numbers to run eQTL analysis on. '
+    'Space separated, as one argument (Default: all)',
 )
 @click.option(
     '--gene-level-parallelism',
@@ -1400,8 +1400,8 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
 def from_cli(
-    chromosomes: str,
     input_files_prefix: str,
+    chromosomes: str,
     gene_level_parallelism,
     cell_types: list[str] | None,
     force: bool = False,
