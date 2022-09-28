@@ -33,36 +33,32 @@ def main():
     vep_ht = hl.read_table(VEP_HT)
     mt = mt.annotate_rows(vep=vep_ht[mt.row_key].vep)
     mt_path = output_path('densified_qced_snps_only_vep_annotated.mt', 'tmp')
-    mt = mt.checkpoint(mt_path, overwrite=True)  # add checkpoint to avoid repeat evaluation
-    logging.info('Number of QC-passing, biallelic SNPs: {}'.format(mt.count()[0]))
+    mt = mt.checkpoint(
+        mt_path, overwrite=True
+    )  # add checkpoint to avoid repeat evaluation
+    logging.info(f'Number of QC-passing, biallelic SNPs: {mt.count()[0]}')
 
     # filter rare variants only (MAF < 5%)
     mt = hl.variant_qc(mt)
     rv_mt = mt.filter_rows((mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0))
     rv_mt_path = output_path('rare_variants.mt', 'tmp')
     rv_mt = rv_mt.checkpoint(rv_mt_path, overwrite=True)
-    logging.info('Number of rare variants (freq<5%): {}'.format(rv_mt.count()[0]))
+    logging.info(f'Number of rare variants (freq<5%): {rv_mt.count()[0]}')
 
     # filter variants found to have regulatory effects
     filtered_mt = rv_mt.filter_rows(
         hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0
     )
     logging.info(
-        'Number of rare variants (freq<5%) with ergulatory conequences: {}'.format(
-            filtered_mt.count()[0]
-        )
+        f'Number of rare variants (freq<5%) with ergulatory conequences: {filtered_mt.count()[0]}'
     )
 
     filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
-    logging.info(
-        'Number of rarer variants (freq<1%): {}'.format(filtered_rrv_mt.count()[0])
-    )
+    logging.info(f'Number of rarer variants (freq<1%): {filtered_rrv_mt.count()[0]}')
 
     filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
     logging.info(
-        'Check that there are {} variants with freq==0'.format(
-            filtered_0maf_mt.count()[0]
-        )
+        f'Check that there are {filtered_0maf_mt.count()[0]} variants with freq==0'
     )
 
     # print out stats
