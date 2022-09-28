@@ -13,8 +13,8 @@ from cpg_utils.hail_batch import output_path
 
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4', 'pandas_plink==2.2.9'], check=True)
 
-from pandas_plink import read_plink1_bin   # pylint: disable=import-error
-from limix.qc import quantile_gaussianize  # pylint: disable=import-error
+from pandas_plink import read_plink1_bin   # pylint: disable=wrong-import-position
+from limix.qc import quantile_gaussianize  # pylint: disable=wrong-import-position
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
