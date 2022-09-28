@@ -58,9 +58,7 @@ def main(
     genotype_filename = AnyPath(output_path(f'{gene_name}_rare_regulatory.csv'))
     kinship_filename = AnyPath(output_path('kinship_common_samples.csv'))
 
-    ##################### lint also not happy with these, should I care?
-    ### phenotype file ##
-    #####################
+    # region PHENOTYPE_FILE
 
     phenotype = pd.read_csv(phenotype_file, sep='\t', index_col=0)
 
@@ -70,9 +68,9 @@ def main(
         coords={'sample': phenotype.index.values, 'gene': phenotype.columns.values},
     )
 
-    ####################
-    ### kinship file ###
-    ####################
+    # endregion PHENOTYPE_FILE
+
+    # region KINSHIP_FILE
 
     ## read in GRM (genotype relationship matrix; kinship matrix)
     K = pd.read_csv(kinship_file, index_col=0)
@@ -86,9 +84,9 @@ def main(
     )
     K = K.sortby('sample_0').sortby('sample_1')
 
-    #####################
-    ### genotype files ##
-    #####################
+    # endregion KINSHIP_FILE
+
+    # region GENOTYPE_FILE
 
     # read in genotype file (plink format)
     # bed
@@ -109,9 +107,9 @@ def main(
     # read
     G = read_plink1_bin('temp.bed')
 
-    #################################
-    ### sample mapping file (SMF) ###
-    #################################
+    # endregion GENOTYPE_FILE
+
+    # region SAMPLE_MAPPING_FILE
 
     # this file will map different IDs (and OneK1K ID to CPG ID)
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
@@ -149,9 +147,9 @@ def main(
     donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
     donors_k = sorted(set(list(K.sample_0.values)).intersection(donors_e_short))
 
-    ######################################
-    ### subset files to common samples ###
-    ######################################
+    # endregion SAMPLE_MAPPING_FILE
+
+    # region SUBSET_FILES
 
     ###############
     #### phenotype
@@ -191,9 +189,9 @@ def main(
 
     del K  # delete K to free up memory
 
-    #########################################
-    ############## save files ###############
-    #########################################
+    # endregion SUBSET_FILES
+
+    # region SAVE_FILES
 
     with expression_filename.open('w') as ef:
         y_df.to_csv(ef, index=False)
@@ -204,6 +202,7 @@ def main(
     with kinship_filename.open('w') as kf:
         K_df.to_csv(kf, index=False)
 
+    # endregion SAVE_FILES
 
 if __name__ == '__main__':
     main()
