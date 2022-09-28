@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import logging
+import re
 import subprocess
 import sys
 
@@ -8,8 +10,6 @@ subprocess.run(
     [sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True
 )
 
-import logging
-import re
 import pandas as pd
 import xarray as xr
 from cloudpathlib import AnyPath
