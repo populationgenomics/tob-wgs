@@ -23,12 +23,12 @@ def main():
 
     logging.info('Number of variants in window: {}'.format(mt.count()[0]))
 
-    # filter out low quality variants
-    mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-
-    # consider biallelic variants only (no multi-allelic, no ref-only)
-    mt = mt.filter_rows(hl.len(mt.alleles) == 2)
-    mt = mt.filter_rows(hl.is_snp(mt.alleles[0], mt.alleles[1]))
+    # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
+    mt = mt.filter_rows(
+        (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
+        & (hl.len(mt.alleles) == 2)
+        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))
+    )
 
     # annotate using VEP
     vep_ht = hl.read_table(VEP_HT)
