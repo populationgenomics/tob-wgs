@@ -1366,28 +1366,15 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
 
 @click.command()
 @click.option(
-    '--input-files-prefix',
-    required=True,
-    help='A path prefix of where input files are located. eg: gs://MyBucket/folder. '
-    'If a relative path is given, it will be from the output-path',
-)
-@click.option(
     '--chromosomes',
     help='List of chromosome numbers to run eQTL analysis on. '
     'Space separated, as one argument (Default: all)',
 )
 @click.option(
-    '--cell-types',
-    default=None,
-    multiple=True,
-    help='List of cell types to test. All available cell types can be found in '
-    '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
-)
-@click.option(
-    '--gene',
-    type=str,
-    multiple=True,
-    help='Limit to specific genes to test with (name of gene)',
+    '--input-files-prefix',
+    required=True,
+    help='A path prefix of where input files are located. eg: gs://MyBucket/folder. '
+    'If a relative path is given, it will be from the output-path',
 )
 @click.option(
     '--gene-level-parallelism',
@@ -1398,16 +1385,28 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     'leaving too few resources for leaf nodes (particularly Hail Query jobs). The default '
     'value is fairly small, as we also process chromosomes and cell types in parallel.',
 )
+@click.option(
+    '--cell-types',
+    multiple=True,
+    help='List of cell types to test. All available cell types can be found in '
+    '`gs://cpg-tob-wgs-main/scrna-seq/grch38_association_files/expression_files/`',
+)
+@click.option(
+    '--gene',
+    type=str,
+    multiple=True,
+    help='Limit to specific genes to test with (name of gene)',
+)
 @click.option('--force', is_flag=True, help='Skip checkpoints')
 @click.option('--local-debug', is_flag=True, help='Dry run without service-backend')
 def from_cli(
     chromosomes: str,
     input_files_prefix: str,
+    gene_level_parallelism,
     cell_types: list[str] | None,
     force: bool = False,
     local_debug: bool = False,
     gene: list[str] = None,
-    gene_level_parallelism,
 ):
     """Run the EQTL analysis from command line arguments"""
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
