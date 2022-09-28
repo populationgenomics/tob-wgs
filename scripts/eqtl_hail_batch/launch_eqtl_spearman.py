@@ -575,6 +575,7 @@ def run_spearman_correlation_scatter(
     mt = hl.filter_intervals(
         mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
     )
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     # remove SNPs with no variance
     mt = mt.filter_rows(
         (hl.agg.all(mt.GT.n_alt_alleles() == 0))
@@ -582,7 +583,6 @@ def run_spearman_correlation_scatter(
         | (hl.agg.all(mt.GT.n_alt_alleles() == 2)),
         keep=False,
     )
-    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     mt = mt.persist('MEMORY_AND_DISK')
 
     position_table = mt.rows().select()
