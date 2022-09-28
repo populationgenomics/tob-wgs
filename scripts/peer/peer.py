@@ -17,11 +17,12 @@ Test run this with:
 
 import os
 import logging
+from typing import Tuple
+
 import click
 import hailtop.batch as hb
 import pandas as pd
-from typing import Tuple
-from cpg_utils.hail import remote_tmpdir, output_path
+from cpg_utils.hail_batch import remote_tmpdir, output_path
 from google.cloud import storage
 
 PEER_DOCKER = 'australia-southeast1-docker.pkg.dev/cpg-common/images/peer:1.3.2'
@@ -108,6 +109,7 @@ def run_peer_job(job: hb.batch.job.Job, expression_file, covariates_file):
     """
 
     job.image(PEER_DOCKER)
+    # pylint: disable=protected-access
     job._preemptible = False
 
     # write python script to container
