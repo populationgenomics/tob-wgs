@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
+import click
 import logging
 import re
 import subprocess
 import sys
+import pandas as pd
+import xarray as xr
+from cloudpathlib import AnyPath
+from cpg_utils import to_path
+from cpg_utils.hail_batch import output_path
 
 subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
 subprocess.run(
     [sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True
 )
 
-import pandas as pd
-import xarray as xr
-from cloudpathlib import AnyPath
-from cpg_utils import to_path
 from pandas_plink import read_plink1_bin
 from limix.qc import quantile_gaussianize
 
@@ -22,26 +24,26 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
 @click.command()
-@click.option("--cell-type", required=True, help="More info here")
-@click.option("--gene-name", required=True)  # 'VPREB3'
+@click.option('--cell-type', required=True, help='More info here')
+@click.option('--gene-name', required=True)  # 'VPREB3'
 @click.option(
-    "--sample-mapping-file", required=True
+    '--sample-mapping-file', required=True
 )  # 'scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv'
 @click.option(
-    "--genotype-file-bed", required=True
+    '--genotype-file-bed', required=True
 )  # 'v0/plink_files/vpreb3_rare_promoter.bed'
 @click.option(
-    "--genotype-file-bim", required=True
+    '--genotype-file-bim', required=True
 )  # 'v0/plink_files/vpreb3_rare_promoter.bim'
 @click.option(
-    "--genotype-file-fam", required=True
+    '--genotype-file-fam', required=True
 )  # 'v0/plink_files/vpreb3_rare_promoter.fam'
 @click.option(
-    "--phenotype-file", required=True
+    '--phenotype-file', required=True
 )  # 'scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv'
-@click.option("--kinship-file", required=True)  # 'v0/skat/grm_wide.csv'
+@click.option('--kinship-file', required=True)  # 'v0/skat/grm_wide.csv'
 @click.option(
-    "--output-folder", required=False, default=""
+    '--output-folder', required=False, default=''
 )  # by default current directory, where you are running your script from
 def main(
     cell_type: str,
@@ -63,7 +65,7 @@ def main(
     ########### phenotype file ###########
     ######################################
 
-    phenotype = pd.read_csv(phenotype_file, sep="\t", index_col=0)
+    phenotype = pd.read_csv(phenotype_file, sep='\t', index_col=0)
 
     phenotype = xr.DataArray(
         phenotype.values,
@@ -71,9 +73,9 @@ def main(
         coords={'sample': phenotype.index.values, 'gene': phenotype.columns.values},
     )
 
-    # # ######################################
-    # # ############ kinship file ############
-    # # ######################################
+    ######################################
+    ############ kinship file ############
+    ######################################
 
     ## read in GRM (genotype relationship matrix; kinship matrix)
     K = pd.read_csv(kinship_file, index_col=0)
@@ -87,9 +89,9 @@ def main(
     )
     K = K.sortby('sample_0').sortby('sample_1')
 
-    # #######################################
-    # ############ genotype files ###########
-    # #######################################
+    #######################################
+    ############ genotype files ###########
+    #######################################
 
     # read in genotype file (plink format)
     # bed
@@ -147,7 +149,7 @@ def main(
     logging.info('Number of unique common donors: {}'.format(len(donors_g)))
 
     ## samples in kinship
-    donors_e_short = [re.sub(".*_", "", donor) for donor in donors_e]
+    donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
     donors_k = sorted(set(list(K.sample_0.values)).intersection(donors_e_short))
 
     #########################################
