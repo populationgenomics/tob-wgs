@@ -1404,9 +1404,9 @@ def from_cli(
     chromosomes: str,
     gene_level_parallelism,
     cell_types: list[str] | None,
-    force: bool = False,
-    local_debug: bool = False,
-    gene: list[str] = None,
+    gene: list[str] | None,
+    force: bool,
+    local_debug: bool,
 ):
     """Run the EQTL analysis from command line arguments"""
     chromosomes_list = chromosomes.split(' ') if chromosomes else None
@@ -1441,9 +1441,9 @@ def main(
     batch: hb.Batch,
     *,
     input_files_prefix: str,
-    chromosomes: list[str],
-    cell_types: list[str],
-    genes: list[str],
+    chromosomes: list[str] | None,
+    cell_types: list[str] | None,
+    genes: list[str] | None,
     gene_level_parallelism: int,
     force: bool,
     conditional_iterations: int = 4,
