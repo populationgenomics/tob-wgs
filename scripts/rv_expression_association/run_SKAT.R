@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
 
-suppressPackageStartupMessages(suppressMessages(install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au', quietly = T)))
-suppressPackageStartupMessages(suppressMessages(install.packages("SKAT", repos = 'http://cran.csiro.au/', quietly = T)))
+install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au')
+install.packages("SKAT", repos = 'http://cran.csiro.au/')
 
-suppressPackageStartupMessages(library(googleCloudStorageR, quietly = T))
-suppressPackageStartupMessages(library(gargle, quietly = T))
-suppressPackageStartupMessages(library(dplyr, quietly = T))
-suppressPackageStartupMessages(library(SKAT, quietly = T))
+library(googleCloudStorageR)
+library(gargle)
+library(dplyr)
+library(SKAT)
 
 # token authorisation
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
