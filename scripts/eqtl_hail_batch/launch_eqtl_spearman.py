@@ -74,7 +74,7 @@ MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0
 # Limit parallelism to avoid starting too many jobs near the root of the scheduling
 # tree, leaving too few resources for leaf nodes (particularly Hail Query jobs).  This
 # value is fairly small, as we also process chromosomes and cell types in parallel.
-GENE_LEVEL_PARALLELISM = 20
+GENE_LEVEL_PARALLELISM = 10
 
 
 # region FILTER_JOINT_CALL_MT
