@@ -50,9 +50,9 @@ def main():
         hl.len(rv_mt.vep.regulatory_feature_consequences['biotype']) > 0
     )
     filtered_mt_path = output_path('regulatory_variants.mt', 'tmp')
-    filtered_mt = filtered_mt.checkpoint(filtered_mt_path, overwrite=True)
+    filtered_mt = filtered_mt.checkpoint(filtered_mt_path, overwrite=True)  # checkpoint
     logging.info(
-        f'Number of rare variants (freq<5%) with regulatory conequences: {filtered_mt.count()[0]}'
+        f'Number of rare variants (freq<5%) with regulatory consequences: {filtered_mt.count()[0]}'
     )
 
     filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
