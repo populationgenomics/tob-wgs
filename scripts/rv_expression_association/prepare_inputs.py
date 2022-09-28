@@ -16,7 +16,7 @@ subprocess.run(
     [sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True
 )
 
-from pandas_plink import read_plink1_bin
+from pandas_plink import read_plink1_bin  # lint complains about these but surely i need to install them before i can import them? 
 from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
@@ -61,7 +61,7 @@ def main(
     genotype_filename = AnyPath(output_path(f'{gene_name}_rare_regulatory.csv'))
     kinship_filename = AnyPath(output_path('kinship_common_samples.csv'))
 
-    #####################
+    ##################### lint also not happy with these, should I care?
     ### phenotype file ##
     #####################
 
