@@ -78,7 +78,8 @@ analysis-runner --dataset "tob-wgs" \
 ```
 
 #### current steps
-for now, considering all regulatory variants (or, _e.g.,_ selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression file (here, donor-level aggregated expression in naive B cells) from Kat's eQTL files.
+
+For now, considering all regulatory variants (or, _e.g.,_ selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression file (here, donor-level aggregated expression in naive B cells) from Kat's eQTL files.
 
 ### Step 3 - run SKAT
 
