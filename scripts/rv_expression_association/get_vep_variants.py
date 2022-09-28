@@ -19,10 +19,9 @@ def main():
     # read and densify object
     init_batch()
     mt = hl.read_matrix_table(MT)
-    mt = hl.experimental.densify(mt)
-
     logging.info('Number of variants in window: {}'.format(mt.count()[0]))
 
+    mt = hl.experimental.densify(mt)
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(
         (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
