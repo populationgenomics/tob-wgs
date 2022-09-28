@@ -587,7 +587,9 @@ def run_spearman_correlation_scatter(
         | (hl.agg.all(mt.GT.n_alt_alleles() == 2)),
         keep=False,
     )
-    mt = mt.persist('MEMORY_AND_DISK')
+    mt = mt.checkpoint(
+        output_path(f'eqtl/{cell_type}/{chromosome}/{gene_name}.mt', 'tmp'), overwrite=True
+    )
 
     position_table = mt.rows().select()
     position_table = position_table.annotate(
