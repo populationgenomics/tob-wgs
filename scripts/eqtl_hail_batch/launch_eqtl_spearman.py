@@ -71,6 +71,11 @@ DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gt
 
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
 
+# Limit parallelism to avoid starting too many jobs near the root of the scheduling
+# tree, leaving too few resources for leaf nodes (particularly Hail Query jobs).  This
+# value is fairly small, as we also process chromosomes and cell types in parallel.
+GENE_LEVEL_PARALLELISM = 20
+
 
 # region FILTER_JOINT_CALL_MT
 
@@ -211,10 +216,9 @@ def generate_eqtl_spearman(
         )
 
     spearman_output_directory = os.path.join(output_prefix, 'parquet')
-    spearman_output_dependencies = []
+    jobs = []
 
     for gene_name in genes:
-
         spearman_output = os.path.join(
             spearman_output_directory, f'correlation_results_{gene_name}.parquet'
         )
@@ -245,9 +249,13 @@ def generate_eqtl_spearman(
             force=force,
         )
         # we'll track job dependencies with an explicit sink
-        spearman_output_dependencies.append(j)
+        jobs.append(j)
 
-    if len(spearman_output_dependencies) == 0:
+        # Limit parallelism.
+        if len(jobs) >= GENE_LEVEL_PARALLELISM:
+            j.depends_on(jobs[len(jobs) - GENE_LEVEL_PARALLELISM])
+
+    if len(jobs) == 0:
         # we've reused results the whole way, so no need for 'fake' sink
         sinked_output_dir = spearman_output_directory
     else:
@@ -256,7 +264,7 @@ def generate_eqtl_spearman(
             return value
 
         fake_sink = batch.new_python_job(f'{job_prefix}sink')
-        fake_sink.depends_on(*spearman_output_dependencies)
+        fake_sink.depends_on(*jobs)
         sinked_output_dir = fake_sink.call(return_value, spearman_output_directory)
 
     return {
@@ -854,7 +862,7 @@ def generate_conditional_analysis(
             )
 
         new_sig_snps_directory = os.path.join(round_dir, 'sigsnps/')
-        sink_jobs = []
+        jobs = []
         for gene_name in genes:
             conditional_output_path = os.path.join(
                 new_sig_snps_directory, f'sig-snps-{gene_name}.parquet'
@@ -887,10 +895,14 @@ def generate_conditional_analysis(
                 )
                 if sig_snps_dependencies:
                     j.depends_on(*sig_snps_dependencies)
-                sink_jobs.append(j)
+                jobs.append(j)
+
+                # Limit parallelism.
+                if len(jobs) >= GENE_LEVEL_PARALLELISM:
+                    j.depends_on(jobs[len(jobs) - GENE_LEVEL_PARALLELISM])
 
         previous_sig_snps_directory = new_sig_snps_directory
-        sig_snps_dependencies = sink_jobs
+        sig_snps_dependencies = jobs
 
     if len(sig_snps_dependencies) == 0:
         # we've reused results the whole way, so no need for 'fake' sink
