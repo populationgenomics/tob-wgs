@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
-'''
+""""
 This script runs SKAT (Wu et al, Lee et al) to test for an association 
 between a set of rare genetic variants and the expression level of a gene. 
 First, it makes sure that the samples are matching and in the same order
 across all objects.
-'''
+""""
 
 install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au')
 install.packages("SKAT", repos = 'http://cran.csiro.au/')

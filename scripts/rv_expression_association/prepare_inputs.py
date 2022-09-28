@@ -121,7 +121,7 @@ def main(
         set(list(phenotype.sample.values)).intersection(donors_onek1k)
     )
     logging.info(
-        'Number of unique donors with expression data: {}'.format(len(donors_exprs))
+        f'Number of unique donors with expression data: {len(donors_exprs)}')
     )
 
     ## samples with genotype data
@@ -129,7 +129,7 @@ def main(
     donors_cpg.sort()
     donors_geno = sorted(set(list(G.sample.values)).intersection(donors_cpg))
     logging.info(
-        'Number of unique donors with genotype data: {}'.format(len(donors_geno))
+        f'Number of unique donors with genotype data: {len(donors_geno)}'
     )
 
     ## samples with both (can this be done in one step?)
@@ -141,7 +141,7 @@ def main(
     donors_g = sample_mapping_both['InternalID'].unique()
     assert len(donors_e) == len(donors_g)
 
-    logging.info('Number of unique common donors: {}'.format(len(donors_g)))
+    logging.info(f'Number of unique common donors: {len(donors_g)}')
 
     ## samples in kinship
     donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
@@ -203,6 +203,7 @@ def main(
         K_df.to_csv(kf, index=False)
 
     # endregion SAVE_FILES
+
 
 if __name__ == '__main__':
     main()
