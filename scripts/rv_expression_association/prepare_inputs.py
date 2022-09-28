@@ -11,10 +11,7 @@ from cloudpathlib import AnyPath
 from cpg_utils import to_path
 from cpg_utils.hail_batch import output_path
 
-subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4'], check=True)
-subprocess.run(
-    [sys.executable, '-m', 'pip', 'install', 'pandas_plink==2.2.9'], check=True
-)
+subprocess.run([sys.executable, '-m', 'pip', 'install', 'limix==3.0.4', 'pandas_plink==2.2.9'], check=True)
 
 from pandas_plink import read_plink1_bin  # lint complains about these but surely i need to install them before i can import them? 
 from limix.qc import quantile_gaussianize
