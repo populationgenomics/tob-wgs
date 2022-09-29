@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3  # pylint: disable=missing-module-docstring
 
 import logging
 import subprocess
