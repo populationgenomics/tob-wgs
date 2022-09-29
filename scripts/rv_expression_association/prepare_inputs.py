@@ -120,7 +120,7 @@ def main(
     with open('temp.fam', 'wb') as handle:
         handle.writelines(data)
     # read
-    G = read_plink1_bin('temp.bed')
+    geno = read_plink1_bin('temp.bed')
 
     # endregion GENOTYPE_FILE
 
@@ -140,7 +140,7 @@ def main(
     ## samples with genotype data
     donors_cpg = sample_mapping['InternalID'].unique()
     donors_cpg.sort()
-    donors_geno = sorted(set(list(G.sample.values)).intersection(donors_cpg))
+    donors_geno = sorted(set(list(geno.sample.values)).intersection(donors_cpg))
     logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
     ## samples with both (can this be done in one step?)
@@ -179,12 +179,12 @@ def main(
 
     ###############
     #### genotype
-    G = G.sel(sample=donors_g)
+    geno = geno.sel(sample=donors_g)
 
     # make data frame to save as csv
-    data = G.values
-    Z_df = pd.DataFrame(data, columns=G.snp.values, index=G.sample.values)
-    Z_df = Z_df.dropna(axis=1)
+    data = geno.values
+    geno_df = pd.DataFrame(data, columns=geno.snp.values, index=geno.sample.values)
+    geno_df = geno_df.dropna(axis=1)
 
     # delete large files to free up memory
     del G
@@ -210,7 +210,7 @@ def main(
         y_df.to_csv(ef, index=False)
 
     with genotype_filename.open('w') as gf:
-        Z_df.to_csv(gf, index=False)
+        geno_df.to_csv(gf, index=False)
 
     with kinship_filename.open('w') as kf:
         kinship_df.to_csv(kf, index=False)
