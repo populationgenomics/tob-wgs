@@ -162,7 +162,6 @@ def main(
 
     # region SUBSET_FILES
 
-    ###############
     #### phenotype
     phenotype = phenotype.sel(sample=donors_e)
 
@@ -177,7 +176,6 @@ def main(
         data=y.values.reshape(y.shape[0], 1), index=y.sample.values, columns=[gene_name]
     )
 
-    ###############
     #### genotype
     geno = geno.sel(sample=donors_g)
 
@@ -187,9 +185,8 @@ def main(
     geno_df = geno_df.dropna(axis=1)
 
     # delete large files to free up memory
-    del G
+    del geno
 
-    ###############
     #### kinship
     kinship = kinship.sel(sample_0=donors_k, sample_1=donors_k)
     assert all(kinship.sample_0 == donors_k)
