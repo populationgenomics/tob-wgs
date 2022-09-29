@@ -215,5 +215,5 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
     # endregion SAVE_FILES
 
 
-if __name__ == '__prepare_inputs__':  # --exclude
-    prepare_inputs()
+if __name__ == '__prepare_inputs__':  
+    prepare_inputs()  # pylint: disable=no-value-for-parameter
