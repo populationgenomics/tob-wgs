@@ -561,7 +561,9 @@ def run_spearman_correlation_scatter(
     # perform correlation in chunks by gene
 
     # get all SNPs which are within 1Mb of each gene
-    init_batch(driver_cores=8, driver_memory='highmem', worker_memory='highmem')
+    init_batch(
+        driver_cores=2, driver_memory='highmem', worker_cores=2, worker_memory='highmem'
+    )
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     # this is important, since not all individuals have expression/residual
@@ -587,7 +589,10 @@ def run_spearman_correlation_scatter(
         keep=False,
     )
     mt = mt.checkpoint(
-        output_path(f'eqtl/{cell_type}/{chromosome}/{gene_name}/spearman_correlation_scatter_filter.mt', 'tmp'),
+        output_path(
+            f'eqtl/{cell_type}/{chromosome}/{gene_name}/spearman_correlation_scatter_filter.mt',
+            'tmp',
+        ),
         overwrite=True,
     )
 
