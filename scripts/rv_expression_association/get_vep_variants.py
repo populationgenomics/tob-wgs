@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3  # pylint: disable=missing-module-docstring
 
 import logging
 import hail as hl
@@ -15,7 +15,7 @@ VEP_HT = dataset_path('v0/VPREB3_50K_window_vep.ht')
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
-def main():
+def main():  # pylint: disable=missing-function-docstring
     # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(MT)
@@ -57,13 +57,18 @@ def main():
         f'Number of rare variants (freq<5%) with regulatory consequences: {filtered_mt.count()[0]}'
     )
 
-    filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
-    logging.info(f'Number of rarer variants (freq<1%): {filtered_rrv_mt.count()[0]}')
+    # export this as a Hail table for downstream analysis
 
-    filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
-    logging.info(
-        f'Check that there are {filtered_0maf_mt.count()[0]} variants with freq==0'
-    )
+    ht_filename = output_path('vpreb3_rare_regulatory_summary.ht')
+    filtered_mt.export_table
+
+    # filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
+    # logging.info(f'Number of rarer variants (freq<1%): {filtered_rrv_mt.count()[0]}')
+
+    # filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
+    # logging.info(
+    #     f'Check that there are {filtered_0maf_mt.count()[0]} variants with freq==0'
+    # )
 
     # print out stats
     # types of regulatory variants
