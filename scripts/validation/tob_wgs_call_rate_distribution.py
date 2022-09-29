@@ -24,11 +24,11 @@ def main():
     # Calculate call rate and add to mt
     mt = mt.annotate_rows(call_rate=hl.agg.sum(hl.is_defined(mt.GT)) / n_samples)
     # plot distribution
-    p1 = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=50, legend='Call Rate', title='Call Rate Distribution')
+    p1 = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
     p1_filename = output_path('histogram_call_rate.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
-    p2 = hl.plot.cumulative_histogram(mt.call_rate, range=(0, 1), bins=50, legend='Call Rate', title='Call Rate Distribution')
+    p2 = hl.plot.cumulative_histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
     p2_filename = output_path('cumulative_histogram_call_rate.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')
