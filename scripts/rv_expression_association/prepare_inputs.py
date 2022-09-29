@@ -53,7 +53,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 # @click.option(
 #     '--output-folder', required=False, default=''
 # )  # by default current directory, where you are running your script from
-def prepare_inputs(  # pylint: disable=missing-function-docstring
+def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-locals
     cell_type: str,
     gene_name: str,
     sample_mapping_file: str,
