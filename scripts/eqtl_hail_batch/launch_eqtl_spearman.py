@@ -588,7 +588,7 @@ def run_spearman_correlation_scatter(
         keep=False,
     )
     mt = mt.checkpoint(
-        output_path(f'eqtl/{cell_type}/{chromosome}/{gene_name}.mt', 'tmp'),
+        output_path(f'eqtl/{cell_type}/{chromosome}/{gene_name}/spearman_correlation_scatter_filter.mt', 'tmp'),
         overwrite=True,
     )
 
