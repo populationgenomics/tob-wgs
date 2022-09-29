@@ -22,7 +22,7 @@ def main():
     # filter out variants that didn't pass the VQSR filter
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     # Calculate call rate and add to mt
-    mt = mt.annotate_rows(call_rate=1-(hl.agg.sum(hl.is_missing(mt.GT))/n_samples))
+    mt = mt.annotate_rows(call_rate=hl.agg.sum(hl.is_defined(mt.GT)) / n_samples))
     # plot distribution
     p = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
     p_filename = output_path('histogram_call_rate.png', 'web')
