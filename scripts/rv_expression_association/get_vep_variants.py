@@ -94,10 +94,9 @@ def main():  # pylint: disable=missing-function-docstring
     filtered_mt2 = filtered_mt.filter_rows(
         filtered_mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter'
     )
-    print(filtered_mt2.count())
     # export to PLINK
-    filtered_mt_path = output_path('plink_files/vpreb3_rare_promoter')
-    export_plink(filtered_mt2, filtered_mt_path, ind_id=filtered_mt2.s)
+    filtered_mt_path2 = output_path('plink_files/vpreb3_rare_promoter')
+    export_plink(filtered_mt2, filtered_mt_path2, ind_id=filtered_mt2.s)
 
 
 if __name__ == '__main__':
