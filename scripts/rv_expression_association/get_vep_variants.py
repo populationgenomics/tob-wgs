@@ -2,8 +2,8 @@
 
 import logging
 import hail as hl
-import numpy as np
-import pandas as pd
+# import numpy as np
+# import pandas as pd
 from hail.methods import export_plink
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
