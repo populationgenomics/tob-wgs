@@ -150,7 +150,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
 
     logging.info(f'Number of unique common donors: {len(donors_g)}')
 
-    ## samples in kinship
+    # samples in kinship
     donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
     donors_k = sorted(set(list(kinship.sample_0.values)).intersection(donors_e_short))
 
