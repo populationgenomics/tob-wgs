@@ -16,8 +16,8 @@ def main():
     mt = hl.read_matrix_table(MT)
     samples = mt.s.collect()
     n_samples = len(samples)
-    # mt = mt.naive_coalesce(10000)
-    # mt = hl.experimental.densify(mt)
+    mt = mt.naive_coalesce(10000)
+    mt = hl.experimental.densify(mt)
     # filter to biallelic loci only
     mt = mt.filter_rows(hl.len(mt.alleles) == 2)
     # filter out variants that didn't pass the VQSR filter
@@ -27,7 +27,7 @@ def main():
     n_samples = len(samples)
     mt = mt.annotate_rows(call_rate=1-(hl.agg.sum(hl.is_missing(mt.GT))/n_samples))
     # plot distribution
-    p = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=50, legend='Call Rate', title='Call Rate Distribution')
+    p = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
     p_filename = output_path('histogram_call_rate.png', 'web')
     with hl.hadoop_open(p_filename, 'wb') as f:
         get_screenshot_as_png(p).save(f, format='PNG')
