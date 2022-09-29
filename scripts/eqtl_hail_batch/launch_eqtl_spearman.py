@@ -579,6 +579,7 @@ def run_spearman_correlation_scatter(
     mt = hl.filter_intervals(
         mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
     )
+    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     # remove SNPs with no variance
     mt = mt.filter_rows(
         (hl.agg.all(mt.GT.n_alt_alleles() == 0))
@@ -586,9 +587,10 @@ def run_spearman_correlation_scatter(
         | (hl.agg.all(mt.GT.n_alt_alleles() == 2)),
         keep=False,
     )
-    mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
-    # TODO: mfranklin to check mt.persist, as mt.rows() is called twice
-    mt = mt.persist('MEMORY_AND_DISK')
+    mt = mt.checkpoint(
+        output_path(f'eqtl/{cell_type}/{chromosome}/{gene_name}/spearman_correlation_scatter_filter.mt', 'tmp'),
+        overwrite=True,
+    )
 
     position_table = mt.rows().select()
     position_table = position_table.annotate(
@@ -611,6 +613,26 @@ def run_spearman_correlation_scatter(
     # the spearman correlation function
     t = mt.entries()
     t = t.key_by()
+
+    # leave this as a computed value to avoid annotating for the whole
+    # table, then mostly discarding - hopefully should save memory
+    def get_t_snp_id(_t):
+        return (
+            hl.str(_t.locus.contig)
+            + ':'
+            + hl.str(_t.locus.position)
+            + ':'
+            + hl.str(_t.alleles[0])
+            + ':'
+            + hl.str(_t.alleles[1])
+        )
+
+    # Do this only on SNPs contained within gene_snp_df to save time
+    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
+    t = t.filter(snps_to_keep.contains(get_t_snp_id(t)))
+
+    # hopefully we've filtered enough now we can annotate
+
     t = t.select(
         n_alt_alleles=t.GT.n_alt_alleles(),
         sampleid=t.onek1k_id,
@@ -619,20 +641,9 @@ def run_spearman_correlation_scatter(
         global_bp=t.locus.global_position(),
         a1=t.alleles[0],
         a2=t.alleles[1],
+        snpid=get_t_snp_id(t),
     )
-    t = t.annotate(
-        snpid=hl.str(t.contig)
-        + ':'
-        + hl.str(t.position)
-        + ':'
-        + hl.str(t.a1)
-        + ':'
-        + hl.str(t.a2)
-    )
-    # Do this only on SNPs contained within gene_snp_df to save on
-    # computational time
-    snps_to_keep = hl.literal(set(gene_snp_df.snpid))
-    t = t.filter(snps_to_keep.contains(t['snpid']))
+
     # only keep SNPs where all samples have an alt_allele value
     # (argument must be a string, a bytes-like object or a number)
     snps_to_remove = set(t.filter(hl.is_missing(t.n_alt_alleles)).snpid.collect())
@@ -645,13 +656,12 @@ def run_spearman_correlation_scatter(
     gene_snp_df = gene_snp_df[gene_snp_df.snpid.isin(set(genotype_df.snpid))]
 
     # Get association effect data, to be used for violin plots for each genotype of each SNP
-    # TODO: remove redefined gene function param
-    def get_association_effect_data(gene):
+    def get_association_effect_data():
         sampleid = expression_df.sampleid
         log_cpm = calculate_log_cpm(expression_df)
         log_cpm['sampleid'] = sampleid
         # reduce log_cpm matrix to gene of interest only
-        log_cpm = log_cpm[['sampleid', gene]]
+        log_cpm = log_cpm[['sampleid', gene_name]]
         # merge log_cpm data with genotype info
         gt_expr_data = genotype_df.merge(
             log_cpm, left_on='sampleid', right_on='sampleid'
@@ -659,13 +669,13 @@ def run_spearman_correlation_scatter(
         # group gt_expr_data by snpid and genotype
         grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
 
-        def create_struct(gene, group):
-            hist, bin_edges = np.histogram(group[gene], bins=10)
-            n_samples = group[gene].count()
-            min_val = group[gene].min()
-            max_val = group[gene].max()
-            mean_val = group[gene].mean()
-            q1, median_val, q3 = group[gene].quantile([0.25, 0.5, 0.75])
+        def create_struct(_group):
+            hist, bin_edges = np.histogram(_group[gene_name], bins=10)
+            n_samples = _group[gene_name].count()
+            min_val = _group[gene_name].min()
+            max_val = _group[gene_name].max()
+            mean_val = _group[gene_name].mean()
+            q1, median_val, q3 = _group[gene_name].quantile([0.25, 0.5, 0.75])
             iqr = q3 - q1
             data_struct = {
                 'bin_counts': hist,
@@ -702,15 +712,15 @@ def run_spearman_correlation_scatter(
                     'global_bp': global_bp,
                     'genotype': genotype,
                     'gene_id': gene_id,
-                    'gene_symbol': gene,
+                    'gene_symbol': gene_name,
                     'cell_type_id': cell_type,
-                    'struct': create_struct(gene, group),
+                    'struct': create_struct(group),
                 }
             )
 
         return pd.DataFrame.from_dict(snp_gt_summary_data)
 
-    association_effect_data = get_association_effect_data(gene_name)
+    association_effect_data = get_association_effect_data()
     # write association effect data
     association_effect_path = output_path(
         os.path.join(
