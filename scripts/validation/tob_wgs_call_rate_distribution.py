@@ -16,7 +16,7 @@ def main():
     mt = hl.read_matrix_table(MT)
     samples = mt.s.collect()
     n_samples = len(samples)
-    mt = hl.experimental.densify(mt)
+    # mt = hl.experimental.densify(mt)
     # filter to biallelic loci only
     mt = mt.filter_rows(hl.len(mt.alleles) == 2)
     # filter out variants that didn't pass the VQSR filter
