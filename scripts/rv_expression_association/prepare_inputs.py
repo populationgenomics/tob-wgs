@@ -83,7 +83,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
 
     # region KINSHIP_FILE
 
-    ## read in GRM (genotype relationship matrix; kinship matrix)
+    # read in GRM (genotype relationship matrix; kinship matrix)
     kinship = pd.read_csv(kinship_file, index_col=0)
     kinship.index = kinship.index.astype('str')
     assert all(kinship.columns == kinship.index)  # symmetric matrix, donors x donors
@@ -125,7 +125,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     # this file will map different IDs (and OneK1K ID to CPG ID)
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
 
-    ## samples with expression data
+    # samples with expression data
     donors_onek1k = sample_mapping['OneK1K_ID'].unique()
     donors_onek1k.sort()
     donors_exprs = sorted(
@@ -133,13 +133,13 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     )
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
-    ## samples with genotype data
+    # samples with genotype data
     donors_cpg = sample_mapping['InternalID'].unique()
     donors_cpg.sort()
     donors_geno = sorted(set(list(geno.sample.values)).intersection(donors_cpg))
     logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
-    ## samples with both (can this be done in one step?)
+    # samples with both (can this be done in one step?)
     sample_mapping1 = sample_mapping.loc[sample_mapping['OneK1K_ID'].isin(donors_exprs)]
     sample_mapping_both = sample_mapping1.loc[
         sample_mapping1['InternalID'].isin(donors_geno)
@@ -158,7 +158,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
 
     # region SUBSET_FILES
 
-    #### phenotype
+    # phenotype
     phenotype = phenotype.sel(sample=donors_e)
 
     # select gene
@@ -172,7 +172,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
         data=y.values.reshape(y.shape[0], 1), index=y.sample.values, columns=[gene_name]
     )
 
-    #### genotype
+    # genotype
     geno = geno.sel(sample=donors_g)
 
     # make data frame to save as csv
@@ -183,7 +183,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     # delete large files to free up memory
     del geno
 
-    #### kinship
+    # kinship
     kinship = kinship.sel(sample_0=donors_k, sample_1=donors_k)
     assert all(kinship.sample_0 == donors_k)
     assert all(kinship.sample_1 == donors_k)
