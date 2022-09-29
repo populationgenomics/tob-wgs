@@ -66,7 +66,7 @@ def main(
     genotype_file_fam: str,
     phenotype_file: str,
     kinship_file: str,
-    output_folder: str,
+    output_folder: str,  # do I need this??
 ):
 
     expression_filename = AnyPath(output_path(f'{gene_name}_{cell_type}.csv'))
