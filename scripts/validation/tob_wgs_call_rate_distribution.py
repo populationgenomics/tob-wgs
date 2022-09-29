@@ -16,7 +16,6 @@ def main():
     mt = hl.read_matrix_table(MT)
     samples = mt.s.collect()
     n_samples = len(samples)
-    mt = mt.naive_coalesce(10000)
     mt = hl.experimental.densify(mt)
     # filter to biallelic loci only
     mt = mt.filter_rows(hl.len(mt.alleles) == 2)
