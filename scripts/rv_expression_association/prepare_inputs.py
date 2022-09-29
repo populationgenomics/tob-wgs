@@ -218,5 +218,5 @@ def main(
     # endregion SAVE_FILES
 
 
-if __name__ == '__main__':
-    main()  # --exclude
+if __name__ == '__main__':  # --exclude
+    main()  
