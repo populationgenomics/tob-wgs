@@ -54,10 +54,10 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     '--phenotype-file', required=True
 )  # 'scrna-seq/grch38_association_files/expression_files/B_naive_expression.tsv'
 @click.option('--kinship-file', required=True)  # 'v0/skat/grm_wide.csv'
-@click.option(
-    '--output-folder', required=False, default=''
-)  # by default current directory, where you are running your script from
-def main(
+# @click.option(
+#     '--output-folder', required=False, default=''
+# )  # by default current directory, where you are running your script from
+def main(  # pylint: disable=missing-function-docstring
     cell_type: str,
     gene_name: str,
     sample_mapping_file: str,
@@ -66,7 +66,7 @@ def main(
     genotype_file_fam: str,
     phenotype_file: str,
     kinship_file: str,
-    output_folder: str,  # do I need this??
+    # output_folder: str,  # do I need this??
 ):
 
     expression_filename = AnyPath(output_path(f'{gene_name}_{cell_type}.csv'))
