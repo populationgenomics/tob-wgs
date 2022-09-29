@@ -23,7 +23,9 @@ def query():
     # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
     n_samples = mt.count_cols()
     call_rate = 0.8
-    mt = mt.filter_rows(hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False)
+    mt = mt.filter_rows(
+        hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
+    )
     # filter out variants with MAF < 0.01
     ht = hl.read_table(FREQ_TABLE)
     mt = mt.annotate_rows(freq=ht[mt.row_key].freq)
@@ -34,10 +36,12 @@ def query():
     t = t.key_by(contig=t.locus.contig, position=t.locus.position)
     t = t.select(t.alleles)
     pd = t.to_pandas(flatten=True)
-    # expand locus to two columns and rename 
+    # expand locus to two columns and rename
     # save each chromosome to an individual file
-    for chr in set(pd['contig']): 
-        pd.loc[pd['contig'] == chr].to_parquet(output_path(f'tob_genotype_maf01_{chr}.parquet'))
+    for chr in set(pd['contig']):
+        pd.loc[pd['contig'] == chr].to_parquet(
+            output_path(f'tob_genotype_maf01_{chr}.parquet')
+        )
 
 
 if __name__ == '__main__':

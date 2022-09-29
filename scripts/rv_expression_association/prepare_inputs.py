@@ -6,7 +6,7 @@ import sys
 import re
 import click
 import pandas as pd
-from cloudpathlib import AnyPath
+
 from cpg_utils import to_path
 from cpg_utils.hail_batch import output_path
 
@@ -23,13 +23,11 @@ subprocess.run(
     check=True,
 )
 
-import xarray as xr  # pylint: disable=wrong-import-position, import-error
-from pandas_plink import (
-    read_plink1_bin,
-)  # pylint: disable=wrong-import-position, import-error
-from limix.qc import (
-    quantile_gaussianize,
-)  # pylint: disable=wrong-import-position, import-error
+# pylint: disable=import-error
+# pylint: disable=wrong-import-position
+import xarray as xr
+from pandas_plink import read_plink1_bin
+from limix.qc import quantile_gaussianize
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -57,7 +55,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 # @click.option(
 #     '--output-folder', required=False, default=''
 # )  # by default current directory, where you are running your script from
-def prepare_inputs(  # pylint: disable=missing-function-docstring
+def prepare_inputs(
     cell_type: str,
     gene_name: str,
     sample_mapping_file: str,
@@ -68,13 +66,13 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
     kinship_file: str,
     # output_folder: str,  # do I need this??
 ):
+    """
+    prepares the inputs
+    """
 
-    expression_filename = AnyPath(output_path(f'{gene_name}_{cell_type}.csv'))
-    genotype_filename = AnyPath(output_path(f'{gene_name}_rare_regulatory.csv'))
-    kinship_filename = AnyPath(output_path('kinship_common_samples.csv'))
+    # pylint: disable=too-many-locals
 
-    # region PHENOTYPE_FILE
-
+    # get phenotypes
     phenotype = pd.read_csv(phenotype_file, sep='\t', index_col=0)
 
     phenotype = xr.DataArray(
@@ -83,11 +81,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
         coords={'sample': phenotype.index.values, 'gene': phenotype.columns.values},
     )
 
-    # endregion PHENOTYPE_FILE
-
-    # region KINSHIP_FILE
-
-    ## read in GRM (genotype relationship matrix; kinship matrix)
+    # read in GRM (genotype relationship matrix; kinship matrix)
     kinship = pd.read_csv(kinship_file, index_col=0)
     kinship.index = kinship.index.astype('str')
     assert all(kinship.columns == kinship.index)  # symmetric matrix, donors x donors
@@ -99,19 +93,17 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
     )
     kinship = kinship.sortby('sample_0').sortby('sample_1')
 
-    # endregion KINSHIP_FILE
-
-    # region GENOTYPE_FILE
-
-    # read in genotype file (plink format)
-    # bed
+    # read in bed genotype file (plink format)
     with to_path(genotype_file_bed).open('rb') as handle:
         data = handle.readlines()
+
     with open('temp.bed', 'wb') as handle:
         handle.writelines(data)
+
     # bim
     with to_path(genotype_file_bim).open('rb') as handle:
         data = handle.readlines()
+
     with open('temp.bim', 'wb') as handle:
         handle.writelines(data)
     # fam
@@ -119,50 +111,47 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
         data = handle.readlines()
     with open('temp.fam', 'wb') as handle:
         handle.writelines(data)
+
     # read
     geno = read_plink1_bin('temp.bed')
-
-    # endregion GENOTYPE_FILE
-
-    # region SAMPLE_MAPPING_FILE
 
     # this file will map different IDs (and OneK1K ID to CPG ID)
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
 
-    ## samples with expression data
-    donors_onek1k = sample_mapping['OneK1K_ID'].unique()
-    donors_onek1k.sort()
-    donors_exprs = sorted(
-        set(list(phenotype.sample.values)).intersection(donors_onek1k)
+    # samples with expression data
+    donors_exprs = set(list(phenotype.sample.values)).intersection(
+        set(sample_mapping['OneK1K_ID'].unique())
     )
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
-    ## samples with genotype data
-    donors_cpg = sample_mapping['InternalID'].unique()
-    donors_cpg.sort()
-    donors_geno = sorted(set(list(geno.sample.values)).intersection(donors_cpg))
+    # samples with genotype data
+    donors_geno = sorted(
+        set(list(geno.sample.values)).intersection(
+            set(sample_mapping['InternalID'].unique())
+        )
+    )
     logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
-    ## samples with both (can this be done in one step?)
+    # samples with both (can this be done in one step?)
     sample_mapping1 = sample_mapping.loc[sample_mapping['OneK1K_ID'].isin(donors_exprs)]
     sample_mapping_both = sample_mapping1.loc[
         sample_mapping1['InternalID'].isin(donors_geno)
     ]
+
     donors_e = sample_mapping_both['OneK1K_ID'].unique()
     donors_g = sample_mapping_both['InternalID'].unique()
     assert len(donors_e) == len(donors_g)
 
     logging.info(f'Number of unique common donors: {len(donors_g)}')
 
-    ## samples in kinship
-    donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
-    donors_k = sorted(set(list(kinship.sample_0.values)).intersection(donors_e_short))
+    # samples in kinship
+    donors_k = sorted(
+        set(list(kinship.sample_0.values)).intersection(
+            [re.sub('.*_', '', donor) for donor in donors_e]
+        )
+    )
 
-    # endregion SAMPLE_MAPPING_FILE
-
-    # region SUBSET_FILES
-
-    #### phenotype
+    # phenotype
     phenotype = phenotype.sel(sample=donors_e)
 
     # select gene
@@ -176,18 +165,19 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
         data=y.values.reshape(y.shape[0], 1), index=y.sample.values, columns=[gene_name]
     )
 
-    #### genotype
+    # genotype
     geno = geno.sel(sample=donors_g)
 
     # make data frame to save as csv
-    data = geno.values
-    geno_df = pd.DataFrame(data, columns=geno.snp.values, index=geno.sample.values)
+    geno_df = pd.DataFrame(
+        geno.values, columns=geno.snp.values, index=geno.sample.values
+    )
     geno_df = geno_df.dropna(axis=1)
 
     # delete large files to free up memory
     del geno
 
-    #### kinship
+    # kinship
     kinship = kinship.sel(sample_0=donors_k, sample_1=donors_k)
     assert all(kinship.sample_0 == donors_k)
     assert all(kinship.sample_1 == donors_k)
@@ -199,21 +189,17 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
 
     del kinship  # delete kinship to free up memory
 
-    # endregion SUBSET_FILES
-
-    # region SAVE_FILES
-
-    with expression_filename.open('w') as ef:
+    with to_path(output_path(f'{gene_name}_{cell_type}.csv')).open('w') as ef:
         y_df.to_csv(ef, index=False)
 
-    with genotype_filename.open('w') as gf:
+    with to_path(output_path(f'{gene_name}_rare_regulatory.csv')).open('w') as gf:
         geno_df.to_csv(gf, index=False)
 
-    with kinship_filename.open('w') as kf:
+    with to_path(output_path('kinship_common_samples.csv')).open('w') as kf:
         kinship_df.to_csv(kf, index=False)
 
-    # endregion SAVE_FILES
 
-
-if __name__ == '__prepare_inputs__':  
+if __name__ == '__prepare_inputs__':
     prepare_inputs()  # pylint: disable=no-value-for-parameter
+
+    # b = AnyPath().open()

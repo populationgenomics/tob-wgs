@@ -53,8 +53,6 @@ if __name__ == '__main__':
     HTML = f'{PREFIX}.html'
     job = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
     b.write_output(job.html, f'{BUCKET}-web/concordance/v1/{HTML}')
-    b.write_output(
-        job.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
-    )
+    b.write_output(job.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv')
     b.run(dry_run=False)
     service_backend.close()

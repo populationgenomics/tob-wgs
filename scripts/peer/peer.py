@@ -50,9 +50,7 @@ def get_covariates(
         scores, sampleid_keys, how='left', left_on='sampleid', right_on='CPG_ID'
     )
     # remove samples which don't have a OneK1K ID and only keep PCA scores
-    scores = scores[~scores.OneK1K_ID.isna()][
-        ['PC1', 'PC2', 'PC3', 'PC4', 'OneK1K_ID']
-    ]
+    scores = scores[~scores.OneK1K_ID.isna()][['PC1', 'PC2', 'PC3', 'PC4', 'OneK1K_ID']]
     # Merge PCA scores with Seyhan's covariate data and drop Seyhan's RNA-seq pca scores
     # NB: these are the ones in lowercase (e.g., 'pc1')
     covariates = pd.read_csv(covariates_path, sep='\t')
@@ -64,16 +62,16 @@ def get_covariates(
     logging.info(f'{missing_cov_data} is missing covariate data')
     # Remove samples with no covariate data and drop
     # the OneK1K_ID, since it's redundant with sampleid
-    covariates = covariates[~covariates.sampleid.isna()].drop(
-        ['OneK1K_ID'], axis=1
-    )
+    covariates = covariates[~covariates.sampleid.isna()].drop(['OneK1K_ID'], axis=1)
     # Match expression data to covariate data, since PEER needs expr and covs
     # dfs to be the same length
     expression = pd.read_csv(expression_file, sep='\t')
     merged_expr_covs = pd.merge(
         expression, covariates, how='right', left_on='sampleid', right_on='sampleid'
     )
-    samples_missing_expression = merged_expr_covs.shape[0] - merged_expr_covs.dropna().shape[0]
+    samples_missing_expression = (
+        merged_expr_covs.shape[0] - merged_expr_covs.dropna().shape[0]
+    )
     logging.info(f'{samples_missing_expression} samples are missing expression data')
     # remove any rows with NA values
     merged_expr_covs = merged_expr_covs.dropna()
@@ -95,7 +93,7 @@ def get_covariates(
 def get_at_index(obj, idx):
     """
     Get the object at index, required to break up the result
-    from the get_covariates data within Hail Batch    
+    from the get_covariates data within Hail Batch
     """
 
     return obj[idx]
@@ -254,10 +252,22 @@ def find_cell_types_from_path(path_to_cell_files):
 
 
 @click.command()
-@click.option('--scores-path', help='A path prefix of where PCA scores are located, eg: gs://MyBucket/output-folder/')
-@click.option('--covariates-path', help='Path prefix of where covariate files are located, eg: gs://MyBucket/output-folder/',)
-@click.option('--sample-id-keys-path', help='Path prefix to convert internal to external, eg: gs://MyBucket/output-folder/')
-@click.option('--path-to-cell-files', help='Path prefix of where cell type files are located, eg: gs://MyBucket/output-folder/')
+@click.option(
+    '--scores-path',
+    help='A path prefix of where PCA scores are located, eg: gs://MyBucket/output-folder/',
+)
+@click.option(
+    '--covariates-path',
+    help='Path prefix of where covariate files are located, eg: gs://MyBucket/output-folder/',
+)
+@click.option(
+    '--sample-id-keys-path',
+    help='Path prefix to convert internal to external, eg: gs://MyBucket/output-folder/',
+)
+@click.option(
+    '--path-to-cell-files',
+    help='Path prefix of where cell type files are located, eg: gs://MyBucket/output-folder/',
+)
 def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     """
     This function finds all the cell types, and runs the inner
@@ -277,12 +287,12 @@ def main(scores_path, covariates_path, sample_id_keys_path, path_to_cell_files):
     for cell_type in cell_types:
         expression_file = f'{path_to_cell_files}{cell_type}_expression.tsv'
         process_cell_type_on_batch(
-            batch, 
-            cell_type, 
-            scores_path=scores_path, 
-            covariates_path=covariates_path, 
-            sample_id_keys_path=sample_id_keys_path, 
-            expression_file=expression_file
+            batch,
+            cell_type,
+            scores_path=scores_path,
+            covariates_path=covariates_path,
+            sample_id_keys_path=sample_id_keys_path,
+            expression_file=expression_file,
         )
 
     batch.run(wait=False)

@@ -20,7 +20,7 @@ def main(script: str, mt: str, vep_version: str):
     runs a script inside dataproc to execute VEP
     :param script: str, the path to the VEP main script
     """
-    
+
     # create a hail batch
     batch = get_batch('run_vep_in_dataproc_cluster')
 
