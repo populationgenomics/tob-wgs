@@ -216,4 +216,4 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring
 
 
 if __name__ == '__prepare_inputs__':  # --exclude
-    prepare_inputs()  
+    prepare_inputs()

@@ -2,6 +2,7 @@
 
 import logging
 import hail as hl
+
 # import numpy as np
 # import pandas as pd
 from hail.methods import export_plink
