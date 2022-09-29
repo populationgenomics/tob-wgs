@@ -411,7 +411,7 @@ def generate_log_cpm_output(
     # add in cell type info
     data_summary['cell_type_id'] = cell_type
     # add in ENSEMBL IDs
-    init_batch(driver_cores=8)
+    init_batch(driver_cores=2)
     gtf = hl.experimental.import_gtf(
         gencode_gtf_path, reference_genome='GRCh38', skip_invalid_contigs=True
     )
