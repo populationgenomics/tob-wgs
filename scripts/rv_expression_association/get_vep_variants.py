@@ -16,12 +16,14 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
 def main():
-    # read and densify object
+    # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(MT)
     logging.info(f'Number of variants in window: {mt.count()[0]}')
 
+    # densify
     mt = hl.experimental.densify(mt)
+
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(
         (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
@@ -42,7 +44,7 @@ def main():
     mt = hl.variant_qc(mt)
     rv_mt = mt.filter_rows((mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0))
     rv_mt_path = output_path('rare_variants.mt', 'tmp')
-    rv_mt = rv_mt.checkpoint(rv_mt_path, overwrite=True)
+    rv_mt = rv_mt.checkpoint(rv_mt_path, overwrite=True)  # checkpoint
     logging.info(f'Number of rare variants (freq<5%): {rv_mt.count()[0]}')
 
     # filter variants found to have regulatory effects

@@ -6,25 +6,37 @@ import sys
 import re
 import click
 import pandas as pd
-import xarray as xr
 from cloudpathlib import AnyPath
 from cpg_utils import to_path
 from cpg_utils.hail_batch import output_path
 
 subprocess.run(
-    [sys.executable, '-m', 'pip', 'install', 'limix==3.0.4', 'pandas_plink==2.2.9'],
+    [
+        sys.executable,
+        '-m',
+        'pip',
+        'install',
+        'limix==3.0.4',
+        'pandas_plink==2.2.9',
+        'xarray==0.20.2',
+    ],
     check=True,
 )
 
-from pandas_plink import read_plink1_bin  # pylint: disable=wrong-import-position, import-error
-from limix.qc import quantile_gaussianize  # pylint: disable=wrong-import-position, import-error
+import xarray as xr  # pylint: disable=wrong-import-position, import-error
+from pandas_plink import (
+    read_plink1_bin,
+)  # pylint: disable=wrong-import-position, import-error
+from limix.qc import (
+    quantile_gaussianize,
+)  # pylint: disable=wrong-import-position, import-error
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
 @click.command()
-@click.option('--cell-type', required=True, help='More info here')
+@click.option('--cell-type', required=True)  # 'B_naive'
 @click.option('--gene-name', required=True)  # 'VPREB3'
 @click.option(
     '--sample-mapping-file', required=True
@@ -76,16 +88,16 @@ def main(
     # region KINSHIP_FILE
 
     ## read in GRM (genotype relationship matrix; kinship matrix)
-    K = pd.read_csv(kinship_file, index_col=0)
-    K.index = K.index.astype('str')
-    assert all(K.columns == K.index)  # symmetric matrix, donors x donors
+    kinship = pd.read_csv(kinship_file, index_col=0)
+    kinship.index = kinship.index.astype('str')
+    assert all(kinship.columns == kinship.index)  # symmetric matrix, donors x donors
 
-    K = xr.DataArray(
-        K.values,
+    kinship = xr.DataArray(
+        kinship.values,
         dims=['sample_0', 'sample_1'],
-        coords={'sample_0': K.columns, 'sample_1': K.index},
+        coords={'sample_0': kinship.columns, 'sample_1': kinship.index},
     )
-    K = K.sortby('sample_0').sortby('sample_1')
+    kinship = kinship.sortby('sample_0').sortby('sample_1')
 
     # endregion KINSHIP_FILE
 
@@ -144,7 +156,7 @@ def main(
 
     ## samples in kinship
     donors_e_short = [re.sub('.*_', '', donor) for donor in donors_e]
-    donors_k = sorted(set(list(K.sample_0.values)).intersection(donors_e_short))
+    donors_k = sorted(set(list(kinship.sample_0.values)).intersection(donors_e_short))
 
     # endregion SAMPLE_MAPPING_FILE
 
@@ -179,14 +191,16 @@ def main(
 
     ###############
     #### kinship
-    K = K.sel(sample_0=donors_k, sample_1=donors_k)
-    assert all(K.sample_0 == donors_k)
-    assert all(K.sample_1 == donors_k)
+    kinship = kinship.sel(sample_0=donors_k, sample_1=donors_k)
+    assert all(kinship.sample_0 == donors_k)
+    assert all(kinship.sample_1 == donors_k)
 
     # make data frame to save as csv
-    K_df = pd.DataFrame(K.values, columns=K.sample_0, index=K.sample_1)
+    kinship_df = pd.DataFrame(
+        kinship.values, columns=kinship.sample_0, index=kinship.sample_1
+    )
 
-    del K  # delete K to free up memory
+    del kinship  # delete kinship to free up memory
 
     # endregion SUBSET_FILES
 
@@ -199,7 +213,7 @@ def main(
         Z_df.to_csv(gf, index=False)
 
     with kinship_filename.open('w') as kf:
-        K_df.to_csv(kf, index=False)
+        kinship_df.to_csv(kf, index=False)
 
     # endregion SAVE_FILES
 
