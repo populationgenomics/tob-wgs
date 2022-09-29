@@ -562,7 +562,7 @@ def run_spearman_correlation_scatter(
 
     # get all SNPs which are within 1Mb of each gene
     # TODO: can we drop these cores: 8 -> 1
-    init_batch(driver_cores=1, worker_cores=1, driver_memory='highmem')
+    init_batch(driver_cores=4, worker_cores=1, driver_memory='highmem')
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
     # this is important, since not all individuals have expression/residual
