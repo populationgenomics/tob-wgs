@@ -93,7 +93,7 @@ def filter_joint_call_mt(
     Returns:
     Path to a hail matrix table, with rows (alleles) filtered on the following requirements:
     1) biallelic, 2) meets VQSR filters, 3) gene quality score higher than 20,
-    4) call rate of 0.8, and 5) variants with MAF <= 0.01.
+    4) call rate of 0.95, and 5) variants with MAF <= 0.01.
     """
 
     logger = setup_logger('filter_joint_call_mt')
@@ -113,8 +113,9 @@ def filter_joint_call_mt(
     mt = mt.filter_rows(hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
     # VQSR does not filter out low quality genotypes. Filter these out
     mt = mt.filter_entries(mt.GQ <= 20, keep=False)
-    # filter out samples with a genotype call rate > 0.8 (as in the gnomAD supplementary paper)
-    call_rate = 0.8
+    # filter out samples with a genotype call rate > 0.95 (as in the validation script)
+    # see https://github.com/populationgenomics/tob-wgs/blob/main/scripts/validation/tob_wgs_call_rate_distribution.py
+    call_rate = 0.95
     mt = mt.filter_rows(
         hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
     )
@@ -407,7 +408,7 @@ def generate_log_cpm_output(
     data_summary = pd.DataFrame(
         log_cpm.apply(create_struct, axis=0), columns=['data']
     ).reset_index()
-    data_summary = data_summary.rename({'index': 'gene_name'}, axis='columns')
+    data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
     # add in cell type info
     data_summary['cell_type_id'] = cell_type
     # add in ENSEMBL IDs
@@ -418,8 +419,8 @@ def generate_log_cpm_output(
     # convert int to str in order to avoid 'int() argument must be a string, a bytes-like object or a number, not 'NoneType''
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
     gtf = gtf.to_pandas()
-    data_summary['ensembl_ids'] = data_summary.merge(
-        gtf.drop_duplicates('gene_name'), how='left', on='gene_name'
+    data_summary['gene_ids'] = data_summary.merge(
+        gtf.drop_duplicates('gene_symbol'), how='left', on='gene_symbol'
     ).gene_id
 
     # Save file
@@ -783,6 +784,9 @@ def run_spearman_correlation_scatter(
     # for front-end analysis
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
+    # change bp and round into int values
+    spearman_df['round'].astype(str).astype(int)
+    spearman_df['bp'].astype(str).astype(int)
     # add celltype id
     celltype_id = cell_type.lower()
     spearman_df['cell_type_id'] = celltype_id
@@ -1268,12 +1272,21 @@ def run_scattered_conditional_analysis(
     # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
     t = t.annotate(global_bp=hl.locus(t.chrom, hl.int32(t.bp)).global_position())
+    # add in vep annotation
+    mt = hl.read_matrix_table(filtered_matrix_table_path)
+    t = t.key_by(t.locus, t.alleles)
+    t = t.annotate(functional_annotation=mt.rows()[t.key].vep_functional_anno)
+    t = t.key_by()
+    t = t.drop(t.locus, t.snp_id)
     # turn back into pandas df and add additional information
     # for front-end analysis
     adjusted_spearman_df = t.to_pandas()
     # add celltype id
     celltype_id = cell_type.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
+    # change bp and round into int values
+    adjusted_spearman_df['round'].astype(str).astype(int)
+    adjusted_spearman_df['bp'].astype(str).astype(int)
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = adjusted_spearman_df['p_value']
