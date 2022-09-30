@@ -785,8 +785,8 @@ def run_spearman_correlation_scatter(
     spearman_df = t.to_pandas()
     spearman_df['round'] = '1'
     # change bp and round into int values
-    spearman_df['round'].astype(str).astype(int)
-    spearman_df['bp'].astype(str).astype(int)
+    spearman_df['round'].astype(int)
+    spearman_df['bp'].astype(int)
     # add celltype id
     celltype_id = cell_type.lower()
     spearman_df['cell_type_id'] = celltype_id
@@ -1285,8 +1285,8 @@ def run_scattered_conditional_analysis(
     celltype_id = cell_type.lower()
     adjusted_spearman_df['cell_type_id'] = celltype_id
     # change bp and round into int values
-    adjusted_spearman_df['round'].astype(str).astype(int)
-    adjusted_spearman_df['bp'].astype(str).astype(int)
+    adjusted_spearman_df['round'].astype(int)
+    adjusted_spearman_df['bp'].astype(int)
     # Correct for multiple testing using Storey qvalues
     # qvalues are used instead of BH/other correction methods, as they do not assume independence (e.g., high LD)
     pvalues = adjusted_spearman_df['p_value']
