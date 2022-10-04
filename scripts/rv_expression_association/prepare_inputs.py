@@ -111,16 +111,16 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
 
     # samples with expression data
-    donors_exprs = sorted(set(phenotype.sample.values).intersection(
+    donors_exprs = set(phenotype.sample.values).intersection(
         set(sample_mapping['OneK1K_ID'].unique())
-    ))
+    )
     
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
     # samples with genotype data
-    donors_geno = sorted(set(geno.sample.values).intersection(
+    donors_geno = set(geno.sample.values).intersection(
         set(sample_mapping['InternalID'].unique())
-    ))
+    )
     logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
     # samples with both (can this be done in one step?)
