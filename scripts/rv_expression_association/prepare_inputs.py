@@ -128,9 +128,9 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
     # samples with genotype data
-    donors_geno = set(geno.sample.values).intersection(
+    donors_geno = sorted(set(geno.sample.values).intersection(
         set(sample_mapping['InternalID'].unique())
-    )
+    ))
     logging.info(f'Number of unique donors with genotype data: {len(donors_geno)}')
 
     # samples with both (can this be done in one step?)
