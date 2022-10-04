@@ -20,6 +20,8 @@ analysis-runner --dataset tob-wgs \
     python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht \
     --chr chr22 --pos 23702743-23804425 --out VPREB3_50K_window_vep
 ```
+Next time, remember to add the ```--biallelic``` flag, to remove both multi-allelic and single-variant loci.
+
 To get the interval, for now in a notebook:
 ```
 import hail as hl
