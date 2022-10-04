@@ -96,20 +96,9 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     # region GENOTYPE_FILE
 
     # read in genotype file (plink format)
-    # bed
-    with to_path(genotype_file_bed).open('rb') as handle:
-        data = handle.readlines()
-    with open('temp.bed', 'wb') as handle:
-        handle.writelines(data)
-    # bim
-    with to_path(genotype_file_bim).open('rb') as read_handle:
-        with open('temp.bim', 'wb') as write_handle:
-            write_handle.writelines(read_handle.readlines())
-    # fam
-    with to_path(genotype_file_fam).open('rb') as read_handle:
-        with open('temp.fam', 'wb') as write_handle:
-            write_handle.writelines(read_handle.readlines())
-    # read
+    to_path(genotype_file_bed).copy('temp.bed')  # bed
+    to_path(genotype_file_bim).copy('temp.bim')  # bim
+    to_path(genotype_file_fam).copy('temp.fam')  # fam
     geno = read_plink1_bin('temp.bed')
 
     # endregion GENOTYPE_FILE
@@ -120,9 +109,9 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
 
     # samples with expression data
-    donors_exprs = set(phenotype.sample.values).intersection(
+    donors_exprs = sorted(set(phenotype.sample.values).intersection(
         set(sample_mapping['OneK1K_ID'].unique())
-    )
+    ))
     
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
