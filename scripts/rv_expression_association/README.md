@@ -1,13 +1,13 @@
 ## Analysis plan
 
-This runs a gene-set association analysis to test for an association between i) a set of rare genetic variants located in and around (now, up to 50kb up and downstream of) a gene and ii) the expression level of the gene itself (in a given cell type).
+This runs a gene-set association analysis to test for an association between i) a set of rare genetic variants located in and around (now: up to 50kb up- and downstream of) a gene and ii) the expression level of the gene itself (in a given cell type).
 
 Testing is done on one gene within chromosome 22, _VPREB3_, in naive B cells, but the analysis will be later expanded to multiple genes and other cell types.
 
 ### Overview
 This folder contains three scripts:
-* [get_vep_variants.py](get_vep_variants.py) is a Python script which takes a hail MT + HT object, filters for relevant variants (detailed below), and exports to plink files
-* [prepare_inputs.py](prepare_inputs.py) is a Python script which takes in genotype and expression files and prepares the input files to run SKAT
+* [get_vep_variants.py](get_vep_variants.py) is a Python script which takes a hail MT + HT object, filters for relevant variants (detailed below), and exports the corresponding genotypes to plink files
+* [prepare_inputs.py](prepare_inputs.py) is a Python script which takes in genotype and expression files and prepares the input files to run the association test (using SKAT, details below)
 * [run_SKAT.R](run_SKAT.R) is an R script that runs SKAT using the inputs generated from the previous scripts and returns association p-values
 
 ### Step 1 - select genetic variants
@@ -20,7 +20,7 @@ analysis-runner --dataset tob-wgs \
     python3 subset_hail_table.py -i gs://cpg-tob-wgs-main/tob_wgs_vep/104/vep104.3_GRCh38.ht \
     --chr chr22 --pos 23702743-23804425 --out VPREB3_50K_window_vep
 ```
-Next time, remember to add the ```--biallelic``` flag, to remove both multi-allelic and single-variant loci.
+Next time, remember to add the ```--biallelic``` flag, to remove both multi-allelic and single-allele (ref-only) loci.
 
 To get the interval, for now in a notebook:
 ```
@@ -43,7 +43,7 @@ right_boundary = min(interval_end, hl.get_reference('GRCh38').lengths[f'chr{chro
 
 # get gene-specific genomic interval
 gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
-gene_interval
+print(gene_interval)
 ```
 In the future, either i) add a previous step subsetting the MT + HT objects to the right genomic region taking a gene name as input, or ii) add that step to this script.
 
@@ -58,14 +58,16 @@ analysis-runner --dataset "tob-wgs" \
     get_vep_variants.py
 ```
 
-### Step 2 - prepare input files for SKAT
+### Step 2 - prepare input files for SKAT(-O)
 
 [SKAT](https://github.com/leelabsg/SKAT) is an R package to run gene-set association tests.
 It requires as inputs:
-* a genotype matrix (Z), samples X genetic variants
+* a genotype matrix (Z), samples X genetic variants [1]  
 * a phenotype vector (y.c), samples X 1 (in my case, this will be the expression level of a gene across samples, see below)
 * (optionally,) a kinship matrix (K), samples X samples
 * (optionally,) a covariance matrix (X), samples X covariates
+
+[1] Each genotype should be coded as 0, 1, 2, and 9 (or NA) for AA, Aa, aa, and missing, where A is a major allele and a is a minor allele (see [here](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf)). 
 
 I use this (Python) script to prepare these input files, using similar steps as in the [CellRegMap pipeline](https://github.com/populationgenomics/cellregmap-pipeline).
 To run:
@@ -84,7 +86,7 @@ For now, considering all regulatory variants (or, _e.g.,_ selecting promoter var
 ### Step 3 - run SKAT
 
 This is an R script that run SKAT-O in multiple modes (after matching sample IDs across objects):
-* with and without the kinship matrix K
+* with and without the kinship matrix K (_i.e._, a Genetic Relatedness Matrix, GRM)
 * reporting the p-values for each of the burden, SKAT and optimised SKAT-O tests. (print only atm, change to saving p-values to file)
 
 To run:
