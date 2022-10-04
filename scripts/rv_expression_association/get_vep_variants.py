@@ -2,9 +2,6 @@
 
 import logging
 import hail as hl
-
-# import numpy as np
-# import pandas as pd
 from hail.methods import export_plink
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
@@ -27,9 +24,9 @@ def main():  # pylint: disable=missing-function-docstring
 
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(
-        (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)
-        & (hl.len(mt.alleles) == 2)
-        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))
+        (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)  # QC
+        & (hl.len(mt.alleles) == 2)                                   # biallelic
+        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))                   # SNVs
     )
 
     # annotate using VEP
@@ -62,29 +59,6 @@ def main():  # pylint: disable=missing-function-docstring
     ht_filename = output_path('vpreb3_rare_regulatory_summary.ht')
     ht = filtered_mt.rows()
     ht.write(ht_filename)  # will this work? should i select important colunmns only?
-
-    # filtered_rrv_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] < 0.01)
-    # logging.info(f'Number of rarer variants (freq<1%): {filtered_rrv_mt.count()[0]}')
-
-    # filtered_0maf_mt = filtered_mt.filter_rows(filtered_mt.variant_qc.AF[1] == 0)
-    # logging.info(
-    #     f'Check that there are {filtered_0maf_mt.count()[0]} variants with freq==0'
-    # )
-
-    # # print out stats
-    # # types of regulatory variants
-    # biotypes = pd.Series(
-    #     filtered_mt.vep.regulatory_feature_consequences['biotype'].collect()
-    # )
-    # print(
-    #     biotypes.value_counts()
-    # )  # not sure how to turn this into logging? Multiline table
-
-    # # MAF distribution
-    # mafs = pd.Series(filtered_mt.variant_qc.AF[1].collect())
-    # logging.info(f'Min frequency in set: {np.nanmin(mafs)}')
-    # logging.info(f'Max frequency in set: {np.nanmax(mafs)}')
-    # logging.info(f'Mean frequency in set: {np.nanmean(mafs)}')
 
     # export MT object to PLINK (all regulatory variants)
     filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
