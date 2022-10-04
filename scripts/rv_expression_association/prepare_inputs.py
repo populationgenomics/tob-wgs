@@ -120,11 +120,10 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     sample_mapping = pd.read_csv(sample_mapping_file, sep='\t')
 
     # samples with expression data
-    donors_onek1k = sample_mapping['OneK1K_ID'].unique()
-    donors_onek1k.sort()
-    donors_exprs = sorted(
-        set(list(phenotype.sample.values)).intersection(donors_onek1k)
+    donors_exprs = set(phenotype.sample.values).intersection(
+        set(sample_mapping['OneK1K_ID'].unique())
     )
+    
     logging.info(f'Number of unique donors with expression data: {len(donors_exprs)}')
 
     # samples with genotype data
