@@ -102,10 +102,9 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
     with open('temp.bed', 'wb') as handle:
         handle.writelines(data)
     # bim
-    with to_path(genotype_file_bim).open('rb') as handle:
-        data = handle.readlines()
-    with open('temp.bim', 'wb') as handle:
-        handle.writelines(data)
+    with to_path(genotype_file_bim).open('rb') as read_handle:
+        with open('temp.bim', 'wb') as write_handle:
+            write_handle.writelines(read_handle.readlines())
     # fam
     with to_path(genotype_file_fam).open('rb') as handle:
         data = handle.readlines()
