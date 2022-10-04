@@ -79,7 +79,7 @@ analysis-runner --dataset "tob-wgs" \
     prepare_inputs.py
 ```
 
-#### current steps
+#### Current approach
 
 For now, considering all regulatory variants (or, _e.g.,_ selecting promoter variants only) and considering pseudo-bulk (mean) expression for each individual, borrowing the expression file (here, donor-level aggregated expression in naive B cells) from Kat's eQTL files.
 
