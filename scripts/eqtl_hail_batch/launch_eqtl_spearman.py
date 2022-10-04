@@ -419,6 +419,8 @@ def generate_log_cpm_output(
     # convert int to str in order to avoid 'int() argument must be a string, a bytes-like object or a number, not 'NoneType''
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
     gtf = gtf.to_pandas()
+    # rename gtf column gene_name in order to match data_summary file
+    gtf = gtf.rename(columns={'gene_name': 'gene_symbol'})
     data_summary['gene_ids'] = data_summary.merge(
         gtf.drop_duplicates('gene_symbol'), how='left', on='gene_symbol'
     ).gene_id
