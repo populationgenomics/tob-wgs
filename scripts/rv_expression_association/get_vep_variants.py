@@ -58,7 +58,7 @@ def main():  # pylint: disable=missing-function-docstring
     # export this as a Hail table for downstream analysis
     ht_filename = output_path('vpreb3_rare_regulatory_summary.ht')
     ht = filtered_mt.rows()
-    ht.write(ht_filename)  # will this work? should i select important colunmns only?
+    ht.write(ht_filename)  
 
     # export MT object to PLINK (all regulatory variants)
     filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
