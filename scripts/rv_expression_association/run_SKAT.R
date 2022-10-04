@@ -1,9 +1,8 @@
 #!/usr/bin/env Rscript
 """"
-This script runs SKAT (Wu et al AJHG 2011, Lee et al AJHG 2012) to test for an association 
-between a set of rare genetic variants and the expression level of a gene. 
-First, it makes sure that the samples are matching and in the same order
-across all objects.
+This script runs a SKAT, burden, and SKAT-O tests (as implemented in the SKAT R package; Wu et al AJHG 2011, Lee et al AJHG 2012) 
+to test for an association  between a set of rare genetic variants and the expression level of a gene. 
+First, it makes sure that the samples are matching and in the same order across all objects.
 """"
 
 install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au')
@@ -51,7 +50,7 @@ print(paste0("y.c dimensionality: ", dim(y.c)))
 Z <- as.matrix(tmp_df1[, 5:ncol(tmp_df1)])
 print(paste0("Z dimensionality: ", dim(Z)))
 
-# genotypes are inverted (figure out!)
+# genotypes are inverted (counting alt allele copies vs ref)
 Z <- 2-Z
 
 # add covariate matrix (X, using SKAT notation)
