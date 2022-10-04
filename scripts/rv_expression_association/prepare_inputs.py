@@ -24,9 +24,10 @@ subprocess.run(
     check=True,
 )
 
-import xarray as xr  # pylint: disable=wrong-import-position, import-error
-from pandas_plink import (read_plink1_bin)  # pylint: disable=wrong-import-position, import-error
-from limix.qc import (quantile_gaussianize)  # pylint: disable=wrong-import-position, import-error
+# pylint: disable=wrong-import-position, import-error
+import xarray as xr  
+from pandas_plink import (read_plink1_bin)  
+from limix.qc import (quantile_gaussianize)  
 
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -182,13 +183,14 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
 
     # region SAVE_FILES
 
-    with expression_filename.open('w') as ef:  # pylint: disable=no-member
+    # pylint: disable=no-member
+    with expression_filename.open('w') as ef:  
         y_df.to_csv(ef, index=False)
 
-    with genotype_filename.open('w') as gf:  # pylint: disable=no-member
+    with genotype_filename.open('w') as gf:  
         geno_df.to_csv(gf, index=False)
 
-    with kinship_filename.open('w') as kf:  # pylint: disable=no-member
+    with kinship_filename.open('w') as kf: 
         kinship_df.to_csv(kf, index=False)
 
     # endregion SAVE_FILES
