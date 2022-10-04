@@ -21,7 +21,7 @@ gcs_auth(token = token)
 # set bucket
 googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 
-# sample mapping file, matching CPG IDs to OneK1K IDs
+# sample mapping file (SMF), matching CPG IDs to OneK1K IDs
 sample_mapping_file <- googleCloudStorageR::gcs_get_object("scrna-seq/grch38_association_files/OneK1K_CPG_IDs.tsv")
 smf_df <- as.data.frame(sample_mapping_file)
 colnames(smf_df)[2] <- "CPG_ID"  # change column name to match other files
@@ -37,16 +37,17 @@ geno_df <- as.data.frame(geno)
 colnames(geno_df)[1] <- "CPG_ID"  # again match column names
 
 # expression files use the OneK1K IDs, genotypes the CPG IDs, use inner join and the SMF to match
+# this guarantees that the samples are the same, and in the same order
 tmp_df <- inner_join(smf_df, exprs_df)
 print(paste0("number of samples with expression data: ", nrow(tmp_df)))
 tmp_df1 <- inner_join(tmp_df, geno_df)
 print(paste0("number of samples with expression and genotype data: ", nrow(tmp_df1)))
 
-# extract phenotype values (.c for continuous, using SKAT notation)
+# extract phenotype values from the joint object (.c for continuous, using SKAT notation)
 y.c <- matrix(tmp_df1[,4], ncol = 1)
 print(paste0("y.c dimensionality: ", dim(y.c)))
 
-# extract genotype values (Z, using SKAT notation)
+# extract genotype values from the joint object (Z, using SKAT notation)
 Z <- as.matrix(tmp_df1[, 5:ncol(tmp_df1)])
 print(paste0("Z dimensionality: ", dim(Z)))
 
@@ -83,7 +84,7 @@ smf2_df <- smf2_df[!duplicated(smf2_df), ]  # remove duplicate rows
 # merge sample mapping files
 tmp_df2 <- inner_join(tmp_df1, smf2_df)
 
-# load kinship file
+# load kinship file (GRM)
 Kin <- googleCloudStorageR::gcs_get_object("v0/skat/grm_wide.csv")
 K_df <- as.data.frame(Kin)
 colnames(K_df)[1] <- "OneK1K_short_ID"
