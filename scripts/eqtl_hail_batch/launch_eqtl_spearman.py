@@ -955,7 +955,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     stored as the number of alternative alleles (n_alt_alleles; 0, 1, or 2).
     """
 
-    init_batch(driver_cores=2)
+    init_batch(worker_cores=2)
     mt = hl.read_matrix_table(filtered_matrix_table_path)
     # only keep samples that are contained within the residuals df
     # this is important, since not all indivuduals have expression/residual
