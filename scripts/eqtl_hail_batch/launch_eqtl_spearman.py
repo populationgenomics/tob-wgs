@@ -1261,20 +1261,14 @@ def run_scattered_conditional_analysis(
         return None
 
     # add in chromosome and position information to get locus and global bp in hail
-    chrom = adjusted_spearman_df.snp_id.str.split(':', expand=True)[0]
-    bp = adjusted_spearman_df.snp_id.str.split(':', expand=True)[1]
-    (
-        adjusted_spearman_df['chrom'],
-        adjusted_spearman_df['bp'],
-    ) = [
-        chrom,
-        bp,
-    ]
-    adjusted_spearman_df['alleles'] = adjusted_spearman_df[['a1','a2']].values.tolist()
+    adjusted_spearman_df['chrom'] = adjusted_spearman_df.snp_id.str.split(':', expand=True)[0]
+    adjusted_spearman_df['bp'] = adjusted_spearman_df.snp_id.str.split(':', expand=True)[1]
+    adjusted_spearman_df['alleles'] = adjusted_spearman_df[['a1', 'a2']].values.tolist()
     adjusted_spearman_df['round'] = str(iteration)
+
     # turn into hail table and annotate with global bp and allele info
     t = hl.Table.from_pandas(adjusted_spearman_df)
-    t = t.annotate(locus = hl.locus(t.chrom, hl.int32(t.bp)))
+    t = t.annotate(locus=hl.locus(t.chrom, hl.int32(t.bp)))
     t = t.annotate(global_bp=t.locus.global_position())
     # add in vep annotation
     mt = hl.read_matrix_table(filtered_matrix_table_path)
