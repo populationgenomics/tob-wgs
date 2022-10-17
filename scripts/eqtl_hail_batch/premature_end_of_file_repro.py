@@ -16,10 +16,10 @@ def main():
     """Main entrypoint."""
     init_batch()
     mt = hl.read_matrix_table(MT_PATH)
-    intervals = mt._calculate_new_partitions(NUM_PARTITIONS)
+    intervals = mt._calculate_new_partitions(NUM_PARTITIONS)  # pylint: disable=protected-access
     intervals_path = output_path(f'eqtl/debug/intervals_{NUM_PARTITIONS}', 'analysis')
     hl.experimental.write_expression(intervals, intervals_path)
-    print(hl.read_matrix_table(MT_PATH, _intervals=intervals).rows()._force_count())
+    print(hl.read_matrix_table(MT_PATH, _intervals=intervals).rows()._force_count())  # pylint: disable=protected-access
 
 if __name__ == '__main__':
     main()
