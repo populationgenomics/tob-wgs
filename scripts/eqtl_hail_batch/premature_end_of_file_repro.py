@@ -13,10 +13,15 @@ def main():
     """Main entrypoint."""
     init_batch()
     mt = hl.read_matrix_table(MT_PATH)
-    tmp_path = output_path('repro/checkpoint.mt', 'tmp')
+    tmp_path = output_path('repro/checkpoint_for_intervals.mt', 'tmp')
     mt = mt.checkpoint(tmp_path, overwrite=True)
-    mt = hl.read_matrix_table(tmp_path, _n_partitions=NUM_PARTITIONS)
-    print(mt.rows()._force_count())  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    intervals = mt._calculate_new_partitions(NUM_PARTITIONS)
+    intervals_path = output_path(
+        f'eqtl/debug/checkpoint_intervals_{NUM_PARTITIONS}', 'analysis'
+    )
+    hl.experimental.write_expression(intervals, intervals_path)
+    print(hl.read_matrix_table(tmp_path, _intervals=intervals).rows()._force_count())
 
 
 if __name__ == '__main__':
