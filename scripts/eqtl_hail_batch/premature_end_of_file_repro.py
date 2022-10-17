@@ -16,7 +16,7 @@ def main():
     tmp_path = output_path('repro/checkpoint.mt', 'tmp')
     mt = mt.checkpoint(output_path, overwrite=True)
     mt = hl.read_matrix_table(tmp_path, _n_partitions=NUM_PARTITIONS)
-    print(mt.count_rows())
+    print(mt.rows()._force_count())  # pylint: disable=protected-access
 
 
 if __name__ == '__main__':
