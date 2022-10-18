@@ -15,7 +15,7 @@ install.packages("SKAT", repos = 'http://cran.csiro.au/')
 library(googleCloudStorageR)
 library(gargle)
 library(SKAT)
-import(glue)
+library(glue)
 
 # token authorisation (Google Cloud Storage R)
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
