@@ -34,10 +34,10 @@ g_df <- as.data.frame(g_file)
 # while we are interested in the alternative allele, flip the genotypes
 geno_all <- 2 - as.matrix(g_df)
 
-# Step 1: sample 100 individuals only
+# Step 1: sample 1000 individuals only
 set.seed(0)
-geno_100 <- geno_all[sample(nrow(geno_all), 100), ]
-variant_count <- colSums(geno_100)     # get alt allele count
+geno_1000 <- geno_all[sample(nrow(geno_all), 1000), ]
+variant_count <- colSums(geno_1000)     # get alt allele count
 variant_freq <- variant_count / 200    # get alt allele frequency
 # remove variants left all 0"s after donor sub-sampling
 variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
@@ -46,10 +46,10 @@ variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 singletons <- names(variant_freq[variant_freq == 0.005])
 
 # first setting
-# * 100 individuals
+# * 1000 individuals
 # * 10 causal variants one in each if 10 individuals
 
-n_samples <- 100
+n_samples <- 1000
 set.seed(0)
 noise <- rnorm(n_samples)                     # random noise
 covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
@@ -62,7 +62,7 @@ pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_100[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
@@ -91,7 +91,7 @@ pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
-    genotypes <- geno_100[, select_singletons_50]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_50]        # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
@@ -121,7 +121,7 @@ pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_20 <- singletons[sample(length(singletons), 20)]
-    genotypes <- geno_100[, select_singletons_20]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_20]        # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
@@ -152,7 +152,7 @@ pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_100[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
     beta[1:2] <- -1                                      # for two variants, -1
     pheno <- genotypes %*% beta + noise                  # build phenotype
@@ -183,7 +183,7 @@ pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_100[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
@@ -208,8 +208,8 @@ write.csv(pv_scenario4_df, pv_scenario4_filename)
 # attempt at saving using code from
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
-output_env <- Sys.getenv("v0/simulations/skat/100samples_10causalvariants/")
-gcs_outdir <- glue("gs://cpg-tob-wgs-test/{output_env}")
+# output_env <- Sys.getenv("v0/simulations/skat/1000samples_10causalvariants/")
+gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/10000samples_10causalvariants/")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
