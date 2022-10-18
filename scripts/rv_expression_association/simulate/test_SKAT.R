@@ -77,5 +77,5 @@ rownames(pv_scenario1_df) = paste0("rep",1:n_reps)
 
 print(head(pv_scenario1_df))
 
-pv_scenario1_filename = "../simulations/skat/100samples_10causalvariants/10tested_samebeta.csv"
+pv_scenario1_filename = "simulations/skat/100samples_10causalvariants/10tested_samebeta.csv"
 write.csv(pv_scenario1_df, pv_scenario1_filename)
