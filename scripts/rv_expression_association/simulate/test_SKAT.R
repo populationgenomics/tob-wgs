@@ -45,17 +45,18 @@ variant_freq = variant_freq[variant_freq %in% variant_freq[variant_freq>0]]
 # consider singletons (1 copy in 1 individual) only
 singletons = names(variant_freq[variant_freq==0.005])
 
-# first scenario
+# first setting
 # * 100 individuals
-# * 10 variants one in each if 10 individuals
-# * test only those 10 variants
-# * same direction and magnitude of effect
+# * 10 causal variants one in each if 10 individuals
 
 n_samples = 100
 set.seed(0)
 noise = rnorm(n_samples)              # random noise
 X = matrix(1, nrow=n_samples, ncol=1) # intercept of ones as covariates
 
+# scenario 1
+# * test only those 10 variants
+# * same direction and magnitude of effect
 n_reps = 100
 pv_scenario1_mt = matrix(0, nrow=n_reps, ncol=4)
 for (i in 1:n_reps){
@@ -65,7 +66,6 @@ for (i in 1:n_reps){
     beta = matrix(1, nrow=ncol(G), ncol=1)              # create effect size
     y = G %*% beta + noise                              # build phenotype
     pv_normal = shapiro.test(y)$p.value                 # record normality pv
-    print(shapiro.test(noise))
     obj <- SKAT_Null_Model(y ~ X, out_type = "C")       # build null model SKAT
     pv_skat <- SKAT(G, obj)$p.value                     # SKAT
     pv_burden <- SKAT(G, obj, r.corr = 1)$p.value       # burden
@@ -82,7 +82,38 @@ rownames(pv_scenario1_df) <- paste0("rep",1:n_reps)
 print(head(pv_scenario1_df))
 
 pv_scenario1_filename = "10tested_samebeta.csv"
-write.csv(pv_scenario1_df, pv_scenario1_filename)
+write.csv(pv_scenario1_df, pv_scenario1_filename) # is this still needed then?
+
+# scenario 2
+# * test 50 variants (of which only 10 are causal)
+# * same direction and magnitude of effect
+pv_scenario2_mt = matrix(0, nrow=n_reps, ncol=4)
+for (i in 1:n_reps){
+    set.seed(i)
+    select_singletons_50 = singletons[sample(length(singletons), 50)]
+    G <- Z_100[,select_singletons_50]                   # subset genotypes
+    beta = matrix(0, nrow=ncol(G), ncol=1)              # create betas as 0s
+    beta[1:10] = 1                                      # only 10 non-0 betas
+    y = G %*% beta + noise                              # build phenotype
+    pv_normal = shapiro.test(y)$p.value                 # record normality pv
+    obj <- SKAT_Null_Model(y ~ X, out_type = "C")       # build null model SKAT
+    pv_skat <- SKAT(G, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(G, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(G, obj, method="SKATO")$p.value   # SKAT-O
+    pv_scenario2_mt[i, 1] = pv_normal
+    pv_scenario2_mt[i, 2] = pv_skat
+    pv_scenario2_mt[i, 3] = pv_burden
+    pv_scenario2_mt[i, 4] = pv_skat_o
+}
+pv_scenario2_df = as.data.frame(pv_scenario2_mt)
+colnames(pv_scenario2_df) <- c("P_shapiro","P_SKAT","P_burden","P_SKATO")
+rownames(pv_scenario2_df) <- paste0("rep",1:n_reps)
+
+print(head(pv_scenario2_df))
+
+pv_scenario2_filename = "50tested_samebeta.csv"
+# write.csv(pv_scenario2_df, pv_scenario2_filename) # is this still needed then?
+
 
 # attempt at saving using code from
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
@@ -90,4 +121,8 @@ dataset_env <- Sys.getenv("tob-wgs")
 output_env <- Sys.getenv("v0/simulations/skat/100samples_10causalvariants/")
 gcs_outdir <- glue("gs://cpg-tob-wgs-test/{output_env}")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
+# system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
+# system(glue("gsutil cp {pv_scenario3_filename} {gcs_outdir}"))
+# system(glue("gsutil cp {pv_scenario4_filename} {gcs_outdir}"))
 cat(glue("[{date()}] Finished successfully!"))
