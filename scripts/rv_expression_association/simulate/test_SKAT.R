@@ -68,7 +68,7 @@ for (i in 1:n_reps){
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden <- SKAT(geenotypes, obj, r.corr = 1)$p.value      # burden
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value      # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario1_mt[i, 1] <- pv_normal
     pv_scenario1_mt[i, 2] <- pv_skat
@@ -98,7 +98,7 @@ for (i in 1:n_reps){
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden <- SKAT(geenotypes, obj, r.corr = 1)$p.value      # burden
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value      # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario2_mt[i, 1] <- pv_normal
     pv_scenario2_mt[i, 2] <- pv_skat
@@ -128,7 +128,7 @@ for (i in 1:n_reps){
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden <- SKAT(geenotypes, obj, r.corr = 1)$p.value      # burden
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value      # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario2a_mt[i, 1] <- pv_normal
     pv_scenario2a_mt[i, 2] <- pv_skat
@@ -159,7 +159,7 @@ for (i in 1:n_reps){
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden <- SKAT(geenotypes, obj, r.corr = 1)$p.value      # burden
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value      # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario3_mt[i, 1] <- pv_normal
     pv_scenario3_mt[i, 2] <- pv_skat
@@ -189,7 +189,7 @@ for (i in 1:n_reps){
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden <- SKAT(geenotypes, obj, r.corr = 1)$p.value      # burden
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value      # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario4_mt[i, 1] <- pv_normal
     pv_scenario4_mt[i, 2] <- pv_skat
