@@ -30,6 +30,8 @@ Other aspects I'd like to include are:
 * getting y (without noise) through a g link function, _e.g._ to look more Poisson
 * more cells per donor (while I am not explicitly saying so, here I am modelling only one cell/observation per donor) - SKAT should be able to handle these repeats if I add the repeat structure as background GRM, I hope, but this may be where CellRegMap-RV should look better?
 
+Even further in the future is to build more complex simulations drawing from real scRNA-seq data.
+
 ### Run script
 To run (after authenticating: ```gcloud auth application-default login```):
 ```
