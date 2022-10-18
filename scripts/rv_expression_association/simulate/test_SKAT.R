@@ -50,6 +50,7 @@ singletons = names(variant_freq[variant_freq==0.005])
 # * same direction and magnitude of effect
 
 n_samples = 100
+set.seed(0)
 noise = rnorm(n_samples)              # random noise
 X = matrix(1, nrow=n_samples, ncol=1) # intercept of ones as covariates
 
@@ -77,5 +78,5 @@ rownames(pv_scenario1_df) = paste0("rep",1:n_reps)
 
 print(head(pv_scenario1_df))
 
-pv_scenario1_filename = "simulations/skat/100samples_10causalvariants/10tested_samebeta.csv"
+pv_scenario1_filename = "../simulations/skat/100samples_10causalvariants/10tested_samebeta.csv"
 write.csv(pv_scenario1_df, pv_scenario1_filename)
