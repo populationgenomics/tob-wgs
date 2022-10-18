@@ -112,7 +112,7 @@ rownames(pv_scenario2_df) <- paste0("rep",1:n_reps)
 print(head(pv_scenario2_df))
 
 pv_scenario2_filename = "50tested_samebeta.csv"
-# write.csv(pv_scenario2_df, pv_scenario2_filename) # is this still needed then?
+write.csv(pv_scenario2_df, pv_scenario2_filename) # is this still needed then?
 
 
 # attempt at saving using code from
