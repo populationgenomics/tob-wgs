@@ -87,6 +87,6 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
 output_env <- Sys.getenv("v0")
-gcs_outdir <- glue("gs://cpg-tob-wgs-test-tmp/{output_env}")
+gcs_outdir <- glue("gs://cpg-tob-wgs-test/{output_env}")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 cat(glue("[{date()}] Finished successfully!"))
