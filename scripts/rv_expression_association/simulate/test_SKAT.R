@@ -65,7 +65,7 @@ for (i in 1:n_reps){
     beta = matrix(1, nrow=ncol(G), ncol=1)              # create effect size
     y = G %*% beta + noise                              # build phenotype
     pv_normal = shapiro.test(y)$p.value                 # record normality pv
-    print(pv_normal)
+    print(shapiro.test(noise))
     obj <- SKAT_Null_Model(y ~ X, out_type = "C")       # build null model SKAT
     pv_skat <- SKAT(G, obj)$p.value                     # SKAT
     pv_burden <- SKAT(G, obj, r.corr = 1)$p.value       # burden
