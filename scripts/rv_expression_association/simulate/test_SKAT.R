@@ -1,13 +1,11 @@
 #!/usr/bin/env Rscript
 
-################################################################################
-# This script aims to record differences in the power of gene-set associations
-# under different scenarios. It runs a SKAT, burden, and SKAT-O tests
-# (implemented in the SKAT R package; Wu et al AJHG 2011, Lee et al AJHG 2012)
-# to test for an association between a set of rare genetic variants (real)
-# and a simulated phenotype. The sets of variants tested and the simulated
-# effect sizes are varied and the resulted association p-values are recorded.
-
+## This script aims to record differences in the power of gene-set associations
+## under different scenarios. It runs a SKAT, burden, and SKAT-O tests
+## (implemented in the SKAT R package; Wu et al AJHG 2011, Lee et al AJHG 2012)
+## to test for an association between a set of rare genetic variants (real)
+## and a simulated phenotype. The sets of variants tested and the simulated
+## effect sizes are varied and the resulted association p-values are recorded.
 
 # install R packages
 install.packages("googleCloudStorageR", repos = 'http://cran.csiro.au')
