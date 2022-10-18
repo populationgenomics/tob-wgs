@@ -4,7 +4,8 @@ This script aims to get assess what parameters most influence power to detect ef
 In a first instance, using the three tests implemented in SKAT:
 * SKAT
 * burden
-* SKAT-O
+* SKAT-O.
+
 Later, this will be extended to other methods, including my own [CellRegMap-RV](). 
 
 ### Approach
