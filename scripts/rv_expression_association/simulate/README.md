@@ -9,12 +9,12 @@ In a first instance, using the three tests implemented in [SKAT](https://cran.r-
 Later, this will be extended to other methods, including my own [CellRegMap-RV](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L653-L697). 
 
 ### Approach
-* Genotypes matrix (G):real variants (SNVs from a genomic region, around the _VPREB3_ gene) from the TOB-WGS dataset
+* Genotypes matrix (```genotypes```):real variants (SNVs from a genomic region, around the _VPREB3_ gene) from the TOB-WGS dataset
   * samples: subsetting to 100 and then 1,000 individuals
   * variants: singletons only (so freq=0.005 and 0.0005, respectively)
-* Phenotype vector y as _y=G*beta + noise_ 
+* Phenotype vector pheno as ```pheno=genotypes*beta + noise``` 
   * where noise is randomly distributed with mean=0, sd=1
-  * G and beta vary as below
+  * genotypes and beta vary as below
 
 #### Scenarios
 * only testing 10 variants, all causal (beta !=0), same magnitude and direction of effect (beta=1)
@@ -27,7 +27,7 @@ I am also recording how "normal" y is in each case (using the Shapiro test p-val
 #### Future
 Other aspects I'd like to include are:
 * frequency (not just singletons)
-* getting y (without noise) through a g link function, _e.g._ to look more Poisson
+* getting y (without noise) through a g-link function, _e.g._ to look more Poisson
 * more cells per donor (while I am not explicitly saying so, here I am modelling only one cell/observation per donor) - SKAT should be able to handle these repeats if I add the repeat structure as background GRM, I hope, but this may be where CellRegMap-RV should look better?
 
 Even further in the future is to build more complex simulations drawing from real scRNA-seq data.
