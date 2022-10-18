@@ -23,6 +23,8 @@ gcs_auth(token = token)
 
 # set bucket
 googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
+# set seed
+set.seed(0)
 
 # get genotypes
 # these are variants in and around gene VPREB3 on chrom 22
@@ -50,7 +52,6 @@ singletons = names(variant_freq[variant_freq==0.005])
 # * same direction and magnitude of effect
 
 n_samples = 100
-set.seed(0)
 noise = rnorm(n_samples)              # random noise
 X = matrix(1, nrow=n_samples, ncol=1) # intercept of ones as covariates
 
