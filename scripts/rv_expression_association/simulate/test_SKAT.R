@@ -80,13 +80,13 @@ rownames(pv_scenario1_df) = paste0("rep",1:n_reps)
 
 print(head(pv_scenario1_df))
 
-pv_scenario1_filename = "simulations_skat_100samples_10causalvariants_10tested_samebeta.csv"
+pv_scenario1_filename = "10tested_samebeta.csv"
 write.csv(pv_scenario1_df, pv_scenario1_filename)
 
 # attempt at saving using code from
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
-output_env <- Sys.getenv("v0")
+output_env <- Sys.getenv("v0/simulations/skat/100samples_10causalvariants/")
 gcs_outdir <- glue("gs://cpg-tob-wgs-test/{output_env}")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 cat(glue("[{date()}] Finished successfully!"))
