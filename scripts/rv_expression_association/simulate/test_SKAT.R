@@ -33,6 +33,7 @@ g_df <- as.data.frame(g_file)
 # because the current matrix is counting the copies of the reference allele
 # while we are interested in the alternative allele, flip the genotypes
 geno_all <- 2 - as.matrix(g_df)
+print(dim(geno_all))
 
 # Step 1: sample 1000 individuals only
 set.seed(0)
@@ -50,7 +51,9 @@ n_samples <- 1000
 
 # consider singletons (1 copy in 1 individual) only
 singleton_freq <- 0.5 / n_samples
+print(singleton_freq)
 singletons <- names(variant_freq[variant_freq == singleton_freq])
+print(length(singletons))
 
 set.seed(0)
 noise <- rnorm(n_samples)                     # random noise
@@ -210,8 +213,7 @@ write.csv(pv_scenario4_df, pv_scenario4_filename)
 # attempt at saving using code from
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
-# output_env <- Sys.getenv("v0/simulations/skat/1000samples_10causalvariants/")
-gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/1000samples_10causalvariants/")
+gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/1000samples_10causal_singletons/")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
