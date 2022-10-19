@@ -35,19 +35,19 @@ g_df <- as.data.frame(g_file)
 geno_all <- 2 - as.matrix(g_df)
 print(dim(geno_all))
 
-# Step 1: sample 1000 individuals only
-set.seed(0)
-geno_1000 <- geno_all[sample(nrow(geno_all), 1000), ]
-variant_count <- colSums(geno_1000)     # get alt allele count
-variant_freq <- variant_count / 200    # get alt allele frequency
-# remove variants left all 0"s after donor sub-sampling
-variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
+n_samples <- 1000
 
+# Step 1: sample 1000 individuals only
 # first setting
 # * 1000 individuals
 # * 10 causal variants one in each if 10 individuals
 
-n_samples <- 1000
+set.seed(0)
+geno_1000 <- geno_all[sample(nrow(geno_all), 1000), ]
+variant_count <- colSums(geno_1000)             # get alt allele count
+variant_freq <- variant_count / (2 * n_samples) # get alt allele frequency
+# remove variants left all 0"s after donor sub-sampling
+variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 
 # consider singletons (1 copy in 1 individual) only
 singleton_freq <- 0.5 / n_samples
