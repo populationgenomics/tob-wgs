@@ -78,7 +78,7 @@ for (i in 1:n_reps){
     pv_scenario1_mt[i, 2] <- pv_skat
     pv_scenario1_mt[i, 3] <- pv_burden
     pv_scenario1_mt[i, 4] <- pv_skat_o
-    pv_scenario1_mt[i, 5] <- lambda
+    pv_scenario1_mt[i, 5] <- mean(lambda) # does this make any sense?
 }
 pv_scenario1_df <- as.data.frame(pv_scenario1_mt)
 colnames(pv_scenario1_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "lambda")
