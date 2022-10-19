@@ -33,7 +33,6 @@ g_df <- as.data.frame(g_file)
 # because the current matrix is counting the copies of the reference allele
 # while we are interested in the alternative allele, flip the genotypes
 geno_all <- 2 - as.matrix(g_df)
-print(dim(geno_all))
 
 n_samples <- 1000
 
@@ -51,9 +50,7 @@ variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 
 # consider singletons (1 copy in 1 individual) only
 singleton_freq <- 0.5 / n_samples
-print(singleton_freq)
 singletons <- names(variant_freq[variant_freq == singleton_freq])
-print(length(singletons))
 
 set.seed(0)
 noise <- rnorm(n_samples)                     # random noise
@@ -67,7 +64,7 @@ pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
@@ -126,7 +123,7 @@ pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_20 <- singletons[sample(length(singletons), 20)]
-    genotypes <- geno_1000[, select_singletons_20]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_20]       # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
@@ -157,7 +154,7 @@ pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
     beta[1:2] <- -1                                      # for two variants, -1
     pheno <- genotypes %*% beta + noise                  # build phenotype
@@ -188,7 +185,7 @@ pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_1000[, select_singletons_10]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
