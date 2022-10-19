@@ -209,7 +209,7 @@ write.csv(pv_scenario4_df, pv_scenario4_filename)
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
 # output_env <- Sys.getenv("v0/simulations/skat/1000samples_10causalvariants/")
-gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/10000samples_10causalvariants/")
+gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/1000samples_10causalvariants/")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
