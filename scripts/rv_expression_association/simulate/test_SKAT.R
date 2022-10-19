@@ -43,7 +43,8 @@ variant_freq <- variant_count / 200    # get alt allele frequency
 variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 
 # consider singletons (1 copy in 1 individual) only
-singletons <- names(variant_freq[variant_freq == 0.005])
+# singletons <- names(variant_freq[variant_freq == 0.005]) # 100 samples
+singletons <- names(variant_freq[variant_freq == 0.0005]) # 1,000 samples
 
 # first setting
 # * 1000 individuals
