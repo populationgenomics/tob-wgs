@@ -69,7 +69,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)
+    pheno <- pheno + rnorm(n_samples)               # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
@@ -90,134 +90,150 @@ print(head(pv_scenario1_df))
 pv_scenario1_filename <- "10tested_samebeta.csv"
 write.csv(pv_scenario1_df, pv_scenario1_filename)
 
-# # scenario 2
-# # * test 50 variants (of which only 10 are causal)
-# # * same direction and magnitude of effect
-# pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
-# for (i in 1:n_reps){
-#     set.seed(i)
-#     select_singletons_50 <- singletons[sample(length(singletons), 50)]
-#     genotypes <- geno_1000[, select_singletons_50]        # subset genotypes
-#     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
-#     beta[1:10] <- 1                                      # only 10 non-0 betas
-#     pheno <- genotypes %*% beta + noise                  # build phenotype
-#     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-#     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-#     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-#     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-#     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-#     pv_scenario2_mt[i, 1] <- pv_normal
-#     pv_scenario2_mt[i, 2] <- pv_skat
-#     pv_scenario2_mt[i, 3] <- pv_burden
-#     pv_scenario2_mt[i, 4] <- pv_skat_o
-# }
-# pv_scenario2_df <- as.data.frame(pv_scenario2_mt)
-# colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
-# rownames(pv_scenario2_df) <- paste0("rep", 1:n_reps)
+# scenario 2
+# * test 50 variants (of which only 10 are causal)
+# * same direction and magnitude of effect
+pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
+for (i in 1:n_reps){
+    set.seed(i)
+    select_singletons_50 <- singletons[sample(length(singletons), 50)]
+    genotypes <- geno_1000[, select_singletons_50]       # subset genotypes
+    beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
+    beta[1:10] <- 1                                      # only 10 non-0 betas
+    lambda <- genotypes %*% beta                         # get mean parameter
+    set.seed(0)
+    pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
+    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    pv_scenario2_mt[i, 1] <- pv_normal
+    pv_scenario2_mt[i, 2] <- pv_skat
+    pv_scenario2_mt[i, 3] <- pv_burden
+    pv_scenario2_mt[i, 4] <- pv_skat_o
+    pv_scenario2_mt[i, 5] <- var(lambda) / (var(lambda) + 1)
+}
+pv_scenario2_df <- as.data.frame(pv_scenario2_mt)
+colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "geno_beta_var")
+rownames(pv_scenario2_df) <- paste0("rep", 1:n_reps)
 
-# print(head(pv_scenario2_df))
+print(head(pv_scenario2_df))
 
-# pv_scenario2_filename <- "50tested_samebeta.csv"
-# write.csv(pv_scenario2_df, pv_scenario2_filename)
+pv_scenario2_filename <- "50tested_samebeta.csv"
+write.csv(pv_scenario2_df, pv_scenario2_filename)
 
-# # scenario 2a
-# # * test 20 variants (of which only 10 are causal)
-# # * same direction and magnitude of effect
-# pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
-# for (i in 1:n_reps){
-#     set.seed(i)
-#     select_singletons_20 <- singletons[sample(length(singletons), 20)]
-#     genotypes <- geno_1000[, select_singletons_20]       # subset genotypes
-#     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
-#     beta[1:10] <- 1                                      # only 10 non-0 betas
-#     pheno <- genotypes %*% beta + noise                  # build phenotype
-#     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-#     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-#     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-#     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-#     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-#     pv_scenario2a_mt[i, 1] <- pv_normal
-#     pv_scenario2a_mt[i, 2] <- pv_skat
-#     pv_scenario2a_mt[i, 3] <- pv_burden
-#     pv_scenario2a_mt[i, 4] <- pv_skat_o
-# }
-# pv_scenario2a_df <- as.data.frame(pv_scenario2a_mt)
-# colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
-# rownames(pv_scenario2a_df) <- paste0("rep", 1:n_reps)
+# scenario 2a
+# * test 20 variants (of which only 10 are causal)
+# * same direction and magnitude of effect
+pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
+for (i in 1:n_reps){
+    set.seed(i)
+    select_singletons_20 <- singletons[sample(length(singletons), 20)]
+    genotypes <- geno_1000[, select_singletons_20]       # subset genotypes
+    beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
+    beta[1:10] <- 1                                      # only 10 non-0 betas
+    lambda <- genotypes %*% beta                         # get mean parameter
+    set.seed(0)
+    pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
+    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    pv_scenario2a_mt[i, 1] <- pv_normal
+    pv_scenario2a_mt[i, 2] <- pv_skat
+    pv_scenario2a_mt[i, 3] <- pv_burden
+    pv_scenario2a_mt[i, 4] <- pv_skat_o
+    pv_scenario2a_mt[i, 5] <- var(lambda) / (var(lambda) + 1)
+}
+pv_scenario2a_df <- as.data.frame(pv_scenario2a_mt)
+colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "geno_beta_var")
+rownames(pv_scenario2a_df) <- paste0("rep", 1:n_reps)
 
-# print(head(pv_scenario2a_df))
+print(head(pv_scenario2a_df))
 
-# pv_scenario2a_filename <- "20tested_samebeta.csv"
-# write.csv(pv_scenario2a_df, pv_scenario2a_filename)
+pv_scenario2a_filename <- "20tested_samebeta.csv"
+write.csv(pv_scenario2a_df, pv_scenario2a_filename)
 
-# # scenario 3
-# # * test 10 variants
-# # * same magnitude of effect
-# # * vary direction for 2/10 variants
-# pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 4)
-# for (i in 1:n_reps){
-#     set.seed(i)
-#     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-#     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
-#     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
-#     beta[1:2] <- -1                                      # for two variants, -1
-#     pheno <- genotypes %*% beta + noise                  # build phenotype
-#     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-#     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-#     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-#     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-#     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-#     pv_scenario3_mt[i, 1] <- pv_normal
-#     pv_scenario3_mt[i, 2] <- pv_skat
-#     pv_scenario3_mt[i, 3] <- pv_burden
-#     pv_scenario3_mt[i, 4] <- pv_skat_o
-# }
-# pv_scenario3_df <- as.data.frame(pv_scenario3_mt)
-# colnames(pv_scenario3_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
-# rownames(pv_scenario3_df) <- paste0("rep", 1:n_reps)
+# scenario 3
+# * test 10 variants
+# * same magnitude of effect
+# * vary direction for 2/10 variants
+pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 4)
+for (i in 1:n_reps){
+    set.seed(i)
+    select_singletons_10 <- singletons[sample(length(singletons), 10)]
+    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
+    beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
+    beta[1:2] <- -1                                      # for two variants, -1
+    lambda <- genotypes %*% beta                         # get mean parameter
+    set.seed(0)
+    pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
+    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    pv_scenario3_mt[i, 1] <- pv_normal
+    pv_scenario3_mt[i, 2] <- pv_skat
+    pv_scenario3_mt[i, 3] <- pv_burden
+    pv_scenario3_mt[i, 4] <- pv_skat_o
+    pv_scenario3_mt[i, 5] <- var(lambda) / (var(lambda) + 1)
+}
+pv_scenario3_df <- as.data.frame(pv_scenario3_mt)
+colnames(pv_scenario3_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "geno_beta_var")
+rownames(pv_scenario3_df) <- paste0("rep", 1:n_reps)
 
-# print(head(pv_scenario3_df))
+print(head(pv_scenario3_df))
 
-# pv_scenario3_filename <- "10tested_2negativebeta.csv"
-# write.csv(pv_scenario3_df, pv_scenario3_filename)
+pv_scenario3_filename <- "10tested_2negativebeta.csv"
+write.csv(pv_scenario3_df, pv_scenario3_filename)
 
-# # scenario 4
-# # * test 10 variants
-# # * same direction of effect
-# # * vary magnitude
-# pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
-# for (i in 1:n_reps){
-#     set.seed(i)
-#     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-#     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
-#     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
-#     pheno <- genotypes %*% beta + noise                  # build phenotype
-#     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-#     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-#     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-#     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-#     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-#     pv_scenario4_mt[i, 1] <- pv_normal
-#     pv_scenario4_mt[i, 2] <- pv_skat
-#     pv_scenario4_mt[i, 3] <- pv_burden
-#     pv_scenario4_mt[i, 4] <- pv_skat_o
-# }
-# pv_scenario4_df <- as.data.frame(pv_scenario4_mt)
-# colnames(pv_scenario4_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
-# rownames(pv_scenario4_df) <- paste0("rep", 1:n_reps)
+# scenario 4
+# * test 10 variants
+# * same direction of effect
+# * vary magnitude
+pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
+for (i in 1:n_reps){
+    set.seed(i)
+    select_singletons_10 <- singletons[sample(length(singletons), 10)]
+    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
+    beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
+    lambda <- genotypes %*% beta                         # get mean parameter
+    set.seed(0)
+    pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
+    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    pv_scenario4_mt[i, 1] <- pv_normal
+    pv_scenario4_mt[i, 2] <- pv_skat
+    pv_scenario4_mt[i, 3] <- pv_burden
+    pv_scenario4_mt[i, 4] <- pv_skat_o
+    pv_scenario4_mt[i, 5] <- var(lambda) / (var(lambda) + 1)
+}
+pv_scenario4_df <- as.data.frame(pv_scenario4_mt)
+colnames(pv_scenario4_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "geno_beta_var")
+rownames(pv_scenario4_df) <- paste0("rep", 1:n_reps)
 
-# print(head(pv_scenario4_df))
+print(head(pv_scenario4_df))
 
-# pv_scenario4_filename <- "10tested_varyingbeta.csv"
-# write.csv(pv_scenario4_df, pv_scenario4_filename)
+pv_scenario4_filename <- "10tested_varyingbeta.csv"
+write.csv(pv_scenario4_df, pv_scenario4_filename)
 
 # attempt at saving using code from
 # https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
 dataset_env <- Sys.getenv("tob-wgs")
 gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/1000samples_10causal_singletons_poisson/")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario3_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario4_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario3_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario4_filename} {gcs_outdir}"))
 cat(glue("[{date()}] Finished successfully!"))
