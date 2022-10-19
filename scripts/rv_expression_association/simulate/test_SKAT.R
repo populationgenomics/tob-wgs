@@ -59,7 +59,7 @@ covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
 # scenario 1
 # * test only those 10 variants
 # * same direction and magnitude of effect
-n_reps <- 100
+n_reps <- 1000
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
