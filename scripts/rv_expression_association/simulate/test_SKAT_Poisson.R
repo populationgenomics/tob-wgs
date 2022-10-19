@@ -93,7 +93,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # scenario 2
 # * test 50 variants (of which only 10 are causal)
 # * same direction and magnitude of effect
-pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
@@ -127,7 +127,7 @@ write.csv(pv_scenario2_df, pv_scenario2_filename)
 # scenario 2a
 # * test 20 variants (of which only 10 are causal)
 # * same direction and magnitude of effect
-pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_20 <- singletons[sample(length(singletons), 20)]
@@ -162,7 +162,7 @@ write.csv(pv_scenario2a_df, pv_scenario2a_filename)
 # * test 10 variants
 # * same magnitude of effect
 # * vary direction for 2/10 variants
-pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario3_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
@@ -197,7 +197,7 @@ write.csv(pv_scenario3_df, pv_scenario3_filename)
 # * test 10 variants
 # * same direction of effect
 # * vary magnitude
-pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
