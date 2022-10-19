@@ -69,7 +69,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnoise(n_samples)
+    pheno <- pheno + rnorm(n_samples)
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
