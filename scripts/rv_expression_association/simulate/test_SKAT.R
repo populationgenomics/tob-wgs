@@ -42,15 +42,16 @@ variant_freq <- variant_count / 200    # get alt allele frequency
 # remove variants left all 0"s after donor sub-sampling
 variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 
-# consider singletons (1 copy in 1 individual) only
-# singletons <- names(variant_freq[variant_freq == 0.005]) # 100 samples
-singletons <- names(variant_freq[variant_freq == 0.0005]) # 1,000 samples
-
 # first setting
 # * 1000 individuals
 # * 10 causal variants one in each if 10 individuals
 
 n_samples <- 1000
+
+# consider singletons (1 copy in 1 individual) only
+singleton_freq <- 0.5 / n_samples
+singletons <- names(variant_freq[variant_freq == singleton_freq])
+
 set.seed(0)
 noise <- rnorm(n_samples)                     # random noise
 covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
