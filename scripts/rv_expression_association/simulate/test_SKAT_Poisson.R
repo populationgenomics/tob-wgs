@@ -54,6 +54,9 @@ variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 singleton_freq <- 0.5 / n_samples
 singletons <- names(variant_freq[variant_freq == singleton_freq])
 
+set.seed(0)
+rnoise <- rnorm(n_samples)
+print(shapiro.test(rnoise))
 covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
 
 # scenario 1
@@ -69,7 +72,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pheno <- pheno + rnoise                         # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
@@ -103,7 +106,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pheno <- pheno + rnoise                         # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
@@ -137,7 +140,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pheno <- pheno + rnoise                         # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
@@ -172,7 +175,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pheno <- pheno + rnoise                         # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
@@ -206,7 +209,7 @@ for (i in 1:n_reps){
     lambda <- genotypes %*% beta                         # get mean parameter
     set.seed(0)
     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-    pheno <- pheno + rnorm(n_samples)               # add random normal noise
+    pheno <- pheno + rnoise                         # add random normal noise
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
