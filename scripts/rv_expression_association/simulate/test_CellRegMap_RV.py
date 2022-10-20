@@ -13,7 +13,7 @@ import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
 from numpy import ones
-from random import sample, seed
+from random import randn, sample, seed
 from scipy.stats import shapiro
 
 # install CellRegMap (new version) from github
@@ -50,34 +50,32 @@ singleton_freq = 0.5 / n_samples
 singletons = names(variant_freq[variant_freq == singleton_freq])
 
 seed(0)
-noise = rnorm(n_samples)                     # random noise
+noise = randn(n_samples, 1)                    # random noise
 covs = ones((n_samples, 1)) # intercept of ones as covariates
 
 # scenario 1
 # * test only those 10 variants
 # * same direction and magnitude of effect
 n_reps = 1000
-pv_scenario1_mt = matrix(0, nrow = n_reps, ncol = 4)
-for (i in 1:n_reps){
-    set.seed(i)
+pv_scenario1_mt = matrix(0, nrow = n_reps, ncol = 2)
+for i in range(n_reps):
+    seed(i)
     select_singletons_10 = singletons[sample(length(singletons), 10)]
     genotypes = geno_1000[, select_singletons_10]       # subset genotypes
     beta = matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
     pheno = genotypes @ beta + noise                  # build phenotype
     pv_normal = shapiro(pheno).pvalue             # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno,W=covs)
-    obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-    pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
-    pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-    pv_skat_o = SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    pv_crm_rv = run_gene_set_association(y=pheno, W=covs, E=None, G=genotypes) # TO DO allow E=None
+    # obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    # pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
+    # pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    # pv_skat_o = SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
     pv_scenario1_mt[i, 1] = pv_normal
-    pv_scenario1_mt[i, 2] = pv_skat
-    pv_scenario1_mt[i, 3] = pv_burden
-    pv_scenario1_mt[i, 4] = pv_skat_o
-}
-pv_scenario1_df = as.data.frame(pv_scenario1_mt)
-colnames(pv_scenario1_df) = c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
-rownames(pv_scenario1_df) = paste0("rep", 1:n_reps)
+    pv_scenario1_mt[i, 2] = pv_crm_rv
+
+pv_scenario1_df = pd.DataFrame(pv_scenario1_mt)
+colnames(pv_scenario1_df) = c("P_shapiro", "P_CRM_RV")
+rownames(pv_scenario1_df) = "rep" + range (n_reps)
 
 print(head(pv_scenario1_df))
 
