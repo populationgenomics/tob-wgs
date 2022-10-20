@@ -54,7 +54,7 @@ variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 singleton_freq <- 0.5 / n_samples
 singletons <- names(variant_freq[variant_freq == singleton_freq])
 
-set.seed(0)
+set.seed(1)
 rnoise <- rnorm(n_samples)
 print(shapiro.test(rnoise))
 covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
@@ -62,7 +62,7 @@ covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
 # scenario 1
 # * test only those 10 variants
 # * same direction and magnitude of effect
-n_reps <- 100
+n_reps <- 1000
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
