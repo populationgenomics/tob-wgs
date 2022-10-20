@@ -6,13 +6,18 @@
 ## and a simulated phenotype. The sets of variants tested and the simulated
 ## effect sizes are varied and the resulted association p-values are recorded.
 
-# install CellRegMap (new version) from github
-
-
 # import python modules
+import sys
+import subprocesss
 import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
+from numpy import ones
+from random import sample, seed
+from scipy.stats import shapiro
+
+# install CellRegMap (new version) from github
+subprocess.run([sys.executable,'-m','pip','install','git+https://github.com/annacuomo/CellRegMap'], check=True)
 
 from CellRegMap import run_gene_set_association
 
@@ -33,7 +38,7 @@ n_samples = 1000
 # * 1000 individuals
 # * 10 causal variants one in each if 10 individuals
 
-set.seed(0)
+seed(0)
 geno_1000 = geno_all[sample(nrow(geno_all), 1000), ]
 variant_count = colSums(geno_1000)             # get alt allele count
 variant_freq = variant_count / (2 * n_samples) # get alt allele frequency
@@ -44,9 +49,9 @@ variant_freq = variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 singleton_freq = 0.5 / n_samples
 singletons = names(variant_freq[variant_freq == singleton_freq])
 
-set.seed(0)
+seed(0)
 noise = rnorm(n_samples)                     # random noise
-covs = matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
+covs = ones((n_samples, 1)) # intercept of ones as covariates
 
 # scenario 1
 # * test only those 10 variants
@@ -58,8 +63,9 @@ for (i in 1:n_reps){
     select_singletons_10 = singletons[sample(length(singletons), 10)]
     genotypes = geno_1000[, select_singletons_10]       # subset genotypes
     beta = matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
-    pheno = genotypes %*% beta + noise                  # build phenotype
-    pv_normal = shapiro.test(pheno)$p.value             # record normality pv
+    pheno = genotypes @ beta + noise                  # build phenotype
+    pv_normal = shapiro(pheno).pvalue             # record normality pv
+    pv_crm_rv = run_gene_set_association(y=pheno,W=covs)
     obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
     pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
