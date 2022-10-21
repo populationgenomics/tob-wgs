@@ -199,7 +199,7 @@ for (i in 1:n_reps){
     pv_scenario3a_mt[i, 3] <- pv_burden
     pv_scenario3a_mt[i, 4] <- pv_skat_o
 }
-pv_scenario3a_df <- as.data.frame(pv_scenario3_mt)
+pv_scenario3a_df <- as.data.frame(pv_scenario3a_mt)
 colnames(pv_scenario3a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
 rownames(pv_scenario3a_df) <- paste0("rep", 1:n_reps)
 
