@@ -65,7 +65,7 @@ for i in range(n_reps):
     beta = matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
     pheno = genotypes @ beta + noise                  # build phenotype
     pv_normal = shapiro(pheno).pvalue             # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, W=covs, E=None, G=genotypes) # TO DO allow E=None
+    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=None) # TO DO allow E=None
     # obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     # pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
     # pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
