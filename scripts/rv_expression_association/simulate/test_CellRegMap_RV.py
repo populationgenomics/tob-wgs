@@ -13,13 +13,13 @@ import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
 from numpy import ones
-from random import randn, sample, seed
+from numpy.random import randn, sample, seed
 from scipy.stats import shapiro
 
 # install CellRegMap (new version) from github
 subprocess.run([sys.executable,'-m','pip','install','git+https://github.com/annacuomo/CellRegMap'], check=True)
 
-from CellRegMap import run_gene_set_association
+from cellregmap import run_gene_set_association
 
 
 # get genotypes
