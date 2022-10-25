@@ -13,7 +13,8 @@ import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
 from numpy import ones
-from numpy.random import randn, sample, seed
+from random import sample
+from numpy.random import randn, seed
 from scipy.stats import shapiro
 
 # install CellRegMap (new version) from github
@@ -39,15 +40,15 @@ n_samples = 1000
 # * 10 causal variants one in each if 10 individuals
 
 seed(0)
-geno_1000 = geno_all[sample(nrow(geno_all), 1000), ]
-variant_count = colSums(geno_1000)             # get alt allele count
+geno_1000 = geno_all.sample(n_samples)
+variant_count = geno_1000.sum(axis=0)             # get alt allele count
 variant_freq = variant_count / (2 * n_samples) # get alt allele frequency
 # remove variants left all 0"s after donor sub-sampling
-variant_freq = variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
+variant_freq = variant_freq[variant_freq > 0]
 
 # consider singletons (1 copy in 1 individual) only
 singleton_freq = 0.5 / n_samples
-singletons = names(variant_freq[variant_freq == singleton_freq])
+singletons = variant_freq[variant_freq == singleton_freq].index.values
 
 seed(0)
 noise = randn(n_samples, 1)                    # random noise
@@ -60,12 +61,12 @@ n_reps = 1000
 pv_scenario1_mt = matrix(0, nrow = n_reps, ncol = 2)
 for i in range(n_reps):
     seed(i)
-    select_singletons_10 = singletons[sample(length(singletons), 10)]
-    genotypes = geno_1000[, select_singletons_10]       # subset genotypes
-    beta = matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
+    select_singletons_10 = sample(list(singletons), 10)
+    genotypes = geno_1000[select_singletons_10]       # subset genotypes
+    beta = ones((genotypes.shape[1], 1))  # create effect size
     pheno = genotypes @ beta + noise                  # build phenotype
     pv_normal = shapiro(pheno).pvalue             # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=None) # TO DO allow E=None
+    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=covs)[0] # TO DO allow E=None
     # obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     # pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
     # pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
