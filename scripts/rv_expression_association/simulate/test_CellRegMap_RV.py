@@ -8,7 +8,7 @@
 
 # import python modules
 import sys
-import subprocesss
+import subprocess
 import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
