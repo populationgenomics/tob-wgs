@@ -12,9 +12,9 @@ import subprocesss
 import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
-from numpy import ones
+from numpy import eye, ones, zeros
 from random import sample
-from numpy.random import randn, seed
+from numpy.random import poisson, randn, seed
 from scipy.stats import shapiro
 
 # install CellRegMap (new version) from github
@@ -51,34 +51,36 @@ singleton_freq = 0.5 / n_samples
 singletons = variant_freq[variant_freq == singleton_freq].index.values
 
 seed(0)
-noise = randn(n_samples, 1)                    # random noise
+noise = randn(n_samples, 1)            # random noise Gaussian
+noise_pois = poisson(lam=1, size=n_samples).reshape(n_samples,1) # Poisson noise
 covs = ones((n_samples, 1)) # intercept of ones as covariates
+E = eye(n_samples)
 
 # scenario 1
 # * test only those 10 variants
 # * same direction and magnitude of effect
 n_reps = 1000
-pv_scenario1_mt = matrix(0, nrow = n_reps, ncol = 2)
+pv_scenario1_mt = zeros((n_reps, 2))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
     genotypes = geno_1000[select_singletons_10]       # subset genotypes
-    beta = ones((genotypes.shape[1], 1))  # create effect size
-    pheno = genotypes @ beta + noise                  # build phenotype
-    pv_normal = shapiro(pheno).pvalue             # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=covs)[0] # TO DO allow E=None
-    # obj = SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-    # pv_skat = SKAT(genotypes, obj)$p.value                     # SKAT
-    # pv_burden = SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-    # pv_skat_o = SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-    pv_scenario1_mt[i, 1] = pv_normal
-    pv_scenario1_mt[i, 2] = pv_crm_rv
+    beta = ones((genotypes.shape[1], 1))        # create effect size
+    pheno = genotypes @ beta + noise            # build phenotype
+    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0] 
+    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+    pv_scenario1_mt[i, 0] = pv_normal
+    pv_scenario1_mt[i, 1] = pv_crm_rv
+    pv_scenario1_mt[i, 2] = pv_crm_rv_pois
 
-pv_scenario1_df = pd.DataFrame(pv_scenario1_mt)
-colnames(pv_scenario1_df) = c("P_shapiro", "P_CRM_RV")
-rownames(pv_scenario1_df) = "rep" + range (n_reps)
+pv_scenario1_df = pd.DataFrame(data = pv_scenario1_mt, columns = ["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"], index = "rep"+range(n_reps))
+# )
+# pv_scenario1_df.columns = ["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois")
+# rownames(pv_scenario1_df) = "rep" + range (n_reps)
 
-print(head(pv_scenario1_df))
+print(pv_scenario1_df.head())
 
 pv_scenario1_filename = "10tested_samebeta.csv"
-write.csv(pv_scenario1_df, pv_scenario1_filename)
+pv_scenario1_df.to_csv(pv_scenario1_filename)
