@@ -32,8 +32,10 @@ Other aspects I'd like to include are:
 
 Even further in the future is to build more complex simulations drawing from real scRNA-seq data.
 
-### Run script
-To run (after authenticating: ```gcloud auth application-default login```):
+### Run scripts
+To run (after authenticating: ```gcloud auth application-default login```).
+
+R scripts (SKAT)
 ```
 analysis-runner --dataset "tob-wgs" \
     --description "test SKAT" \
@@ -41,4 +43,13 @@ analysis-runner --dataset "tob-wgs" \
     --output-dir "v0" \
     --image australia-southeast1-docker.pkg.dev/analysis-runner/images/driver-r:1.2 \
     test_SKAT.R
+```
+
+python scripts (CellRegMap)
+```
+analysis-runner --dataset "tob-wgs" \
+    --description "test CRM_V" \
+    --access-level "test" \
+    --output-dir "v0" \
+    test_CellRegMap_RV.py
 ```
