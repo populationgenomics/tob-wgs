@@ -25,8 +25,8 @@ subprocess.run(
         'pip',
         'install',
         'git+https://github.com/annacuomo/CellRegMap',
-        '--force-reinstall',
-        '--no-dependencies',
+        '--force-reinstall',  # install github version and overwrite current
+        '--no-dependencies',  # same dependencies, no need to uninstall and reinstall those
     ],
     check=True,
 )
