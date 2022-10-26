@@ -98,4 +98,6 @@ pv_scenario1_df = pd.DataFrame(
 print(pv_scenario1_df.head())
 
 pv_scenario1_filename = "10tested_samebeta.csv"
-pv_scenario1_df.to_csv(pv_scenario1_filename)
+with pv_scenario1_filename.open('w') as pf:  
+        pv_scenario1_df.to_csv(pf, index=False)
+# pv_scenario1_df.to_csv(pv_scenario1_filename)
