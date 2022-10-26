@@ -36,7 +36,7 @@ from cellregmap import run_gene_set_association
 
 # get genotypes
 # these are variants in and around gene VPREB3 on chrom 22
-g_file = AnyPath(output_path("v0/VPREB3_50K_window/SNVs.csv"))
+g_file = AnyPath(output_path("VPREB3_50K_window/SNVs.csv"))
 g_df = pd.read_csv(g_file)
 
 # because the current matrix is counting the copies of the reference allele
