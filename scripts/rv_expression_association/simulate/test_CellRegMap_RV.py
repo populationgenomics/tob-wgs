@@ -12,7 +12,7 @@ import subprocess
 import pandas as pd
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
-from numpy import eye, ones, zeros
+from numpy import arange, eye, ones, zeros
 from random import sample
 from numpy.random import poisson, randn, seed
 from scipy.stats import shapiro
@@ -76,11 +76,11 @@ pv_scenario1_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10]  # subset genotypes
-    beta = ones((genotypes.shape[1], 1))  # create effect size
-    pheno = genotypes @ beta + noise  # build phenotype
+    genotypes = geno_1000[select_singletons_10] # subset genotypes
+    beta = ones((genotypes.shape[1], 1))        # create effect size
+    pheno = genotypes @ beta + noise            # build phenotype
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue  # record normality pv
+    pv_normal = shapiro(pheno).pvalue           # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario1_mt[i, 0] = pv_normal
@@ -109,10 +109,10 @@ for i in range(n_reps):
     select_singletons_50 = sample(list(singletons), 50)
     genotypes = geno_1000[select_singletons_50] # subset genotypes
     beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    beta[0:10] = 1                             # only 10 non-0 betas
+    beta[0:10] = 1                              # only 10 non-0 betas
     pheno = genotypes @ beta + noise            # build phenotype Gauss
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue  # record normality pv
+    pv_normal = shapiro(pheno).pvalue           # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario2_mt[i, 0] = pv_normal
@@ -141,7 +141,7 @@ for i in range(n_reps):
     select_singletons_20 = sample(list(singletons), 20)
     genotypes = geno_1000[select_singletons_20] # subset genotypes
     beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    beta[0:10] = 1                             # only 10 non-0 betas
+    beta[0:10] = 1                              # only 10 non-0 betas
     pheno = genotypes @ beta + noise            # build phenotype Gauss
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
     pv_normal = shapiro(pheno).pvalue           # record normality pv
@@ -228,3 +228,35 @@ print(pv_scenario3a_df.head())
 pv_scenario3a_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv"))
 with pv_scenario3a_filename.open('w') as pf:
     pv_scenario3a_df.to_csv(pf, index=False)
+
+
+# scenario 4
+# * test 10 variants
+# * same direction of effect
+# * vary magnitude
+pv_scenario4_mt = zeros((n_reps, 3))
+for i in range(n_reps):
+    seed(i)
+    select_singletons_10 = sample(list(singletons), 10)
+    genotypes = geno_1000[select_singletons_10] # subset genotypes
+    beta = arange(0.1, 1, 0.1)                  # create varying betas
+    pheno = genotypes @ beta + noise            # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+    pv_scenario4_mt[i, 0] = pv_normal
+    pv_scenario4_mt[i, 1] = pv_crm_rv
+    pv_scenario4_mt[i, 2] = pv_crm_rv_pois
+
+pv_scenario4_df = pd.DataFrame(
+    data=pv_scenario4_mt,
+    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
+    index=["rep" + str(rep) for rep in range(n_reps)],
+)
+
+print(pv_scenario4_df.head())
+
+pv_scenario4_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv"))
+with pv_scenario4_filename.open('w') as pf:
+    pv_scenario4_df.to_csv(pf, index=False)
