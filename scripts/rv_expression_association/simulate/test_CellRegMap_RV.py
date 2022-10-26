@@ -97,7 +97,7 @@ pv_scenario1_df = pd.DataFrame(
 
 print(pv_scenario1_df.head())
 
-pv_scenario1_filename = "10tested_samebeta.csv"
+pv_scenario1_filename = AnyPath(output_path("v0/simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv"))
 with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 # pv_scenario1_df.to_csv(pv_scenario1_filename)
