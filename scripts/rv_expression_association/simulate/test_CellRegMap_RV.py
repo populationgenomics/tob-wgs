@@ -63,6 +63,7 @@ singletons = variant_freq[variant_freq == singleton_freq].index.values
 
 seed(0)
 noise = randn(n_samples, 1)  # random noise Gaussian
+seed(0)
 noise_pois = poisson(lam=1, size=n_samples).reshape(n_samples, 1)  # Poisson noise
 covs = ones((n_samples, 1))  # intercept of ones as covariates
 E = eye(n_samples)
@@ -108,7 +109,7 @@ for i in range(n_reps):
     select_singletons_50 = sample(list(singletons), 50)
     genotypes = geno_1000[select_singletons_50] # subset genotypes
     beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    betas[0:10] = 1                             # only 10 non-0 betas
+    beta[0:10] = 1                             # only 10 non-0 betas
     pheno = genotypes @ beta + noise            # build phenotype Gauss
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
     pv_normal = shapiro(pheno).pvalue  # record normality pv
@@ -140,7 +141,7 @@ for i in range(n_reps):
     select_singletons_20 = sample(list(singletons), 20)
     genotypes = geno_1000[select_singletons_20] # subset genotypes
     beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    betas[0:10] = 1                             # only 10 non-0 betas
+    beta[0:10] = 1                             # only 10 non-0 betas
     pheno = genotypes @ beta + noise            # build phenotype Gauss
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
     pv_normal = shapiro(pheno).pvalue           # record normality pv
