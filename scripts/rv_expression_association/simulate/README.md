@@ -53,6 +53,6 @@ analysis-runner --dataset "tob-wgs" \
     --description "test CRM_RV" \
     --access-level "test" \
     --output-dir "v0" \
-    --image \
+    --image australia-southeast1-docker.pkg.dev/cpg-common/images/cellregmap:0.0.3 \
     test_CellRegMap_RV.py
 ```
