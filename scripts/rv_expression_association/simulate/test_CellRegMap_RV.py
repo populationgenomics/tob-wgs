@@ -26,6 +26,7 @@ subprocess.run(
         'install',
         'git+https://github.com/annacuomo/CellRegMap',
         '--force-reinstall',
+        '--no-dependencies',
     ],
     check=True,
 )
