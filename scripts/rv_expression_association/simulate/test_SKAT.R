@@ -93,7 +93,7 @@ pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
-    genotypes <- geno_1000[, select_singletons_50]        # subset genotypes
+    genotypes <- geno_1000[, select_singletons_50]       # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
