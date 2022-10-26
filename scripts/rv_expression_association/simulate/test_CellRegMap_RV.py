@@ -89,7 +89,7 @@ for i in range(n_reps):
 pv_scenario1_df = pd.DataFrame(
     data=pv_scenario1_mt,
     columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index="rep" + range(n_reps),
+    index=["rep" + str(rep) for rep in range(n_reps)],
 )
 # )
 # pv_scenario1_df.columns = ["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois")
@@ -98,6 +98,6 @@ pv_scenario1_df = pd.DataFrame(
 print(pv_scenario1_df.head())
 
 pv_scenario1_filename = "10tested_samebeta.csv"
-with pv_scenario1_filename.open('w') as pf:  
-        pv_scenario1_df.to_csv(pf, index=False)
+with pv_scenario1_filename.open('w') as pf:
+    pv_scenario1_df.to_csv(pf, index=False)
 # pv_scenario1_df.to_csv(pv_scenario1_filename)
