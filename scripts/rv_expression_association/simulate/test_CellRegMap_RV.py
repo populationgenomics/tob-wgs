@@ -239,7 +239,7 @@ for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
     genotypes = geno_1000[select_singletons_10] # subset genotypes
-    beta = arange(0.1, 1, 0.1)                  # create varying betas
+    beta = arange(0.1, 1.1, 0.1).reshape(10,1)  # create varying betas
     pheno = genotypes @ beta + noise            # build phenotype Gauss
     pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
     pv_normal = shapiro(pheno).pvalue           # record normality pv
