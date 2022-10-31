@@ -13,21 +13,27 @@
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
 
+print("Install STAAR dependencies Rcpp")
+
 # required for STAAR
 install.packages("Rcpp")
 install.packages("RcppArmadillo")
 
+print("Install STAAR dependencies GENESIS")
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("GENESIS") # this currently fails because of igraph
 
+print("Install STAAR dependencies SeqArray")
 # required for GMMAT
 BiocManager::install("SeqArray")
 BiocManager::install("SeqVarTools")
 
+print("Install STAAR dependencies GMMAT")
 # install GMMAT
 install.packages("GMMAT")
 
+print("Install STAAR")
 # install STAAR
 library(devtools)
 devtools::install_github("xihaoli/STAAR")
@@ -40,7 +46,7 @@ library(STAAR)
 library(glue)
 
 pvalues <- c(2e-02, 4e-04, 0.2, 0.1, 0.8)
-CCT(pvals = pvalues)
+print(CCT(pvals = pvalues))
 
 # # token authorisation (Google Cloud Storage R)
 # scope <- c("https://www.googleapis.com/auth/cloud-platform")
