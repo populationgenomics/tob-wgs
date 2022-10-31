@@ -10,6 +10,8 @@
 # install R packages
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
+library(devtools)
+devtools::install_github("yaowuliu/ACAT")
 
 # import R packages
 library(googleCloudStorageR)
@@ -117,7 +119,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # scenario 2
 # * test 50 variants (of which only 10 are causal)
 # * same direction and magnitude of effect
-pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
@@ -126,17 +128,23 @@ for (i in 1:n_reps){
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    # SKAT
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C")        # null model
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno), covs)    # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)  # ACAT-V test
+    # save p-values
     pv_scenario2_mt[i, 1] <- pv_normal
     pv_scenario2_mt[i, 2] <- pv_skat
     pv_scenario2_mt[i, 3] <- pv_burden
     pv_scenario2_mt[i, 4] <- pv_skat_o
+    pv_scenario2_mt[i, 5] <- pv_acat_v
 }
 pv_scenario2_df <- as.data.frame(pv_scenario2_mt)
-colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
+colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "P_ACATV")
 rownames(pv_scenario2_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario2_df))
@@ -147,7 +155,7 @@ write.csv(pv_scenario2_df, pv_scenario2_filename)
 # scenario 2a
 # * test 20 variants (of which only 10 are causal)
 # * same direction and magnitude of effect
-pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario2a_mt <- matrix(0, nrow = n_reps, ncol = 5)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_20 <- singletons[sample(length(singletons), 20)]
@@ -156,17 +164,23 @@ for (i in 1:n_reps){
     beta[1:10] <- 1                                      # only 10 non-0 betas
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    # SKAT
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno), covs)    # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)  # ACAT-V test
+    # save p-values
     pv_scenario2a_mt[i, 1] <- pv_normal
     pv_scenario2a_mt[i, 2] <- pv_skat
     pv_scenario2a_mt[i, 3] <- pv_burden
     pv_scenario2a_mt[i, 4] <- pv_skat_o
+    pv_scenario2_mt[i, 5] <- pv_acat_v
 }
 pv_scenario2a_df <- as.data.frame(pv_scenario2a_mt)
-colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
+colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "P_ACATV")
 rownames(pv_scenario2a_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario2a_df))
