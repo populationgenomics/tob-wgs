@@ -1,10 +1,11 @@
 ## Parameters and settings affecting gene-set association tests power
 
 These scripts aim to assess what parameters most influence power to detect effects using a gene-set association test.
-In a first instance, using the three tests implemented in the [SKAT R package](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf):
+In a first instance, using the three tests implemented in the [SKAT R package](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf) + [ACAT](https://github.com/yaowuliu/ACAT):
 * SKAT: SNP-Set (Sequence) Kernel Association Test ([Wu et al, AJHG 2011](https://www.sciencedirect.com/science/article/pii/S0002929711002229))
 * burden: standard burden test
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
+* ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 
 Later, this will be extended to other methods, including my own [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687). 
 
