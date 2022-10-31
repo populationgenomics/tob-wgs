@@ -293,26 +293,52 @@ write.csv(pv_scenario3_df, pv_scenario3_filename)
 # * test 10 variants
 # * same magnitude of effect
 # * vary direction for 5/10 variants
-pv_scenario3a_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario3a_mt <- matrix(0, nrow = n_reps, ncol = 10)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
     beta[1:5] <- -1                                      # for five variants, -1
+    # Gaussian noise
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
+    # SKAT
+    obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C")        # null model
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno), covs)    # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)  # ACAT-V test
+    # save p-values
     pv_scenario3a_mt[i, 1] <- pv_normal
     pv_scenario3a_mt[i, 2] <- pv_skat
     pv_scenario3a_mt[i, 3] <- pv_burden
     pv_scenario3a_mt[i, 4] <- pv_skat_o
+    pv_scenario3a_mt[i, 5] <- pv_acat_v
+    # Poisson noise
+    pheno_pois <- genotypes %*% beta + noise_pois   # build phenotype (Poisson)
+    pv_normal <- shapiro.test(pheno_pois)$p.value   # record normality pv
+    # SKAT
+    obj <- SKAT_Null_Model(pheno_pois ~ covs, out_type = "C")   # null model
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno_pois), covs) # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)    # ACAT-V test
+    # save p-values
+    pv_scenario3a_mt[i, 6] <- pv_normal
+    pv_scenario3a_mt[i, 7] <- pv_skat
+    pv_scenario3a_mt[i, 8] <- pv_burden
+    pv_scenario3a_mt[i, 9] <- pv_skat_o
+    pv_scenario3a_mt[i, 10] <- pv_acat_v
 }
 pv_scenario3a_df <- as.data.frame(pv_scenario3a_mt)
-colnames(pv_scenario3a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
+colnames(pv_scenario3a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO",
+    "P_ACATV", "P_shapiro_Pois", "P_SKAT_Pois", "P_burden_Pois", "P_SKATO_Pois",
+    "P_ACATV_Pois")
 rownames(pv_scenario3a_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario3a_df))
@@ -324,25 +350,51 @@ write.csv(pv_scenario3a_df, pv_scenario3a_filename)
 # * test 10 variants
 # * same direction of effect
 # * vary magnitude
-pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 4)
+pv_scenario4_mt <- matrix(0, nrow = n_reps, ncol = 10)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
+    # Gaussian noise
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
+    # SKAT
     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno), covs)      # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)    # ACAT-V test
+    # save p-values
     pv_scenario4_mt[i, 1] <- pv_normal
     pv_scenario4_mt[i, 2] <- pv_skat
     pv_scenario4_mt[i, 3] <- pv_burden
     pv_scenario4_mt[i, 4] <- pv_skat_o
+    pv_scenario4_mt[i, 5] <- pv_acat_v
+    # Poisson noise
+    pheno_pois <- genotypes %*% beta + noise_pois   # build phenotype (Poisson)
+    pv_normal <- shapiro.test(pheno_pois)$p.value   # record normality pv
+    # SKAT
+    obj <- SKAT_Null_Model(pheno_pois ~ covs, out_type = "C")   # null model
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno_pois), covs) # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)    # ACAT-V test
+    # save p-values
+    pv_scenario4_mt[i, 6] <- pv_normal
+    pv_scenario4_mt[i, 7] <- pv_skat
+    pv_scenario4_mt[i, 8] <- pv_burden
+    pv_scenario4_mt[i, 9] <- pv_skat_o
+    pv_scenario4_mt[i, 10] <- pv_acat_v
 }
 pv_scenario4_df <- as.data.frame(pv_scenario4_mt)
-colnames(pv_scenario4_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO")
+colnames(pv_scenario4_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO",
+    "P_ACATV", "P_shapiro_Pois", "P_SKAT_Pois", "P_burden_Pois", "P_SKATO_Pois",
+    "P_ACATV_Pois")
 rownames(pv_scenario4_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario4_df))
@@ -350,14 +402,13 @@ print(head(pv_scenario4_df))
 pv_scenario4_filename <- "10tested_varyingbeta.csv"
 write.csv(pv_scenario4_df, pv_scenario4_filename)
 
-# attempt at saving using code from
-# https://github.com/populationgenomics/analysis-runner/blob/main/examples/r/script.R
+# save results
 dataset_env <- Sys.getenv("tob-wgs")
 gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/skat/1000samples_10causal_singletons/")
-# system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario3_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario3_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario3a_filename} {gcs_outdir}"))
-# system(glue("gsutil cp {pv_scenario4_filename} {gcs_outdir}"))
+system(glue("gsutil cp {pv_scenario4_filename} {gcs_outdir}"))
 cat(glue("[{date()}] Finished successfully!"))
