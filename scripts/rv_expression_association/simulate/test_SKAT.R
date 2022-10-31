@@ -12,7 +12,8 @@
 # install R packages
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
-# install.packages("devtools", repos = "http://cran.csiro.au/")
+
+# install ACAT using devtools
 library(devtools)
 devtools::install_github("yaowuliu/ACAT")
 
@@ -42,7 +43,7 @@ geno_all <- 2 - as.matrix(g_df)
 
 n_samples <- 1000
 
-# Step 1: sample 1000 individuals only
+# Step 1: sample 1000 individuals
 # first setting
 # * 1000 individuals
 # * 10 causal variants one in each if 10 individuals
