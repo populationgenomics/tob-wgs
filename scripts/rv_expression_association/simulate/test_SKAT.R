@@ -10,6 +10,7 @@
 # install R packages
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
+install.packages("devtools", repos = "http://cran.csiro.au/")
 library(devtools)
 devtools::install_github("yaowuliu/ACAT")
 
@@ -106,8 +107,9 @@ for (i in 1:n_reps){
     pv_scenario1_mt[i, 10] <- pv_acat_v
 }
 pv_scenario1_df <- as.data.frame(pv_scenario1_mt)
-colnames(pv_scenario1_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "P_ACATV",
-    "P_shapiro_Pois", "P_SKAT_Pois", "P_burden_Pois", "P_SKATO_Pois", "P_ACATV_Pois")
+colnames(pv_scenario1_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO",
+    "P_ACATV", "P_shapiro_Pois", "P_SKAT_Pois", "P_burden_Pois", "P_SKATO_Pois",
+    "P_ACATV_Pois")
 
 rownames(pv_scenario1_df) <- paste0("rep", 1:n_reps)
 
@@ -119,13 +121,14 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # scenario 2
 # * test 50 variants (of which only 10 are causal)
 # * same direction and magnitude of effect
-pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 5)
+pv_scenario2_mt <- matrix(0, nrow = n_reps, ncol = 10)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
     genotypes <- geno_1000[, select_singletons_50]       # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
+    # Gaussian noise
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     # SKAT
@@ -142,9 +145,28 @@ for (i in 1:n_reps){
     pv_scenario2_mt[i, 3] <- pv_burden
     pv_scenario2_mt[i, 4] <- pv_skat_o
     pv_scenario2_mt[i, 5] <- pv_acat_v
+    # Poisson noise
+    pheno_pois <- genotypes %*% beta + noise_pois   # build phenotype (Poisson)
+    pv_normal <- shapiro.test(pheno_pois)$p.value   # record normality pv
+    # SKAT
+    obj <- SKAT_Null_Model(pheno_pois ~ covs, out_type = "C")   # null model
+    pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
+    pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
+    pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
+    # ACAT-V
+    obj_acat <- NULL_Model(t(pheno_pois), covs) # null model
+    pv_acat_v <- ACAT_V(genotypes, obj_acat)    # ACAT-V test
+    # save p-values
+    pv_scenario2_mt[i, 6] <- pv_normal
+    pv_scenario2_mt[i, 7] <- pv_skat
+    pv_scenario2_mt[i, 8] <- pv_burden
+    pv_scenario2_mt[i, 9] <- pv_skat_o
+    pv_scenario2_mt[i, 10] <- pv_acat_v
 }
 pv_scenario2_df <- as.data.frame(pv_scenario2_mt)
-colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "P_ACATV")
+colnames(pv_scenario2_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO",
+    "P_ACATV", "P_shapiro_Pois", "P_SKAT_Pois", "P_burden_Pois", "P_SKATO_Pois",
+    "P_ACATV_Pois")
 rownames(pv_scenario2_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario2_df))
@@ -162,6 +184,7 @@ for (i in 1:n_reps){
     genotypes <- geno_1000[, select_singletons_20]       # subset genotypes
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
+    # Gaussian noise
     pheno <- genotypes %*% beta + noise                  # build phenotype
     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
     # SKAT
@@ -177,10 +200,14 @@ for (i in 1:n_reps){
     pv_scenario2a_mt[i, 2] <- pv_skat
     pv_scenario2a_mt[i, 3] <- pv_burden
     pv_scenario2a_mt[i, 4] <- pv_skat_o
-    pv_scenario2_mt[i, 5] <- pv_acat_v
+    pv_scenario2a_mt[i, 5] <- pv_acat_v
+    # Poisson noise
+    pheno_pois <- genotypes %*% beta + noise_pois   # build phenotype (Poisson)
+    pv_normal <- shapiro.test(pheno_pois)$p.value   # record normality pv
 }
 pv_scenario2a_df <- as.data.frame(pv_scenario2a_mt)
-colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "P_ACATV")
+colnames(pv_scenario2a_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO",
+    "P_ACATV")
 rownames(pv_scenario2a_df) <- paste0("rep", 1:n_reps)
 
 print(head(pv_scenario2a_df))
