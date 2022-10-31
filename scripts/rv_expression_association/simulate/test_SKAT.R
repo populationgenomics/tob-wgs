@@ -12,7 +12,7 @@
 # install R packages
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
-install.packages("devtools", repos = "http://cran.csiro.au/")
+# install.packages("devtools", repos = "http://cran.csiro.au/")
 library(devtools)
 devtools::install_github("yaowuliu/ACAT")
 
