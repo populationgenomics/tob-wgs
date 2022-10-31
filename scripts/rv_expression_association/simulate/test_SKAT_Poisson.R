@@ -16,8 +16,8 @@ install.packages("SKAT", repos = "http://cran.csiro.au/")
 print("Install STAAR dependencies Rcpp")
 
 # required for STAAR
-install.packages("Rcpp")
-install.packages("RcppArmadillo")
+install.packages("Rcpp", repos = "http://cran.csiro.au")
+install.packages("RcppArmadillo", repos = "http://cran.csiro.au")
 
 print("Install STAAR dependencies GENESIS")
 if (!require("BiocManager", quietly = TRUE))
@@ -31,7 +31,7 @@ BiocManager::install("SeqVarTools")
 
 print("Install STAAR dependencies GMMAT")
 # install GMMAT
-install.packages("GMMAT")
+install.packages("GMMAT", repos = "http://cran.csiro.au")
 
 print("Install STAAR")
 # install STAAR
