@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-## This script aims to record differences in the power of gene-set associations
-## under different scenarios. It runs our CellRegMap-RV method
-## to test for an association between a set of rare genetic variants (real)
-## and a simulated phenotype. The sets of variants tested and the simulated
-## effect sizes are varied and the resulted association p-values are recorded.
+# This script aims to record differences in the power of gene-set associations
+# under different scenarios. It runs our CellRegMap-RV method
+# to test for an association between a set of rare genetic variants (real)
+# and a simulated phenotype. The sets of variants tested and the simulated
+# effect sizes are varied and the resulted association p-values are recorded.
 
 # import python modules
 import sys
@@ -21,12 +21,12 @@ from scipy.stats import shapiro
 subprocess.run(
     [
         sys.executable,
-        '-m',
-        'pip',
-        'install',
-        'git+https://github.com/annacuomo/CellRegMap',
-        '--force-reinstall',  # install github version and overwrite current
-        '--no-dependencies',  # same dependencies, no need to uninstall and reinstall those
+        "-m",
+        "pip",
+        "install",
+        "git+https://github.com/annacuomo/CellRegMap",
+        "--force-reinstall",  # install github version and overwrite current
+        "--no-dependencies",  # same dependencies, no need to uninstall and reinstall those
     ],
     check=True,
 )
@@ -96,7 +96,7 @@ pv_scenario1_df = pd.DataFrame(
 print(pv_scenario1_df.head())
 
 pv_scenario1_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv"))
-with pv_scenario1_filename.open('w') as pf:
+with pv_scenario1_filename.open("w") as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
 
@@ -128,7 +128,7 @@ pv_scenario2_df = pd.DataFrame(
 print(pv_scenario2_df.head())
 
 pv_scenario2_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv"))
-with pv_scenario2_filename.open('w') as pf:
+with pv_scenario2_filename.open("w") as pf:
     pv_scenario2_df.to_csv(pf, index=False)
 
 
@@ -160,7 +160,7 @@ pv_scenario2a_df = pd.DataFrame(
 print(pv_scenario2a_df.head())
 
 pv_scenario2a_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/20tested_samebeta.csv"))
-with pv_scenario2a_filename.open('w') as pf:
+with pv_scenario2a_filename.open("w") as pf:
     pv_scenario2a_df.to_csv(pf, index=False)
 
 
@@ -193,7 +193,7 @@ pv_scenario3_df = pd.DataFrame(
 print(pv_scenario3_df.head())
 
 pv_scenario3_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_2negativebeta.csv"))
-with pv_scenario3_filename.open('w') as pf:
+with pv_scenario3_filename.open("w") as pf:
     pv_scenario3_df.to_csv(pf, index=False)
 
 
@@ -226,7 +226,7 @@ pv_scenario3a_df = pd.DataFrame(
 print(pv_scenario3a_df.head())
 
 pv_scenario3a_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv"))
-with pv_scenario3a_filename.open('w') as pf:
+with pv_scenario3a_filename.open("w") as pf:
     pv_scenario3a_df.to_csv(pf, index=False)
 
 
@@ -258,5 +258,5 @@ pv_scenario4_df = pd.DataFrame(
 print(pv_scenario4_df.head())
 
 pv_scenario4_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv"))
-with pv_scenario4_filename.open('w') as pf:
+with pv_scenario4_filename.open("w") as pf:
     pv_scenario4_df.to_csv(pf, index=False)
