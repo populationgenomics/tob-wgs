@@ -3,7 +3,7 @@
 These scripts aim to assess what parameters most influence power to detect effects using a gene-set association test.
 In a first instance, using the three tests implemented in the [SKAT](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf) + [ACAT](https://github.com/yaowuliu/ACAT) R packages:
 * SKAT: SNP-Set (Sequence) Kernel Association Test ([Wu et al, AJHG 2011](https://www.sciencedirect.com/science/article/pii/S0002929711002229))
-* burden: standard burden test
+* burden: Burden test as described in [Lee et al, AJHG 2014](https://www.cell.com/ajhg/fulltext/S0002-9297(14)00271-7)
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 * ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
