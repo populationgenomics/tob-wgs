@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=missing-module-docstring,wrong-import-position,import-error
 
 # This script aims to record differences in the power of gene-set associations
 # under different scenarios. It runs our CellRegMap-RV method

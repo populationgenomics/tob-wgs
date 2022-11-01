@@ -75,7 +75,7 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests = 10) {
     pvals[5] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[2]
     # ACAT-V
     pvals[6] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 1))
-    ppvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
+    pvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
     # SKAT-O
     pvals[8] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[3]
     pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
