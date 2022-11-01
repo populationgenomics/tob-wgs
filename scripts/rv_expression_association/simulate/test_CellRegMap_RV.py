@@ -77,11 +77,11 @@ pv_scenario1_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10] # subset genotypes
-    beta = ones((genotypes.shape[1], 1))        # create effect size
-    pheno = genotypes @ beta + noise            # build phenotype
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_10]  # subset genotypes
+    beta = ones((genotypes.shape[1], 1))         # create effect size
+    pheno = genotypes @ beta + noise             # build phenotype
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario1_mt[i, 0] = pv_normal
@@ -108,12 +108,12 @@ pv_scenario2_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_50 = sample(list(singletons), 50)
-    genotypes = geno_1000[select_singletons_50] # subset genotypes
-    beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    beta[0:10] = 1                              # only 10 non-0 betas
-    pheno = genotypes @ beta + noise            # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_50]  # subset genotypes
+    beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
+    beta[0:10] = 1                               # only 10 non-0 betas
+    pheno = genotypes @ beta + noise             # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario2_mt[i, 0] = pv_normal
@@ -140,12 +140,12 @@ pv_scenario2a_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_20 = sample(list(singletons), 20)
-    genotypes = geno_1000[select_singletons_20] # subset genotypes
-    beta = zeros((genotypes.shape[1], 1))       # create betas as 0s
-    beta[0:10] = 1                              # only 10 non-0 betas
-    pheno = genotypes @ beta + noise            # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_20]  # subset genotypes
+    beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
+    beta[0:10] = 1                               # only 10 non-0 betas
+    pheno = genotypes @ beta + noise             # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario2a_mt[i, 0] = pv_normal
@@ -173,12 +173,12 @@ pv_scenario3_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10] # subset genotypes
-    beta = ones((genotypes.shape[1], 1))        # create betas as 1s
-    beta[0:2] = -1                              # for two variants, -1
-    pheno = genotypes @ beta + noise            # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_10]  # subset genotypes
+    beta = ones((genotypes.shape[1], 1))         # create betas as 1s
+    beta[0:2] = -1                               # for two variants, -1
+    pheno = genotypes @ beta + noise             # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario3_mt[i, 0] = pv_normal
@@ -206,12 +206,12 @@ pv_scenario3a_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10] # subset genotypes
-    beta = ones((genotypes.shape[1], 1))        # create betas as 1s
-    beta[0:5] = -1                              # for five variants, -1
-    pheno = genotypes @ beta + noise            # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_10]  # subset genotypes
+    beta = ones((genotypes.shape[1], 1))         # create betas as 1s
+    beta[0:5] = -1                               # for five variants, -1
+    pheno = genotypes @ beta + noise             # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario3a_mt[i, 0] = pv_normal
@@ -239,11 +239,11 @@ pv_scenario4_mt = zeros((n_reps, 3))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10] # subset genotypes
-    beta = arange(0.1, 1.1, 0.1).reshape(10,1)  # create varying betas
-    pheno = genotypes @ beta + noise            # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue           # record normality pv
+    genotypes = geno_1000[select_singletons_10]  # subset genotypes
+    beta = arange(0.1, 1.1, 0.1).reshape(10, 1)  # create varying betas
+    pheno = genotypes @ beta + noise             # build phenotype Gauss
+    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue            # record normality pv
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
     pv_scenario4_mt[i, 0] = pv_normal
@@ -261,3 +261,4 @@ print(pv_scenario4_df.head())
 pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
 with pv_scenario4_filename.open('w') as pf:
     pv_scenario4_df.to_csv(pf, index=False)
+    
