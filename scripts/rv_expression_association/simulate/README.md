@@ -1,7 +1,7 @@
 ## Parameters and settings affecting gene-set association tests power
 
 These scripts aim to assess what parameters most influence power to detect effects using a gene-set association test.
-In a first instance, using the three tests implemented in the [SKAT R package](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf) + [ACAT](https://github.com/yaowuliu/ACAT):
+In a first instance, using the three tests implemented in the [SKAT](https://cran.r-project.org/web/packages/SKAT/SKAT.pdf) + [ACAT](https://github.com/yaowuliu/ACAT) R packages:
 * SKAT: SNP-Set (Sequence) Kernel Association Test ([Wu et al, AJHG 2011](https://www.sciencedirect.com/science/article/pii/S0002929711002229))
 * burden: standard burden test
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
