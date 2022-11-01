@@ -41,7 +41,7 @@ Other aspects I would like to include are:
 Even further in the future is to build more complex simulations drawing from real scRNA-seq data.
 
 ### Run scripts
-To run (after authenticating: ```gcloud auth application-default login```).
+To run (after authenticating: ```gcloud auth application-default login```, and in the correct environment: ```conda activate gcp2```).
 
 R scripts (SKAT, ACAT)
 ```
