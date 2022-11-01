@@ -32,6 +32,16 @@ gcs_auth(token = token)
 # set bucket
 googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 
+# ACAT-O omnibus test
+# this takes p-values from various tests (SKAT, burden and ACAT-V)
+# with two different sets of parameters (1,1) and (1,25) and get a
+# combined optimal p-value
+get_acato_pv<-function(pvals){
+    cct.stat <- (1/6)*sum tan()
+    pval <- as.numeric(pcauchy(cct.stat, lower.tail = F))
+    return(pval)
+}
+
 # get genotypes
 # these are variants in and around gene VPREB3 on chrom 22
 g_file <- googleCloudStorageR::gcs_get_object("v0/VPREB3_50K_window/SNVs.csv")

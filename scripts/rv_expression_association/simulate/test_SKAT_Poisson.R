@@ -27,7 +27,7 @@ library(igraph)
 
 print("Install STAAR dependencies GENESIS")
 if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
+    install.packages("BiocManager", repos = "http://cran.csiro.au")
 BiocManager::install("GENESIS") # this currently fails because of igraph
 
 print("Install STAAR dependencies SeqArray")
