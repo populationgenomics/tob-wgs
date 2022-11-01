@@ -110,7 +110,7 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
     # # ACAT-O (combining SKAT, burden and ACAT-V)
     # pvals[10] <- get_acato_pv(pvals[2:7])
     # STAAR (combined CCT)
-    pvals[11] <- get_cct_pv(pvals[2:7])
+    # pvals[11] <- get_cct_pv(pvals[2:7])
     # STAAR-O
     pvals[12] <- get_staar_pv(pheno, covs, genotypes)
     return(pvals)
