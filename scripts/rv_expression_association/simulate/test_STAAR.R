@@ -81,8 +81,9 @@ get_cct_pv <- function(pvals) {
 
 # STAAR actual test (STAAR-O)
 get_staar_pv <- function(pheno, covs, genotypes) {
-    fixed <- pheno ~ covs
-    data <- data.frame(pheno = pheno, covs = covs)
+    fixed <- t(pheno) ~ covs
+    data <- data.frame(pheno = t(pheno), covs = covs)
+    print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
     pv <- res["results_STAAR_O"][1]
@@ -92,22 +93,22 @@ get_staar_pv <- function(pheno, covs, genotypes) {
 # utility function to get p-values from the different tests
 # from pheno, covs and genos
 get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
-    pvals <- as.vector(matrix(0, nrow = n_tests))
-    pvals[1] <- shapiro.test(pheno)$p.value          # record normality pv
-    # SKAT
-    pvals[2] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[1]
-    pvals[3] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[1]
-    # burden
-    pvals[4] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[2]
-    pvals[5] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[2]
-    # ACAT-V
-    pvals[6] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 1))
-    pvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
-    # SKAT-O
-    pvals[8] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[3]
-    pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
-    # ACAT-O (combining SKAT, burden and ACAT-V)
-    pvals[10] <- get_acato_pv(pvals[2:7])
+    # pvals <- as.vector(matrix(0, nrow = n_tests))
+    # pvals[1] <- shapiro.test(pheno)$p.value          # record normality pv
+    # # SKAT
+    # pvals[2] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[1]
+    # pvals[3] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[1]
+    # # burden
+    # pvals[4] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[2]
+    # pvals[5] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[2]
+    # # ACAT-V
+    # pvals[6] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 1))
+    # pvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
+    # # SKAT-O
+    # pvals[8] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[3]
+    # pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
+    # # ACAT-O (combining SKAT, burden and ACAT-V)
+    # pvals[10] <- get_acato_pv(pvals[2:7])
     # STAAR (combined CCT)
     pvals[11] <- get_cct_pv(pvals[2:7])
     # STAAR-O
