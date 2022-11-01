@@ -81,8 +81,10 @@ get_cct_pv <- function(pvals) {
 
 # STAAR actual test (STAAR-O)
 get_staar_pv <- function(pheno, covs, genotypes) {
-    fixed <- t(pheno) ~ covs
-    data <- data.frame(pheno = t(pheno), covs = covs)
+    print(length(pheno))
+    print(dim(covs))
+    fixed <- pheno ~ covs
+    data <- data.frame(pheno = pheno, covs = covs)
     print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
