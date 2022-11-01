@@ -135,8 +135,8 @@ n_samples <- 100
 # * 10 causal variants one in each if 10 individuals
 
 set.seed(0)
-geno_1000 <- geno_all[sample(nrow(geno_all), 1000), ]
-variant_count <- colSums(geno_1000)             # get alt allele count
+geno_subset <- geno_all[sample(nrow(geno_all), n_samples), ]
+variant_count <- colSums(geno_subset)             # get alt allele count
 variant_freq <- variant_count / (2 * n_samples) # get alt allele frequency
 # remove variants left all 0"s after donor sub-sampling
 variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
@@ -166,7 +166,7 @@ pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 12)
 for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-    genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
+    genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise               # build phenotype (Gauss)
@@ -192,7 +192,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # for (i in 1:n_reps){
 #     set.seed(i)
 #     select_singletons_50 <- singletons[sample(length(singletons), 50)]
-#     genotypes <- geno_1000[, select_singletons_50]       # subset genotypes
+#     genotypes <- geno_subset[, select_singletons_50]       # subset genotypes
 #     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
 #     beta[1:10] <- 1                                      # only 10 non-0 betas
 #     lambda <- genotypes %*% beta                         # get mean parameter
@@ -226,7 +226,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # for (i in 1:n_reps){
 #     set.seed(i)
 #     select_singletons_20 <- singletons[sample(length(singletons), 20)]
-#     genotypes <- geno_1000[, select_singletons_20]       # subset genotypes
+#     genotypes <- geno_subset[, select_singletons_20]       # subset genotypes
 #     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
 #     beta[1:10] <- 1                                      # only 10 non-0 betas
 #     lambda <- genotypes %*% beta                         # get mean parameter
@@ -261,7 +261,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # for (i in 1:n_reps){
 #     set.seed(i)
 #     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-#     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
+#     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
 #     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
 #     beta[1:2] <- -1                                      # for two variants, -1
 #     lambda <- genotypes %*% beta                         # get mean parameter
@@ -296,7 +296,7 @@ write.csv(pv_scenario1_df, pv_scenario1_filename)
 # for (i in 1:n_reps){
 #     set.seed(i)
 #     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-#     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
+#     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
 #     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
 #     lambda <- genotypes %*% beta                         # get mean parameter
 #     set.seed(0)
