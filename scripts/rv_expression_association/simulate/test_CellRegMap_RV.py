@@ -261,4 +261,4 @@ print(pv_scenario4_df.head())
 pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
 with pv_scenario4_filename.open('w') as pf:
     pv_scenario4_df.to_csv(pf, index=False)
-    
+

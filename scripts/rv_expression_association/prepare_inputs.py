@@ -69,7 +69,7 @@ def prepare_inputs(  # pylint: disable=missing-function-docstring, too-many-loca
 
     # region PHENOTYPE_FILE
 
-    phenotype = pd.read_csv(expression_filename, sep='\t', index_col=0)
+    phenotype = pd.read_csv(phenotype_file, sep='\t', index_col=0)
 
     phenotype = xr.DataArray(
         phenotype.values,
