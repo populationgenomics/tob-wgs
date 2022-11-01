@@ -9,32 +9,20 @@
 
 ## specifically in this script I model the phenotype as Poisson distributed
 
-# install R packages
+# install R packages (install.packages)
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
 install.packages("SKAT", repos = "http://cran.csiro.au/")
 # required for STAAR
 install.packages("Rcpp", repos = "http://cran.csiro.au")
 install.packages("RcppArmadillo", repos = "http://cran.csiro.au")
-
-# print("Install GENESIS dependencies igraph")
-# install.packages("igraph", repos = "http://cran.csiro.au")
-# library(igraph)
-
-# print("Install STAAR dependencies GENESIS")
+# Bioconductor packages install
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager", repos = "http://cran.csiro.au")
-BiocManager::install("GENESIS")
+BiocManager::install("GENESIS")     # required for STAAR
+BiocManager::install("SeqArray")    # required for GMMAT
+BiocManager::install("SeqVarTools") # required for GMMAT
+install.packages("GMMAT", repos = "http://cran.csiro.au") # STAAR dep.
 
-# print("Install STAAR dependencies SeqArray")
-# required for GMMAT
-BiocManager::install("SeqArray")
-BiocManager::install("SeqVarTools")
-
-# print("Install STAAR dependencies GMMAT")
-# install GMMAT
-install.packages("GMMAT", repos = "http://cran.csiro.au")
-
-# print("Install STAAR")
 # install STAAR and ACAT using devtools
 library(devtools)
 devtools::install_github("yaowuliu/ACAT")
@@ -47,7 +35,6 @@ library(SKAT)
 library(STAAR)
 library(glue)
 
-
 # token authorisation (Google Cloud Storage R)
 scope <- c("https://www.googleapis.com/auth/cloud-platform")
 token <- token_fetch(scopes = scope)
@@ -59,11 +46,12 @@ googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 # SKAT tests (SKAT, burden, SKAT-O)
 # Wu et al AJHG 2011, Lee et al AJHG 2012
 get_skat_pvs <- function(pheno, covs, genotypes, weights = c(1, 25)) {
-    obj <- SKAT::SKAT_Null_Model(pheno ~ covs, out_type = "C")       # null
-    pv_skat <- SKAT::SKAT(genotypes, obj, weights.beta = weights)$p.value # SKAT
-    pv_burden <- SKAT::SKAT(genotypes, obj, r.corr = 1,           # burden
+    obj <- SKAT::SKAT_Null_Model(pheno ~ covs, out_type = "C")  # null
+    pv_skat <- SKAT::SKAT(genotypes, obj,                       # SKAT
+        weights.beta = weights)$p.value 
+    pv_burden <- SKAT::SKAT(genotypes, obj, r.corr = 1,         # burden
         weights.beta = weights)$p.value
-    pv_skat_o <- SKAT::SKAT(genotypes, obj, method = "SKATO",     # SKAT-O
+    pv_skat_o <- SKAT::SKAT(genotypes, obj, method = "SKATO",   # SKAT-O
         weights.beta = weights)$p.value
     return(c(pv_skat, pv_burden, pv_skat_o))
 }
@@ -110,7 +98,7 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests = 10) {
     pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
     # ACAT-O (combining SKAT, burden and ACAT-V)
     pvals[10] <- get_acato_pv(pvals[2:7])
-    # STAAR
+    # STAAR (combined CCT)
     pvals[11] <- get_staar_pv(pvals[2:7])
     return(pvals)
 }
@@ -124,7 +112,7 @@ g_df <- as.data.frame(g_file)
 # while we are interested in the alternative allele, flip the genotypes
 geno_all <- 2 - as.matrix(g_df)
 
-n_samples <- 1000
+n_samples <- 100
 
 # Step 1: sample 1000 individuals
 # first setting
@@ -143,9 +131,9 @@ singleton_freq <- 0.5 / n_samples
 singletons <- names(variant_freq[variant_freq == singleton_freq])
 
 set.seed(0)
-noise <- rnorm(n_samples)                      # random noise (Gauss)
-noise_pois <- rpois(n = n_samples, lambda = 1) # random noise (Poisson)
-covs <- matrix(rnorm(n_samples * 2), ncol = 2) # random covariates
+noise <- rnorm(n_samples)                       # random noise (Gauss)
+noise_pois <- rpois(n = n_samples, lambda = 1)  # random noise (Poisson)
+covs <- matrix(rnorm(n_samples * 2), ncol = 2)  # random covariates
 
 cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
     "P_burden_1_1", "P_burden_1_25", "P_ACATV_1_1", "P_ACATV_1_25",
@@ -181,91 +169,6 @@ print(head(pv_scenario1_df))
 pv_scenario1_filename <- "10tested_samebeta.csv"
 write.csv(pv_scenario1_df, pv_scenario1_filename)
 
-
-
-
-
-
-
-
-
-
-
-
-
-# # token authorisation (Google Cloud Storage R)
-# scope <- c("https://www.googleapis.com/auth/cloud-platform")
-# token <- token_fetch(scopes = scope)
-# gcs_auth(token = token)
-
-# # set bucket
-# googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
-
-# # get genotypes
-# # these are variants in and around gene VPREB3 on chrom 22
-# g_file <- googleCloudStorageR::gcs_get_object("v0/VPREB3_50K_window/SNVs.csv")
-# g_df <- as.data.frame(g_file)
-
-# # because the current matrix is counting the copies of the reference allele
-# # while we are interested in the alternative allele, flip the genotypes
-# geno_all <- 2 - as.matrix(g_df)
-
-# n_samples <- 1000
-
-# # Step 1: sample 1000 individuals only
-# # first setting
-# # * 1000 individuals
-# # * 10 causal variants one in each if 10 individuals
-
-# set.seed(0)
-# geno_1000 <- geno_all[sample(nrow(geno_all), 1000), ]
-# variant_count <- colSums(geno_1000)             # get alt allele count
-# variant_freq <- variant_count / (2 * n_samples) # get alt allele frequency
-# # remove variants left all 0"s after donor sub-sampling
-# variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
-
-# # consider singletons (1 copy in 1 individual) only
-# singleton_freq <- 0.5 / n_samples
-# singletons <- names(variant_freq[variant_freq == singleton_freq])
-
-# set.seed(1)
-# rnoise <- rnorm(n_samples)
-# print(shapiro.test(rnoise))
-# covs <- matrix(1, nrow = n_samples, ncol = 1) # intercept of ones as covariates
-
-# # scenario 1
-# # * test only those 10 variants
-# # * same direction and magnitude of effect
-# n_reps <- 1000
-# pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 5)
-# for (i in 1:n_reps){
-#     set.seed(i)
-#     select_singletons_10 <- singletons[sample(length(singletons), 10)]
-#     genotypes <- geno_1000[, select_singletons_10]       # subset genotypes
-#     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
-#     lambda <- genotypes %*% beta                         # get mean parameter
-#     set.seed(0)
-#     pheno <- rpois(n = n_samples, lambda = lambda)  # build phenotype (Poisson)
-#     pheno <- pheno + rnoise                         # add random normal noise
-#     pv_normal <- shapiro.test(pheno)$p.value             # record normality pv
-#     obj <- SKAT_Null_Model(pheno ~ covs, out_type = "C") # build null model SKAT
-#     pv_skat <- SKAT(genotypes, obj)$p.value                     # SKAT
-#     pv_burden <- SKAT(genotypes, obj, r.corr = 1)$p.value       # burden
-#     pv_skat_o <- SKAT(genotypes, obj, method = "SKATO")$p.value # SKAT-O
-#     pv_scenario1_mt[i, 1] <- pv_normal
-#     pv_scenario1_mt[i, 2] <- pv_skat
-#     pv_scenario1_mt[i, 3] <- pv_burden
-#     pv_scenario1_mt[i, 4] <- pv_skat_o
-#     pv_scenario1_mt[i, 5] <- var(lambda) / (var(lambda) + 1)
-# }
-# pv_scenario1_df <- as.data.frame(pv_scenario1_mt)
-# colnames(pv_scenario1_df) <- c("P_shapiro", "P_SKAT", "P_burden", "P_SKATO", "geno_beta_var")
-# rownames(pv_scenario1_df) <- paste0("rep", 1:n_reps)
-
-# print(head(pv_scenario1_df))
-
-# pv_scenario1_filename <- "10tested_samebeta.csv"
-# write.csv(pv_scenario1_df, pv_scenario1_filename)
 
 # # scenario 2
 # # * test 50 variants (of which only 10 are causal)
