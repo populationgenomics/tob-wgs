@@ -41,7 +41,7 @@ get_skat_pvs <- function(pheno, covs, genotypes, weights = c(1, 25)) {
     pv_burden <- SKAT::SKAT(genotypes, obj, r.corr = 1,           # burden
         weights.beta = weights)$p.value
     pv_skat_o <- SKAT::SKAT(genotypes, obj, method = "SKATO",     # SKAT-O
-        weights.beta = weights)$p.value 
+        weights.beta = weights)$p.value
     return(c(pv_skat, pv_burden, pv_skat_o))
 }
 
@@ -133,7 +133,7 @@ for (i in 1:n_reps){
 
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_1_mt[i, 11:20] <- get_all_pvs(pheno_pois, covs, genotypes, 10)
+    pv_1_mt[i, 11:20] <- get_all_pvs(pheno = pheno_pois, covs = covs, genotypes = genotypes, n_tests = 10)
 }
 pv_scenario1_df <- as.data.frame(pv_1_mt)
 colnames(pv_scenario1_df) <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
