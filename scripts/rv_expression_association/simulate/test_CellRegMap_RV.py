@@ -22,12 +22,12 @@ from scipy.stats import shapiro
 subprocess.run(
     [
         sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "git+https://github.com/annacuomo/CellRegMap",
-        "--force-reinstall",  # install github version and overwrite current
-        "--no-dependencies",  # same dependencies, no need to uninstall and reinstall those
+        '-m',
+        'pip',
+        'install',
+        'git+https://github.com/annacuomo/CellRegMap',
+        '--force-reinstall',  # install github version and overwrite current
+        '--no-dependencies',  # same dependencies, no need to uninstall and reinstall those
     ],
     check=True,
 )
@@ -37,7 +37,7 @@ from cellregmap import run_gene_set_association
 
 # get genotypes
 # these are variants in and around gene VPREB3 on chrom 22
-g_file = AnyPath(output_path("VPREB3_50K_window/SNVs.csv"))
+g_file = AnyPath(output_path('VPREB3_50K_window/SNVs.csv'))
 g_df = pd.read_csv(g_file)
 
 # because the current matrix is counting the copies of the reference allele
@@ -55,7 +55,7 @@ seed(0)
 geno_1000 = geno_all.sample(n_samples)
 variant_count = geno_1000.sum(axis=0)  # get alt allele count
 variant_freq = variant_count / (2 * n_samples)  # get alt allele frequency
-# remove variants left all 0"s after donor sub-sampling
+# remove variants left all 0's after donor sub-sampling
 variant_freq = variant_freq[variant_freq > 0]
 
 # consider singletons (1 copy in 1 individual) only
@@ -90,14 +90,14 @@ for i in range(n_reps):
 
 pv_scenario1_df = pd.DataFrame(
     data=pv_scenario1_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario1_df.head())
 
-pv_scenario1_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv"))
-with pv_scenario1_filename.open("w") as pf:
+pv_scenario1_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv'))
+with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
 
@@ -122,14 +122,14 @@ for i in range(n_reps):
 
 pv_scenario2_df = pd.DataFrame(
     data=pv_scenario2_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario2_df.head())
 
-pv_scenario2_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv"))
-with pv_scenario2_filename.open("w") as pf:
+pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv'))
+with pv_scenario2_filename.open('w') as pf:
     pv_scenario2_df.to_csv(pf, index=False)
 
 
@@ -154,14 +154,14 @@ for i in range(n_reps):
 
 pv_scenario2a_df = pd.DataFrame(
     data=pv_scenario2a_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario2a_df.head())
 
-pv_scenario2a_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/20tested_samebeta.csv"))
-with pv_scenario2a_filename.open("w") as pf:
+pv_scenario2a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/20tested_samebeta.csv'))
+with pv_scenario2a_filename.open('w') as pf:
     pv_scenario2a_df.to_csv(pf, index=False)
 
 
@@ -187,14 +187,14 @@ for i in range(n_reps):
 
 pv_scenario3_df = pd.DataFrame(
     data=pv_scenario3_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario3_df.head())
 
-pv_scenario3_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_2negativebeta.csv"))
-with pv_scenario3_filename.open("w") as pf:
+pv_scenario3_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_2negativebeta.csv'))
+with pv_scenario3_filename.open('w') as pf:
     pv_scenario3_df.to_csv(pf, index=False)
 
 
@@ -220,14 +220,14 @@ for i in range(n_reps):
 
 pv_scenario3a_df = pd.DataFrame(
     data=pv_scenario3a_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario3a_df.head())
 
-pv_scenario3a_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv"))
-with pv_scenario3a_filename.open("w") as pf:
+pv_scenario3a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv'))
+with pv_scenario3a_filename.open('w') as pf:
     pv_scenario3a_df.to_csv(pf, index=False)
 
 
@@ -252,12 +252,12 @@ for i in range(n_reps):
 
 pv_scenario4_df = pd.DataFrame(
     data=pv_scenario4_mt,
-    columns=["P_shapiro", "P_CRM_RV", "P_CRM_RV_Pois"],
-    index=["rep" + str(rep) for rep in range(n_reps)],
+    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+    index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario4_df.head())
 
-pv_scenario4_filename = AnyPath(output_path("simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv"))
-with pv_scenario4_filename.open("w") as pf:
+pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
+with pv_scenario4_filename.open('w') as pf:
     pv_scenario4_df.to_csv(pf, index=False)
