@@ -8,6 +8,7 @@ In a first instance, using the three tests implemented in the [SKAT R package](h
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 * ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
 
+Coming:
 * An equivalent Python script is available to test [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687).
 * TODO is to implement 
   * a burden test and 
