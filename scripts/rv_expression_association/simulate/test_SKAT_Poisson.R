@@ -19,6 +19,9 @@ print("Install STAAR dependencies Rcpp")
 install.packages("Rcpp", repos = "http://cran.csiro.au")
 install.packages("RcppArmadillo", repos = "http://cran.csiro.au")
 
+print("Install GENESIS dependencies igraph")
+install.packages("igraph", repos = "http://cran.csiro.au")
+
 print("Install STAAR dependencies GENESIS")
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
