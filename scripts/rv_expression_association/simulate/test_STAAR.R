@@ -95,7 +95,7 @@ get_staar_pv <- function(pheno, covs, genotypes) {
 # utility function to get p-values from the different tests
 # from pheno, covs and genos
 get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
-    # pvals <- as.vector(matrix(0, nrow = n_tests))
+    pvals <- as.vector(matrix(0, nrow = n_tests))
     # pvals[1] <- shapiro.test(pheno)$p.value          # record normality pv
     # # SKAT
     # pvals[2] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[1]
