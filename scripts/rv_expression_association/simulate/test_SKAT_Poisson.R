@@ -28,7 +28,7 @@ library(igraph)
 print("Install STAAR dependencies GENESIS")
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager", repos = "http://cran.csiro.au")
-BiocManager::install("GENESIS") # this currently fails because of igraph
+BiocManager::install("GENESIS")
 
 print("Install STAAR dependencies SeqArray")
 # required for GMMAT
