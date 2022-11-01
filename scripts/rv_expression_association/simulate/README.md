@@ -8,8 +8,10 @@ In a first instance, using the three tests implemented in the [SKAT R package](h
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 * ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
 
-An equivalent script is available to test [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687).
-* TODO: are to implement a burden test and an omnibus combined test (similar to the ACAT-O approach?)
+* An equivalent Python script is available to test [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687).
+* TODO is to implement 
+  * a burden test and 
+  * an omnibus combined test (similar to the ACAT-O approach, i.e. simply combine the p-values?)
 
 ### Approach
 * Genotypes matrix (```genotypes```): real variants (SNVs from a genomic region, around the _VPREB3_ gene) from the TOB-WGS dataset
@@ -40,10 +42,10 @@ Even further in the future is to build more complex simulations drawing from rea
 ### Run scripts
 To run (after authenticating: ```gcloud auth application-default login```).
 
-R scripts (SKAT)
+R scripts (SKAT, ACAT)
 ```
 analysis-runner --dataset "tob-wgs" \
-    --description "test SKAT" \
+    --description "test SKAT and ACAT" \
     --access-level "test" \
     --output-dir "v0" \
     --image australia-southeast1-docker.pkg.dev/analysis-runner/images/driver-r:1.3 \
