@@ -6,8 +6,10 @@ In a first instance, using the three tests implemented in the [SKAT R package](h
 * burden: standard burden test
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
+* ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
 
-Later, this will be extended to other methods, including my own [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687). 
+An equivalent script is available to test [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687).
+* TODO: are to implement a burden test and an omnibus combined test (similar to the ACAT-O approach?)
 
 ### Approach
 * Genotypes matrix (```genotypes```): real variants (SNVs from a genomic region, around the _VPREB3_ gene) from the TOB-WGS dataset
