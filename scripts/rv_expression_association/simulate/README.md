@@ -47,7 +47,7 @@ analysis-runner --dataset "tob-wgs" \
     --access-level "test" \
     --output-dir "v0" \
     --image australia-southeast1-docker.pkg.dev/analysis-runner/images/driver-r:1.3 \
-    test_SKAT.R
+    test_SKAT_ACAT.R
 ```
 
 python scripts (CellRegMap)
