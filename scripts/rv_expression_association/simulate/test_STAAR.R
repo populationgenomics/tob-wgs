@@ -81,14 +81,15 @@ get_cct_pv <- function(pvals) {
 
 # STAAR actual test (STAAR-O)
 get_staar_pv <- function(pheno, covs, genotypes) {
-    print(length(pheno))
-    print(dim(covs))
+    # print(length(pheno))
+    # print(dim(covs))
     fixed <- pheno ~ covs
     data <- data.frame(pheno = pheno, covs = covs)
-    print(head(data))
+    # print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
     pv <- res["results_STAAR_O"][1]
+    print(pv)
     return(pv)
 }
 
@@ -115,6 +116,7 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
     # pvals[11] <- get_cct_pv(pvals[2:7])
     # STAAR-O
     pvals[12] <- get_staar_pv(pheno, covs, genotypes)
+    print(length(pvals))
     return(pvals)
 }
 
