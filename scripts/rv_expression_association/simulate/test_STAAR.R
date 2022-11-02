@@ -88,8 +88,8 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     # print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    print(res)
-    print(res["results_STAAR_O"])
+    # print(res)
+    # print(res["results_STAAR_O"])
     pv <- res["results_STAAR_O"][1]
     print(pv)
     return(pv)
@@ -118,6 +118,7 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
     # pvals[11] <- get_cct_pv(pvals[2:7])
     # STAAR-O
     pvals[12] <- get_staar_pv(pheno, covs, genotypes)
+    print(pvals)
     print(length(pvals))
     return(pvals)
 }
@@ -167,6 +168,7 @@ cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
 # * same direction and magnitude of effect
 n_reps <- 10
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 12)
+print(dim(pv_scenario1_mt))
 for (i in 1:n_reps){
     set.seed(i)
     print(i)
