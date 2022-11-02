@@ -185,9 +185,10 @@ for (i in 1:n_reps){
     print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    print(res)
+    # print(res)
     # print(res["results_STAAR_O"])
-    # pv <- res["results_STAAR_O"]
+    pv <- res["results_STAAR_O"]
+    print(pv)
 
 
 
