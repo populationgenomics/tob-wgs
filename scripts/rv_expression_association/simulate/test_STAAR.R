@@ -139,7 +139,7 @@ n_samples <- 100
 set.seed(0)
 geno_subset <- geno_all[sample(nrow(geno_all), n_samples), ]
 variant_count <- colSums(geno_subset)             # get alt allele count
-variant_freq <- variant_count / (2 * n_samples) # get alt allele frequency
+variant_freq <- variant_count / (2 * n_samples)   # get alt allele frequency
 # remove variants left all 0"s after donor sub-sampling
 variant_freq <- variant_freq[variant_freq %in% variant_freq[variant_freq > 0]]
 
@@ -167,9 +167,10 @@ n_reps <- 10
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 12)
 for (i in 1:n_reps){
     set.seed(i)
+    print(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
-    beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create effect size
+    beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise               # build phenotype (Gauss)
     pv_scenario1_mt[i, 1:12] <- get_all_pvs(pheno, covs, genotypes, 12)
