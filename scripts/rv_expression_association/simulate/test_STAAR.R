@@ -176,7 +176,7 @@ for (i in 1:n_reps){
     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
-    pheno <- genotypes %*% beta + noise               # build phenotype (Gauss)
+    pheno <- genotypes %*% beta + noise                    # build phenotype (Gauss)
 
     print(length(pheno))
     fixed <- pheno ~ covs.1 + covs.2
