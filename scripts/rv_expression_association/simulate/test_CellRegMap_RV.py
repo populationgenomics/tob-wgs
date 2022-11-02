@@ -116,6 +116,8 @@ pv_scenario1_df = pd.DataFrame(
         'P_CRM_RV_Pois',
         'P_CRM_burden',
         'P_CRM_burden_Pois',
+        'P_CRM_omnibus',
+        'P_CRM_omnibus_Pois',
     ],
     index=['rep' + str(rep) for rep in range(n_reps)],
 )
