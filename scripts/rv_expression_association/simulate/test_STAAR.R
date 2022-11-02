@@ -187,9 +187,9 @@ for (i in 1:n_reps){
     res <- STAAR::STAAR(genotypes, obj_null_model)
     # print(res)
     # print(res["results_STAAR_O"])
-    pv <- res["results_STAAR_O"]
+    pv <- res["results_STAAR_O"][[1]]
     print(pv)
-    pv_scenario1_mt[i, 12] = pv
+    pv_scenario1_mt[i, 12] <- pv
 
 
     # print(length(pv_scenario1_mt[i, 1:12]))
