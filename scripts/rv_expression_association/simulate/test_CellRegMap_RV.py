@@ -33,7 +33,11 @@ subprocess.run(
     check=True,
 )
 
-from cellregmap import run_gene_set_association, run_burden_association, omnibus_set_association
+from cellregmap import (
+    run_gene_set_association,
+    run_burden_association,
+    omnibus_set_association,
+)
 
 
 # get genotypes
@@ -79,10 +83,10 @@ for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
     genotypes = geno_1000[select_singletons_10]  # subset genotypes
-    beta = ones((genotypes.shape[1], 1))         # create effect size
-    pheno = genotypes @ beta + noise             # build phenotype
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
+    beta = ones((genotypes.shape[1], 1))  # create effect size
+    pheno = genotypes @ beta + noise  # build phenotype
+    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
+    pv_normal = shapiro(pheno).pvalue  # record normality pv
     # Variance Component (SKAT-like)
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
@@ -90,8 +94,12 @@ for i in range(n_reps):
     pv_scenario1_mt[i, 1] = pv_crm_rv
     pv_scenario1_mt[i, 2] = pv_crm_rv_pois
     # Burden (max)
-    pv_crm_bm = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.max")[0]
-    pv_crm_bm_pois = run_burden_association(y=pheno_pois, G=genotypes, W=covs, E=E, mask="mask.max")[0]
+    pv_crm_bm = run_burden_association(
+        y=pheno, G=genotypes, W=covs, E=E, mask="mask.max"
+    )[0]
+    pv_crm_bm_pois = run_burden_association(
+        y=pheno_pois, G=genotypes, W=covs, E=E, mask="mask.max"
+    )[0]
     pv_scenario1_mt[i, 3] = pv_crm_bm
     pv_scenario1_mt[i, 4] = pv_crm_bm_pois
     # Combined
@@ -102,13 +110,21 @@ for i in range(n_reps):
 
 pv_scenario1_df = pd.DataFrame(
     data=pv_scenario1_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois', 'P_CRM_burden', 'P_CRM_burden_Pois'],
+    columns=[
+        'P_shapiro',
+        'P_CRM_RV',
+        'P_CRM_RV_Pois',
+        'P_CRM_burden',
+        'P_CRM_burden_Pois',
+    ],
     index=['rep' + str(rep) for rep in range(n_reps)],
 )
 
 print(pv_scenario1_df.head())
 
-pv_scenario1_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv'))
+pv_scenario1_filename = AnyPath(
+    output_path('simulations/CRM/1000samples_10causal_singletons/10tested_samebeta.csv')
+)
 with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
@@ -273,4 +289,3 @@ with pv_scenario1_filename.open('w') as pf:
 # pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
 # with pv_scenario4_filename.open('w') as pf:
 #     pv_scenario4_df.to_csv(pf, index=False)
-
