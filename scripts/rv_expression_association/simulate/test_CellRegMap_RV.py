@@ -94,8 +94,8 @@ for i in range(n_reps):
     pv_scenario1_mt[i, 3] = pv_crm_bm
     pv_scenario1_mt[i, 4] = pv_crm_bm_pois
     # Combined
-    pv_crm_o = omnibus_set_association(pv_crm_rv, pv_crm_bm)
-    pv_crm_o_pois = omnibus_set_association(pv_crm_rv_pois, pv_crm_bm_pois)
+    pv_crm_o = omnibus_set_association([pv_crm_rv, pv_crm_bm])
+    pv_crm_o_pois = omnibus_set_association([pv_crm_rv_pois, pv_crm_bm_pois])
     pv_scenario1_mt[i, 5] = pv_crm_o
     pv_scenario1_mt[i, 6] = pv_crm_o_pois
 
