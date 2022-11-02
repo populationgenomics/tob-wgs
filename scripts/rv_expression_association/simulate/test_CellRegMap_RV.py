@@ -32,7 +32,7 @@ subprocess.run(
     check=True,
 )
 
-from cellregmap import run_gene_set_association
+from cellregmap import run_gene_set_association, run_burden_association
 
 
 # get genotypes
