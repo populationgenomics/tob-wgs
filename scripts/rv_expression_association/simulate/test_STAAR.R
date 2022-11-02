@@ -90,7 +90,7 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     res <- STAAR::STAAR(genotypes, obj_null_model)
     # print(res)
     # print(res["results_STAAR_O"])
-    pv <- res["results_STAAR_O"][1]
+    pv <- res["results_STAAR_O"]
     print(pv)
     return(pv)
 }
@@ -177,6 +177,8 @@ for (i in 1:n_reps){
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise               # build phenotype (Gauss)
+    print(dim(pv_scenario1_mt[i, 1:12]))
+    print(dim(get_all_pvs(pheno, covs, genotypes, 12)))
     pv_scenario1_mt[i, 1:12] <- get_all_pvs(pheno, covs, genotypes, 12)
     # Poisson noise
     # pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
