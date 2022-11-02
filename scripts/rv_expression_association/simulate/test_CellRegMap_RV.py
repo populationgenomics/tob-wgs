@@ -11,6 +11,7 @@
 import sys
 import subprocess
 import pandas as pd
+import numpy as np
 from cloudpathlib import AnyPath
 from cpg_utils.hail_batch import output_path
 from numpy import arange, eye, ones, zeros
