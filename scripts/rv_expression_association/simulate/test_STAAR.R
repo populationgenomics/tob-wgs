@@ -177,9 +177,23 @@ for (i in 1:n_reps){
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise               # build phenotype (Gauss)
-    print(length(pv_scenario1_mt[i, 1:12]))
-    print(length(get_all_pvs(pheno, covs, genotypes, 12)))
-    pv_scenario1_mt[i, 1:12] <- get_all_pvs(pheno, covs, genotypes, 12)
+
+    print(length(pheno))
+    fixed <- pheno ~ covs.1 + covs.2
+    print(fixed)
+    data <- data.frame(pheno = pheno, covs = covs)
+    print(head(data))
+    obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
+    res <- STAAR::STAAR(genotypes, obj_null_model)
+    print(res)
+    # print(res["results_STAAR_O"])
+    # pv <- res["results_STAAR_O"]
+
+
+
+    # print(length(pv_scenario1_mt[i, 1:12]))
+    # print(length(get_all_pvs(pheno, covs, genotypes, 12)))
+    # pv_scenario1_mt[i, 1:12] <- get_all_pvs(pheno, covs, genotypes, 12)
     # Poisson noise
     # pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
     # pv_scenario1_mt[i, 12:22] <- get_all_pvs(pheno_pois, covs, genotypes, 11)
