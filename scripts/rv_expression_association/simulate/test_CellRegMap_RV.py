@@ -78,7 +78,7 @@ E = eye(n_samples)
 # * test only those 10 variants
 # * same direction and magnitude of effect
 n_reps = 1000
-pv_scenario1_mt = zeros((n_reps, 6))
+pv_scenario1_mt = zeros((n_reps, 7))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
