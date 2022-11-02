@@ -32,7 +32,7 @@ subprocess.run(
     check=True,
 )
 
-from cellregmap import run_gene_set_association, run_burden_association
+from cellregmap import run_gene_set_association, run_burden_association, omnibus_set_association
 
 
 # get genotypes
@@ -73,7 +73,7 @@ E = eye(n_samples)
 # * test only those 10 variants
 # * same direction and magnitude of effect
 n_reps = 1000
-pv_scenario1_mt = zeros((n_reps, 5))
+pv_scenario1_mt = zeros((n_reps, 6))
 for i in range(n_reps):
     seed(i)
     select_singletons_10 = sample(list(singletons), 10)
@@ -85,14 +85,19 @@ for i in range(n_reps):
     # Variance Component (SKAT-like)
     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    # Burden (max, sum, comphet)
     pv_scenario1_mt[i, 0] = pv_normal
     pv_scenario1_mt[i, 1] = pv_crm_rv
     pv_scenario1_mt[i, 2] = pv_crm_rv_pois
+    # Burden (max)
     pv_crm_bm = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.max")[0]
     pv_crm_bm_pois = run_burden_association(y=pheno_pois, G=genotypes, W=covs, E=E, mask="mask.max")[0]
     pv_scenario1_mt[i, 3] = pv_crm_bm
     pv_scenario1_mt[i, 4] = pv_crm_bm_pois
+    # Combined
+    pv_crm_o = omnibus_set_association(pv_crm_rv, pv_crm_bm)
+    pv_crm_o_pois = omnibus_set_association(pv_crm_rv_pois, pv_crm_bm_pois)
+    pv_scenario1_mt[i, 5] = pv_crm_o
+    pv_scenario1_mt[i, 6] = pv_crm_o_pois
 
 pv_scenario1_df = pd.DataFrame(
     data=pv_scenario1_mt,
@@ -107,164 +112,164 @@ with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
 
-# scenario 2
-# * test 50 variants (of which only 10 are causal)
-# * same direction and magnitude of effects
-pv_scenario2_mt = zeros((n_reps, 3))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_50 = sample(list(singletons), 50)
-    genotypes = geno_1000[select_singletons_50]  # subset genotypes
-    beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
-    beta[0:10] = 1                               # only 10 non-0 betas
-    pheno = genotypes @ beta + noise             # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    pv_scenario2_mt[i, 0] = pv_normal
-    pv_scenario2_mt[i, 1] = pv_crm_rv
-    pv_scenario2_mt[i, 2] = pv_crm_rv_pois
+# # scenario 2
+# # * test 50 variants (of which only 10 are causal)
+# # * same direction and magnitude of effects
+# pv_scenario2_mt = zeros((n_reps, 3))
+# for i in range(n_reps):
+#     seed(i)
+#     select_singletons_50 = sample(list(singletons), 50)
+#     genotypes = geno_1000[select_singletons_50]  # subset genotypes
+#     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
+#     beta[0:10] = 1                               # only 10 non-0 betas
+#     pheno = genotypes @ beta + noise             # build phenotype Gauss
+#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+#     pv_normal = shapiro(pheno).pvalue            # record normality pv
+#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+#     pv_scenario2_mt[i, 0] = pv_normal
+#     pv_scenario2_mt[i, 1] = pv_crm_rv
+#     pv_scenario2_mt[i, 2] = pv_crm_rv_pois
 
-pv_scenario2_df = pd.DataFrame(
-    data=pv_scenario2_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-    index=['rep' + str(rep) for rep in range(n_reps)],
-)
+# pv_scenario2_df = pd.DataFrame(
+#     data=pv_scenario2_mt,
+#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+#     index=['rep' + str(rep) for rep in range(n_reps)],
+# )
 
-print(pv_scenario2_df.head())
+# print(pv_scenario2_df.head())
 
-pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv'))
-with pv_scenario2_filename.open('w') as pf:
-    pv_scenario2_df.to_csv(pf, index=False)
-
-
-# scenario 2a
-# * test 20 variants (of which only 10 are causal)
-# * same direction and magnitude of effects
-pv_scenario2a_mt = zeros((n_reps, 3))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_20 = sample(list(singletons), 20)
-    genotypes = geno_1000[select_singletons_20]  # subset genotypes
-    beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
-    beta[0:10] = 1                               # only 10 non-0 betas
-    pheno = genotypes @ beta + noise             # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    pv_scenario2a_mt[i, 0] = pv_normal
-    pv_scenario2a_mt[i, 1] = pv_crm_rv
-    pv_scenario2a_mt[i, 2] = pv_crm_rv_pois
-
-pv_scenario2a_df = pd.DataFrame(
-    data=pv_scenario2a_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-    index=['rep' + str(rep) for rep in range(n_reps)],
-)
-
-print(pv_scenario2a_df.head())
-
-pv_scenario2a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/20tested_samebeta.csv'))
-with pv_scenario2a_filename.open('w') as pf:
-    pv_scenario2a_df.to_csv(pf, index=False)
+# pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv'))
+# with pv_scenario2_filename.open('w') as pf:
+#     pv_scenario2_df.to_csv(pf, index=False)
 
 
-# scenario 3
-# * test 10 variants
-# * same magnitude of effect
-# * vary direction for 2/10 variants
-pv_scenario3_mt = zeros((n_reps, 3))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10]  # subset genotypes
-    beta = ones((genotypes.shape[1], 1))         # create betas as 1s
-    beta[0:2] = -1                               # for two variants, -1
-    pheno = genotypes @ beta + noise             # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    pv_scenario3_mt[i, 0] = pv_normal
-    pv_scenario3_mt[i, 1] = pv_crm_rv
-    pv_scenario3_mt[i, 2] = pv_crm_rv_pois
+# # scenario 2a
+# # * test 20 variants (of which only 10 are causal)
+# # * same direction and magnitude of effects
+# pv_scenario2a_mt = zeros((n_reps, 3))
+# for i in range(n_reps):
+#     seed(i)
+#     select_singletons_20 = sample(list(singletons), 20)
+#     genotypes = geno_1000[select_singletons_20]  # subset genotypes
+#     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
+#     beta[0:10] = 1                               # only 10 non-0 betas
+#     pheno = genotypes @ beta + noise             # build phenotype Gauss
+#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+#     pv_normal = shapiro(pheno).pvalue            # record normality pv
+#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+#     pv_scenario2a_mt[i, 0] = pv_normal
+#     pv_scenario2a_mt[i, 1] = pv_crm_rv
+#     pv_scenario2a_mt[i, 2] = pv_crm_rv_pois
 
-pv_scenario3_df = pd.DataFrame(
-    data=pv_scenario3_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-    index=['rep' + str(rep) for rep in range(n_reps)],
-)
+# pv_scenario2a_df = pd.DataFrame(
+#     data=pv_scenario2a_mt,
+#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+#     index=['rep' + str(rep) for rep in range(n_reps)],
+# )
 
-print(pv_scenario3_df.head())
+# print(pv_scenario2a_df.head())
 
-pv_scenario3_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_2negativebeta.csv'))
-with pv_scenario3_filename.open('w') as pf:
-    pv_scenario3_df.to_csv(pf, index=False)
-
-
-# scenario 3a
-# * test 10 variants
-# * same magnitude of effect
-# * vary direction for 5/10 variants
-pv_scenario3a_mt = zeros((n_reps, 3))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10]  # subset genotypes
-    beta = ones((genotypes.shape[1], 1))         # create betas as 1s
-    beta[0:5] = -1                               # for five variants, -1
-    pheno = genotypes @ beta + noise             # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    pv_scenario3a_mt[i, 0] = pv_normal
-    pv_scenario3a_mt[i, 1] = pv_crm_rv
-    pv_scenario3a_mt[i, 2] = pv_crm_rv_pois
-
-pv_scenario3a_df = pd.DataFrame(
-    data=pv_scenario3a_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-    index=['rep' + str(rep) for rep in range(n_reps)],
-)
-
-print(pv_scenario3a_df.head())
-
-pv_scenario3a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv'))
-with pv_scenario3a_filename.open('w') as pf:
-    pv_scenario3a_df.to_csv(pf, index=False)
+# pv_scenario2a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/20tested_samebeta.csv'))
+# with pv_scenario2a_filename.open('w') as pf:
+#     pv_scenario2a_df.to_csv(pf, index=False)
 
 
-# scenario 4
-# * test 10 variants
-# * same direction of effect
-# * vary magnitude
-pv_scenario4_mt = zeros((n_reps, 3))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10]  # subset genotypes
-    beta = arange(0.1, 1.1, 0.1).reshape(10, 1)  # create varying betas
-    pheno = genotypes @ beta + noise             # build phenotype Gauss
-    pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-    pv_normal = shapiro(pheno).pvalue            # record normality pv
-    pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-    pv_scenario4_mt[i, 0] = pv_normal
-    pv_scenario4_mt[i, 1] = pv_crm_rv
-    pv_scenario4_mt[i, 2] = pv_crm_rv_pois
+# # scenario 3
+# # * test 10 variants
+# # * same magnitude of effect
+# # * vary direction for 2/10 variants
+# pv_scenario3_mt = zeros((n_reps, 3))
+# for i in range(n_reps):
+#     seed(i)
+#     select_singletons_10 = sample(list(singletons), 10)
+#     genotypes = geno_1000[select_singletons_10]  # subset genotypes
+#     beta = ones((genotypes.shape[1], 1))         # create betas as 1s
+#     beta[0:2] = -1                               # for two variants, -1
+#     pheno = genotypes @ beta + noise             # build phenotype Gauss
+#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+#     pv_normal = shapiro(pheno).pvalue            # record normality pv
+#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+#     pv_scenario3_mt[i, 0] = pv_normal
+#     pv_scenario3_mt[i, 1] = pv_crm_rv
+#     pv_scenario3_mt[i, 2] = pv_crm_rv_pois
 
-pv_scenario4_df = pd.DataFrame(
-    data=pv_scenario4_mt,
-    columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-    index=['rep' + str(rep) for rep in range(n_reps)],
-)
+# pv_scenario3_df = pd.DataFrame(
+#     data=pv_scenario3_mt,
+#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+#     index=['rep' + str(rep) for rep in range(n_reps)],
+# )
 
-print(pv_scenario4_df.head())
+# print(pv_scenario3_df.head())
 
-pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
-with pv_scenario4_filename.open('w') as pf:
-    pv_scenario4_df.to_csv(pf, index=False)
+# pv_scenario3_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_2negativebeta.csv'))
+# with pv_scenario3_filename.open('w') as pf:
+#     pv_scenario3_df.to_csv(pf, index=False)
+
+
+# # scenario 3a
+# # * test 10 variants
+# # * same magnitude of effect
+# # * vary direction for 5/10 variants
+# pv_scenario3a_mt = zeros((n_reps, 3))
+# for i in range(n_reps):
+#     seed(i)
+#     select_singletons_10 = sample(list(singletons), 10)
+#     genotypes = geno_1000[select_singletons_10]  # subset genotypes
+#     beta = ones((genotypes.shape[1], 1))         # create betas as 1s
+#     beta[0:5] = -1                               # for five variants, -1
+#     pheno = genotypes @ beta + noise             # build phenotype Gauss
+#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+#     pv_normal = shapiro(pheno).pvalue            # record normality pv
+#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+#     pv_scenario3a_mt[i, 0] = pv_normal
+#     pv_scenario3a_mt[i, 1] = pv_crm_rv
+#     pv_scenario3a_mt[i, 2] = pv_crm_rv_pois
+
+# pv_scenario3a_df = pd.DataFrame(
+#     data=pv_scenario3a_mt,
+#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+#     index=['rep' + str(rep) for rep in range(n_reps)],
+# )
+
+# print(pv_scenario3a_df.head())
+
+# pv_scenario3a_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_5negativebeta.csv'))
+# with pv_scenario3a_filename.open('w') as pf:
+#     pv_scenario3a_df.to_csv(pf, index=False)
+
+
+# # scenario 4
+# # * test 10 variants
+# # * same direction of effect
+# # * vary magnitude
+# pv_scenario4_mt = zeros((n_reps, 3))
+# for i in range(n_reps):
+#     seed(i)
+#     select_singletons_10 = sample(list(singletons), 10)
+#     genotypes = geno_1000[select_singletons_10]  # subset genotypes
+#     beta = arange(0.1, 1.1, 0.1).reshape(10, 1)  # create varying betas
+#     pheno = genotypes @ beta + noise             # build phenotype Gauss
+#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
+#     pv_normal = shapiro(pheno).pvalue            # record normality pv
+#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
+#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
+#     pv_scenario4_mt[i, 0] = pv_normal
+#     pv_scenario4_mt[i, 1] = pv_crm_rv
+#     pv_scenario4_mt[i, 2] = pv_crm_rv_pois
+
+# pv_scenario4_df = pd.DataFrame(
+#     data=pv_scenario4_mt,
+#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
+#     index=['rep' + str(rep) for rep in range(n_reps)],
+# )
+
+# print(pv_scenario4_df.head())
+
+# pv_scenario4_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/10tested_varyingbeta.csv'))
+# with pv_scenario4_filename.open('w') as pf:
+#     pv_scenario4_df.to_csv(pf, index=False)
 
