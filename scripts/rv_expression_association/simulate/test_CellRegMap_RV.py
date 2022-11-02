@@ -39,6 +39,7 @@ from cellregmap import (
     omnibus_set_association,
 )
 
+
 def get_crm_pvs(pheno, covs, genotypes, E=None):
     """
     CellRegMap-RV tests
@@ -49,11 +50,13 @@ def get_crm_pvs(pheno, covs, genotypes, E=None):
     pv0 = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
     pv1 = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.max")[0]
     pv2 = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.sum")[0]
-    pv3 = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.comphet")[0]
+    pv3 = run_burden_association(
+        y=pheno, G=genotypes, W=covs, E=E, mask="mask.comphet"
+    )[0]
     pv4 = omnibus_set_association(np.array([pv0, pv1]))
     pv5 = omnibus_set_association(np.array([pv0, pv2]))
     pv6 = omnibus_set_association(np.array([pv0, pv3]))
-    return([pv0, pv1, pv2, pv3, pv4, pv5, pv6])
+    return [pv0, pv1, pv2, pv3, pv4, pv5, pv6]
 
 
 # get genotypes
@@ -90,28 +93,8 @@ noise_pois = poisson(lam=1, size=n_samples).reshape(n_samples, 1)  # Poisson noi
 covs = ones((n_samples, 1))  # intercept of ones as covariates
 E = eye(n_samples)
 
-# scenario 1
-# * test only those 10 variants
-# * same direction and magnitude of effect
-n_reps = 1000
-pv_scenario1_mt = zeros((n_reps, 16))
-for i in range(n_reps):
-    seed(i)
-    select_singletons_10 = sample(list(singletons), 10)
-    genotypes = geno_1000[select_singletons_10]    # subset genotypes
-    beta = ones((genotypes.shape[1], 1))           # create effect size
-    # Gaussian
-    pheno = genotypes @ beta + noise               # build phenotype (Gauss)
-    pv_scenario1_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv 
-    pv_scenario1_mt[i, 1:8] = get_crm_pvs(pheno, covs, genotypes, E)
-    # Poisson
-    pheno_pois = genotypes @ beta + noise_pois          # build phenotype Poisson
-    pv_scenario1_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
-    pv_scenario1_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, genotypes, E)
-    
-pv_scenario1_df = pd.DataFrame(
-    data=pv_scenario1_mt,
-    columns=[
+cols = (
+    [
         'P_shapiro',
         'P_CRM_RV',
         'P_CRM_burden_max',
@@ -129,6 +112,30 @@ pv_scenario1_df = pd.DataFrame(
         'P_CRM_omnibus_sum_Pois',
         'P_CRM_omnibus_comphet_Pois',
     ],
+)
+
+# scenario 1
+# * test only those 10 variants
+# * same direction and magnitude of effect
+n_reps = 1000
+pv_scenario1_mt = zeros((n_reps, 16))
+for i in range(n_reps):
+    seed(i)
+    select_singletons_10 = sample(list(singletons), 10)
+    genotypes = geno_1000[select_singletons_10]  # subset genotypes
+    beta = ones((genotypes.shape[1], 1))  # create effect size
+    # Gaussian
+    pheno = genotypes @ beta + noise  # build phenotype (Gauss)
+    pv_scenario1_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv
+    pv_scenario1_mt[i, 1:8] = get_crm_pvs(pheno, covs, genotypes, E)
+    # Poisson
+    pheno_pois = genotypes @ beta + noise_pois  # build phenotype Poisson
+    pv_scenario1_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
+    pv_scenario1_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, genotypes, E)
+
+pv_scenario1_df = pd.DataFrame(
+    data=pv_scenario1_mt,
+    columns=cols,
     index=['rep' + str(rep) for rep in range(n_reps)],
 )
 

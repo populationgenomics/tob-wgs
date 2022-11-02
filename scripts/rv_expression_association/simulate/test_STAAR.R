@@ -88,9 +88,7 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     # print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    # print(res)
-    # print(res["results_STAAR_O"])
-    pv <- res["results_STAAR_O"]
+    pv <- res["results_STAAR_O"][[1]]
     print(pv)
     return(pv)
 }
@@ -177,15 +175,11 @@ for (i in 1:n_reps){
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise                    # build phenotype (Gauss)
-
-    print(length(pheno))
     fixed <- pheno ~ covs.1 + covs.2
-    print(fixed)
     data <- data.frame(pheno = pheno, covs = covs)
-    print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    # print(res)
+    print(res)
     # print(res["results_STAAR_O"])
     pv <- res["results_STAAR_O"][[1]]
     print(pv)
