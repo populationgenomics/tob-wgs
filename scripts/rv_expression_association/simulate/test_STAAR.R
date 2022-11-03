@@ -87,9 +87,9 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
     print(res)
-    pv_staaro <- as.numeric(res["results_STAAR_O"])       # STAAR-O
-    pv_acato <- as.numeric(res["results_ACAT_O"])        # ACAT-O
-    pv_skat <- as.numeric(res["results_STAAR_S_1_25"][1])     # SKAT
+    pv_staaro <- as.numeric(res["results_STAAR_O"][[1]])       # STAAR-O
+    pv_acato <- as.numeric(res["results_ACAT_O"][[1]])        # ACAT-O
+    pv_skat <- as.numeric(res["results_STAAR_S_1_25"][[1]][1])     # SKAT
     pv_burden <- as.numeric(res["results_STAAR_B_1_25"][1])   # burden
     pv_acatv <- as.numeric(res["results_STAAR_A_1_25"][1])  # ACAT-V
     print(pv_staaro)
