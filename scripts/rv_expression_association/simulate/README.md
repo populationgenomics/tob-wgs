@@ -7,7 +7,7 @@ In a first instance, using the three tests implemented in the [SKAT](https://cra
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 * ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
-* STAAR: [Li et al 2022](https://www.nature.com/articles/s41592-022-01640-x)
+* STAAR: [Li et al, Nature Methods 2022](https://www.nature.com/articles/s41592-022-01640-x)
 
 Additionally (Python):
 * CellRegMap-RV (new name coming soon)[variance-component score test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L648-L676).
