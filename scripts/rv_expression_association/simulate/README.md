@@ -7,12 +7,12 @@ In a first instance, using the three tests implemented in the [SKAT](https://cra
 * SKAT-O: "omnibus" optimised combined test ([Lee et al, AJHG 2012](https://www.sciencedirect.com/science/article/pii/S0002929712003163)).
 * ACAT-V: gene-set test using the aggregated Cauchy association test (ACAT; [Liu et al, AJHG 2019](https://www.sciencedirect.com/science/article/pii/S0002929719300023))
 * ACAT-O: omnibus test self-implemented based on the description in the ACAT paper
+* STAAR: [Li et al, Nature Methods 2022](https://www.nature.com/articles/s41592-022-01640-x)
 
-Coming:
-* An equivalent Python script is available to test [CellRegMap-RV (new name coming soon)](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L657-L687).
-* TODO is to implement 
-  * a burden test and 
-  * an omnibus combined test (similar to the ACAT-O approach, i.e. simply combine the p-values?)
+Additionally (Python):
+* CellRegMap-RV (new name coming soon)[variance-component score test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L648-L676).
+* CellRegMap-RV [burden test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L679-L720)
+* CellRegMap-RV [omnibus combined test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L723-L742) (similar to the ACAT-O approach)
 
 ### Approach
 * Genotypes matrix (```genotypes```): real variants (SNVs from a genomic region, around the _VPREB3_ gene) from the TOB-WGS dataset
