@@ -93,8 +93,7 @@ noise_pois = poisson(lam=1, size=n_samples).reshape(n_samples, 1)  # Poisson noi
 covs = ones((n_samples, 1))  # intercept of ones as covariates
 E = eye(n_samples)
 
-cols = (
-    [
+cols = [
         'P_shapiro',
         'P_CRM_RV',
         'P_CRM_burden_max',
@@ -111,8 +110,7 @@ cols = (
         'P_CRM_omnibus_max_Pois',
         'P_CRM_omnibus_sum_Pois',
         'P_CRM_omnibus_comphet_Pois',
-    ],
-)
+]
 
 # scenario 1
 # * test only those 10 variants
