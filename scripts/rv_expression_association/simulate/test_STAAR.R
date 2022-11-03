@@ -31,6 +31,7 @@ devtools::install_github("xihaoli/STAAR")
 # import R packages
 library(googleCloudStorageR)
 library(gargle)
+library(ACAT)
 library(SKAT)
 library(STAAR)
 library(glue)
@@ -83,14 +84,13 @@ get_cct_pv <- function(pvals) {
 get_staar_pv <- function(pheno, covs, genotypes) {
     fixed <- pheno ~ covs.1 + covs.2
     data <- data.frame(pheno = pheno, covs = covs)
-    # print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    pv_staaro <- res["results_STAAR_O"][[1]]
-    pv_acato <- res["results_ACAT_O"][[1]]
-    pv_skat <- res["results_STAAR_S_1_25"][[1]]
-    pv_burden <- res["results_STAAR_B_1_25"][[1]]
-    pv_acatv <- res["results_STAAR_A_1_25"][[1]]
+    pv_staaro <- res["results_STAAR_O"][[1]]        # STAAR-O
+    pv_acato <- res["results_ACAT_O"][[1]]          # ACAT-O
+    pv_skat <- res["results_STAAR_S_1_25"][[1]]     # SKAT
+    pv_burden <- res["results_STAAR_B_1_25"][[1]]   # burden
+    pv_acatv <- res["results_STAAR_A_1_25"][[1]]    # ACAT-V
     return(c(pv_staaro, pv_acato, pv_skat, pv_burden, pv_acatv))
 }
 
@@ -113,12 +113,10 @@ get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
     pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
     # ACAT-O (combining SKAT, burden and ACAT-V)
     pvals[10] <- get_acato_pv(pvals[2:7])
-    STAAR (combined CCT)
+    # STAAR (combined CCT)
     pvals[11] <- get_cct_pv(pvals[2:7])
-    # STAAR-O
+    # STAAR-O (and other STAAR-implemented tests)
     pvals[12:16] <- get_staar_pv(pheno, covs, genotypes)
-    # print(pvals)
-    print(length(pvals))
     return(pvals)
 }
 
@@ -157,7 +155,7 @@ covs <- matrix(rnorm(n_samples * 2), ncol = 2)  # random covariates
 cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
     "P_burden_1_1", "P_burden_1_25", "P_ACATV_1_1", "P_ACATV_1_25",
     "P_SKATO_1_1", "P_SKATO_1_25", "P_ACATO", "P_STAAR", "P_STAARO",
-    "P_STAAR_ACATO", "P_STAAR_SKAT","P_STAAR_burden","P_STAAR_ACATV")
+    "P_STAAR_ACATO", "P_STAAR_SKAT", "P_STAAR_burden", "P_STAAR_ACATV")
     # "P_shapiro_Pois", "P_SKAT_1_1_Pois", "P_SKAT_1_25_Pois",
     # "P_burden_1_1_Pois", "P_burden_1_25_Pois", "P_ACATV_1_1_Pois",
     # "P_ACATV_1_25_Pois", "P_SKATO_1_1_Pois", "P_SKATO_1_25_Pois",
