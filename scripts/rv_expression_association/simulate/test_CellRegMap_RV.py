@@ -148,36 +148,36 @@ with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
 
-# # scenario 2
-# # * test 50 variants (of which only 10 are causal)
-# # * same direction and magnitude of effects
-# pv_scenario2_mt = zeros((n_reps, 3))
-# for i in range(n_reps):
-#     seed(i)
-#     select_singletons_50 = sample(list(singletons), 50)
-#     genotypes = geno_1000[select_singletons_50]  # subset genotypes
-#     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
-#     beta[0:10] = 1                               # only 10 non-0 betas
-#     pheno = genotypes @ beta + noise             # build phenotype Gauss
-#     pheno_pois = genotypes @ beta + noise_pois   # build phenotype Poisson
-#     pv_normal = shapiro(pheno).pvalue            # record normality pv
-#     pv_crm_rv = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-#     pv_crm_rv_pois = run_gene_set_association(y=pheno_pois, G=genotypes, W=covs, E=E)[0]
-#     pv_scenario2_mt[i, 0] = pv_normal
-#     pv_scenario2_mt[i, 1] = pv_crm_rv
-#     pv_scenario2_mt[i, 2] = pv_crm_rv_pois
+# scenario 2
+# * test 50 variants (of which only 10 are causal)
+# * same direction and magnitude of effects
+pv_scenario2_mt = zeros((n_reps, 16))
+for i in range(n_reps):
+    seed(i)
+    select_singletons_50 = sample(list(singletons), 50)
+    genotypes = geno_1000[select_singletons_50]  # subset genotypes
+    beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
+    beta[0:10] = 1                               # only 10 non-0 betas
+    # Gaussian
+    pheno = genotypes @ beta + noise               # build phenotype (Gauss)
+    pv_scenario2_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv
+    pv_scenario2_mt[i, 1:8] = get_crm_pvs(pheno, covs, genotypes, E)
+    # Poisson
+    pheno_pois = genotypes @ beta + noise_pois          # build phenotype Poisson
+    pv_scenario2_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
+    pv_scenario2_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, genotypes, E)
 
-# pv_scenario2_df = pd.DataFrame(
-#     data=pv_scenario2_mt,
-#     columns=['P_shapiro', 'P_CRM_RV', 'P_CRM_RV_Pois'],
-#     index=['rep' + str(rep) for rep in range(n_reps)],
-# )
+pv_scenario2_df = pd.DataFrame(
+    data=pv_scenario2_mt,
+    columns=cols,
+    index=['rep' + str(rep) for rep in range(n_reps)],
+)
 
-# print(pv_scenario2_df.head())
+print(pv_scenario2_df.head())
 
-# pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv'))
-# with pv_scenario2_filename.open('w') as pf:
-#     pv_scenario2_df.to_csv(pf, index=False)
+pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/50tested_samebeta.csv'))
+with pv_scenario2_filename.open('w') as pf:
+    pv_scenario2_df.to_csv(pf, index=False)
 
 
 # # scenario 2a
