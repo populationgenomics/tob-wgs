@@ -165,7 +165,7 @@ cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
 # scenario 1
 # * test only those 10 variants
 # * same direction and magnitude of effect
-n_reps <- 100
+n_reps <- 1000
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 32)
 for (i in 1:n_reps){
     set.seed(i)
