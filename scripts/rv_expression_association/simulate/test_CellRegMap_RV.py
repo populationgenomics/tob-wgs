@@ -133,6 +133,10 @@ for i in range(n_reps):
     pv_scenario1_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
     pv_scenario1_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, genotypes, E)
 
+print(pv_scenario1_mt.shape)
+print(len(cols))
+print(len(['rep' + str(rep) for rep in range(n_reps)]))
+
 pv_scenario1_df = pd.DataFrame(
     data=pv_scenario1_mt,
     columns=cols,
