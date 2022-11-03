@@ -81,41 +81,42 @@ get_cct_pv <- function(pvals) {
 
 # STAAR actual test (STAAR-O)
 get_staar_pv <- function(pheno, covs, genotypes) {
-    print(length(pheno))
-    print(dim(covs))
     fixed <- pheno ~ covs.1 + covs.2
     data <- data.frame(pheno = pheno, covs = covs)
     # print(head(data))
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    pv <- res["results_STAAR_O"][[1]]
-    print(pv)
-    return(pv)
+    pv_staaro <- res["results_STAAR_O"][[1]]
+    pv_acato <- res["results_ACAT_O"][[1]]
+    pv_skat <- res["results_STAAR_S_1_25"][[1]]
+    pv_burden <- res["results_STAAR_B_1_25"][[1]]
+    pv_acatv <- res["results_STAAR_A_1_25"][[1]]
+    return(c(pv_staaro, pv_acato, pv_skat, pv_burden, pv_acatv))
 }
 
 # utility function to get p-values from the different tests
 # from pheno, covs and genos
 get_all_pvs <- function(pheno, covs, genotypes, n_tests) {
     pvals <- as.vector(matrix(0, nrow = n_tests))
-    # pvals[1] <- shapiro.test(pheno)$p.value          # record normality pv
-    # # SKAT
-    # pvals[2] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[1]
-    # pvals[3] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[1]
-    # # burden
-    # pvals[4] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[2]
-    # pvals[5] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[2]
-    # # ACAT-V
-    # pvals[6] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 1))
-    # pvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
-    # # SKAT-O
-    # pvals[8] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[3]
-    # pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
-    # # ACAT-O (combining SKAT, burden and ACAT-V)
-    # pvals[10] <- get_acato_pv(pvals[2:7])
-    # STAAR (combined CCT)
-    # pvals[11] <- get_cct_pv(pvals[2:7])
+    pvals[1] <- shapiro.test(pheno)$p.value          # record normality pv
+    # SKAT
+    pvals[2] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[1]
+    pvals[3] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[1]
+    # burden
+    pvals[4] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[2]
+    pvals[5] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[2]
+    # ACAT-V
+    pvals[6] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 1))
+    pvals[7] <- get_acatv_pv(pheno, covs, genotypes, weights = c(1, 25))
+    # SKAT-O
+    pvals[8] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 1))[3]
+    pvals[9] <- get_skat_pvs(pheno, covs, genotypes, weights = c(1, 25))[3]
+    # ACAT-O (combining SKAT, burden and ACAT-V)
+    pvals[10] <- get_acato_pv(pvals[2:7])
+    STAAR (combined CCT)
+    pvals[11] <- get_cct_pv(pvals[2:7])
     # STAAR-O
-    pvals[12] <- get_staar_pv(pheno, covs, genotypes)
+    pvals[12:16] <- get_staar_pv(pheno, covs, genotypes)
     # print(pvals)
     print(length(pvals))
     return(pvals)
@@ -155,7 +156,8 @@ covs <- matrix(rnorm(n_samples * 2), ncol = 2)  # random covariates
 
 cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
     "P_burden_1_1", "P_burden_1_25", "P_ACATV_1_1", "P_ACATV_1_25",
-    "P_SKATO_1_1", "P_SKATO_1_25", "P_ACATO", "P_STAAR", "P_STAARO")
+    "P_SKATO_1_1", "P_SKATO_1_25", "P_ACATO", "P_STAAR", "P_STAARO",
+    "P_STAAR_ACATO", "P_STAAR_SKAT","P_STAAR_burden","P_STAAR_ACATV")
     # "P_shapiro_Pois", "P_SKAT_1_1_Pois", "P_SKAT_1_25_Pois",
     # "P_burden_1_1_Pois", "P_burden_1_25_Pois", "P_ACATV_1_1_Pois",
     # "P_ACATV_1_25_Pois", "P_SKATO_1_1_Pois", "P_SKATO_1_25_Pois",
@@ -165,7 +167,7 @@ cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
 # * test only those 10 variants
 # * same direction and magnitude of effect
 n_reps <- 10
-pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 12)
+pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 16)
 print(dim(pv_scenario1_mt))
 for (i in 1:n_reps){
     set.seed(i)
@@ -174,21 +176,12 @@ for (i in 1:n_reps){
     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
-    pheno <- genotypes %*% beta + noise                    # build phenotype (Gauss)
+    pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
     fixed <- pheno ~ covs.1 + covs.2
     data <- data.frame(pheno = pheno, covs = covs)
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
-    print(res)
-    # print(res["results_STAAR_O"])
-    pv <- res["results_STAAR_O"][[1]]
-    print(pv)
-    pv_scenario1_mt[i, 12] <- pv
-
-
-    # print(length(pv_scenario1_mt[i, 1:12]))
-    # print(length(get_all_pvs(pheno, covs, genotypes, 12)))
-    # pv_scenario1_mt[i, 1:12] <- get_all_pvs(pheno, covs, genotypes, 12)
+    pv_scenario1_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
     # Poisson noise
     # pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
     # pv_scenario1_mt[i, 12:22] <- get_all_pvs(pheno_pois, covs, genotypes, 11)
