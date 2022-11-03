@@ -92,6 +92,9 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     pv_skat <- res["results_STAAR_S_1_25"][[1]][1]     # SKAT
     pv_burden <- res["results_STAAR_B_1_25"][[1]][1]   # burden
     pv_acatv <- res["results_STAAR_A_1_25"][[1]] [1]   # ACAT-V
+    print(pv_staaro)
+    print(pv_acato)
+    print(pv_skat)
     return(c(pv_staaro, pv_acato, pv_skat, pv_burden, pv_acatv))
 }
 

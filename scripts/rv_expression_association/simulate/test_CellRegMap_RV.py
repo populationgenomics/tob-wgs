@@ -94,22 +94,22 @@ covs = ones((n_samples, 1))  # intercept of ones as covariates
 E = eye(n_samples)
 
 cols = [
-        'P_shapiro',
-        'P_CRM_RV',
-        'P_CRM_burden_max',
-        'P_CRM_burden_sum',
-        'P_CRM_burden_comphet',
-        'P_CRM_omnibus_max',
-        'P_CRM_omnibus_sum',
-        'P_CRM_omnibus_comphet',
-        'P_shapiro_Pois',
-        'P_CRM_RV_Pois',
-        'P_CRM_burden_max_Pois',
-        'P_CRM_burden_sum_Pois',
-        'P_CRM_burden_comphet_Pois',
-        'P_CRM_omnibus_max_Pois',
-        'P_CRM_omnibus_sum_Pois',
-        'P_CRM_omnibus_comphet_Pois',
+    'P_shapiro',
+    'P_CRM_RV',
+    'P_CRM_burden_max',
+    'P_CRM_burden_sum',
+    'P_CRM_burden_comphet',
+    'P_CRM_omnibus_max',
+    'P_CRM_omnibus_sum',
+    'P_CRM_omnibus_comphet',
+    'P_shapiro_Pois',
+    'P_CRM_RV_Pois',
+    'P_CRM_burden_max_Pois',
+    'P_CRM_burden_sum_Pois',
+    'P_CRM_burden_comphet_Pois',
+    'P_CRM_omnibus_max_Pois',
+    'P_CRM_omnibus_sum_Pois',
+    'P_CRM_omnibus_comphet_Pois',
 ]
 
 # scenario 1
