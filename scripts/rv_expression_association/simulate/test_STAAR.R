@@ -49,7 +49,7 @@ googleCloudStorageR::gcs_global_bucket("gs://cpg-tob-wgs-test")
 get_skat_pvs <- function(pheno, covs, genotypes, weights = c(1, 25)) {
     obj <- SKAT::SKAT_Null_Model(pheno ~ covs, out_type = "C")  # null
     pv_skat <- SKAT::SKAT(genotypes, obj,                       # SKAT
-        weights.beta = weights)$p.value 
+        weights.beta = weights)$p.value
     pv_burden <- SKAT::SKAT(genotypes, obj, r.corr = 1,         # burden
         weights.beta = weights)$p.value
     pv_skat_o <- SKAT::SKAT(genotypes, obj, method = "SKATO",   # SKAT-O
@@ -86,11 +86,12 @@ get_staar_pv <- function(pheno, covs, genotypes) {
     data <- data.frame(pheno = pheno, covs = covs)
     obj_null_model <- STAAR::fit_null_glm(fixed, data, family = gaussian)
     res <- STAAR::STAAR(genotypes, obj_null_model)
+    print(res)
     pv_staaro <- res["results_STAAR_O"][[1]]        # STAAR-O
     pv_acato <- res["results_ACAT_O"][[1]]          # ACAT-O
-    pv_skat <- res["results_STAAR_S_1_25"][[1]]     # SKAT
-    pv_burden <- res["results_STAAR_B_1_25"][[1]]   # burden
-    pv_acatv <- res["results_STAAR_A_1_25"][[1]]    # ACAT-V
+    pv_skat <- res["results_STAAR_S_1_25"][[1]][1]     # SKAT
+    pv_burden <- res["results_STAAR_B_1_25"][[1]][1]   # burden
+    pv_acatv <- res["results_STAAR_A_1_25"][[1]] [1]   # ACAT-V
     return(c(pv_staaro, pv_acato, pv_skat, pv_burden, pv_acatv))
 }
 
@@ -166,7 +167,7 @@ cols <- c("P_shapiro", "P_SKAT_1_1", "P_SKAT_1_25",
 # * same direction and magnitude of effect
 n_reps <- 10
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 16)
-print(dim(pv_scenario1_mt))
+# print(dim(pv_scenario1_mt))
 for (i in 1:n_reps){
     set.seed(i)
     print(i)
