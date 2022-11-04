@@ -122,12 +122,14 @@ pv_scenario1_mt = zeros((n_reps, 16))
 for i in range(n_reps):
     seed(i)
     singletons = all_singletons
+    print(len(singletons))
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))  # create effect size
     # get other singletons to test (to assess calibration)
     [singletons.remove(x) for x in select_singletons_10]
-    alt_singletons_10 = sample(list(singletons), 10)
+    print(len(singletons))
+    alt_singletons_10 = sample(singletons, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
     # Gaussian
@@ -281,7 +283,7 @@ pv_scenario3a_mt = zeros((n_reps, 16))
 for i in range(n_reps):
     seed(i)
     singletons = all_singletons
-    select_singletons_10 = sample(list(singletons), 10)
+    select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))           # create betas as 1s
     beta[0:5] = -1                                 # for five variants, -1
