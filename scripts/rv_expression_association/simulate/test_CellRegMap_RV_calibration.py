@@ -119,9 +119,9 @@ cols = [
 # * same direction and magnitude of effect
 n_reps = 100
 pv_scenario1_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     print(len(singletons))
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
@@ -164,9 +164,9 @@ with pv_scenario1_filename.open('w') as pf:
 # * test 50 variants (of which only 10 are causal)
 # * same direction and magnitude of effects
 pv_scenario2_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     select_singletons_50 = sample(singletons, 50)
     genotypes = geno_subset[select_singletons_50]  # subset genotypes
     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
@@ -202,9 +202,9 @@ with pv_scenario2_filename.open('w') as pf:
 # * test 20 variants (of which only 10 are causal)
 # * same direction and magnitude of effects
 pv_scenario2a_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     select_singletons_20 = sample(singletons, 20)
     genotypes = geno_subset[select_singletons_20]  # subset genotypes
     beta = zeros((genotypes.shape[1], 1))          # create betas as 0s
@@ -241,9 +241,9 @@ with pv_scenario2a_filename.open('w') as pf:
 # * same magnitude of effect
 # * vary direction for 2/10 variants
 pv_scenario3_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))           # create betas as 1s
@@ -280,9 +280,9 @@ with pv_scenario3_filename.open('w') as pf:
 # * same magnitude of effect
 # * vary direction for 5/10 variants
 pv_scenario3a_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))           # create betas as 1s
@@ -319,9 +319,9 @@ with pv_scenario3a_filename.open('w') as pf:
 # * same direction of effect
 # * vary magnitude
 pv_scenario4_mt = zeros((n_reps, 16))
+singletons = all_singletons
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = arange(0.1, 1.1, 0.1).reshape(10, 1)    # create varying betas
