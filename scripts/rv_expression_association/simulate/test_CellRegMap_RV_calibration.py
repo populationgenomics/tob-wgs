@@ -130,7 +130,7 @@ for i in range(n_reps):
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))  # create effect size
     # get other singletons to test (to assess calibration)
-    singletons_left = singletons - select_singletons_10)
+    singletons_left = singletons - select_singletons_10
     print(len(singletons_left))
     seed(i)
     alt_singletons_10 = sample(singletons_left, 10)
