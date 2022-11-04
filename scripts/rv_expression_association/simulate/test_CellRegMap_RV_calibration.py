@@ -84,8 +84,10 @@ variant_freq = variant_freq[variant_freq > 0]
 
 # consider singletons (1 copy in 1 individual) only
 singleton_freq = 0.5 / n_samples
-all_singletons = list(variant_freq[variant_freq == singleton_freq].index.values)
-print(len(all_singletons))
+# all_singletons = list(variant_freq[variant_freq == singleton_freq].index.values)
+# print(len(all_singletons))
+singletons = list(variant_freq[variant_freq == singleton_freq].index.values)
+print(len(singletons))
 
 seed(0)
 noise = randn(n_samples, 1)  # random noise Gaussian
