@@ -121,7 +121,7 @@ n_reps = 10
 pv_scenario1_mt = zeros((n_reps, 16))
 for i in range(n_reps):
     seed(i)
-    singletons = all_singletons
+    singletons = all_singletons # why does this not reset to all?
     print(len(singletons))
     select_singletons_10 = sample(singletons, 10)
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
@@ -129,6 +129,7 @@ for i in range(n_reps):
     # get other singletons to test (to assess calibration)
     [singletons.remove(x) for x in select_singletons_10]
     print(len(singletons))
+    seed(i)
     alt_singletons_10 = sample(singletons, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
