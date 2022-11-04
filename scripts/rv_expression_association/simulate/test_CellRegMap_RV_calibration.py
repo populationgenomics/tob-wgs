@@ -126,7 +126,7 @@ for i in range(n_reps):
     # singletons = all_singletons # why does this not reset to all?
     print(len(singletons))
     # print(len(all_singletons))
-    select_singletons_10 = sample(singletons, 10)
+    select_singletons_10 = set(sample(singletons, 10))
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))  # create effect size
     # get other singletons to test (to assess calibration)
