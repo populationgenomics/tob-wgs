@@ -87,7 +87,7 @@ singleton_freq = 0.5 / n_samples
 # all_singletons = list(variant_freq[variant_freq == singleton_freq].index.values)
 # print(len(all_singletons))
 singletons = set(variant_freq[variant_freq == singleton_freq].index.values)
-print(len(singletons))
+print(f'Total number of singletons: {len(singletons)}')
 
 seed(0)
 noise = randn(n_samples, 1)  # random noise Gaussian
@@ -123,15 +123,11 @@ n_reps = 10
 pv_scenario1_mt = zeros((n_reps, 16))
 for i in range(n_reps):
     seed(i)
-    # singletons = all_singletons # why does this not reset to all?
-    print(len(singletons))
-    # print(len(all_singletons))
     select_singletons_10 = set(sample(singletons, 10))
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))  # create effect size
     # get other singletons to test (to assess calibration)
     singletons_left = singletons - select_singletons_10
-    print(len(singletons_left))
     seed(i)
     alt_singletons_10 = sample(singletons_left, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
@@ -164,42 +160,42 @@ with pv_scenario1_filename.open('w') as pf:
     pv_scenario1_df.to_csv(pf, index=False)
 
 
-# # scenario 2
-# # * test 50 variants (of which only 10 are causal)
-# # * same direction and magnitude of effects
-# pv_scenario2_mt = zeros((n_reps, 16))
-# for i in range(n_reps):
-#     seed(i)
-#     singletons = all_singletons
-#     select_singletons_50 = sample(singletons, 50)
-#     genotypes = geno_subset[select_singletons_50]  # subset genotypes
-#     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
-#     beta[0:10] = 1                               # only 10 non-0 betas
-#     # get other singletons to test (to assess calibration)
-#     [singletons.remove(x) for x in select_singletons_50]
-#     alt_singletons_50 = sample(singletons, 50)
-#     alt_genotypes = geno_subset[alt_singletons_50]  # subset genotypes
-#     # now build pheno with regular genotypes, test alt
-#     # Gaussian 
-#     pheno = genotypes @ beta + noise               # build phenotype (Gauss)
-#     pv_scenario2_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv
-#     pv_scenario2_mt[i, 1:8] = get_crm_pvs(pheno, covs, alt_genotypes, E)
-#     # Poisson
-#     pheno_pois = genotypes @ beta + noise_pois          # build phenotype Poisson
-#     pv_scenario2_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
-#     pv_scenario2_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, alt_genotypes, E)
+# scenario 2
+# * test 50 variants (of which only 10 are causal)
+# * same direction and magnitude of effects
+pv_scenario2_mt = zeros((n_reps, 16))
+for i in range(n_reps):
+    seed(i)
+    select_singletons_50 = set(sample(singletons, 50))
+    genotypes = geno_subset[select_singletons_50]  # subset genotypes
+    beta = zeros((genotypes.shape[1], 1))          # create betas as 0s
+    beta[0:10] = 1                                 # only 10 non-0 betas
+    # get other singletons to test (to assess calibration)
+    singletons_left = singletons - select_singletons_50
+    seed(i)
+    alt_singletons_50 = sample(singletons_left, 50)
+    alt_genotypes = geno_subset[alt_singletons_50]  # subset genotypes
+    # now build pheno with regular genotypes, test alt
+    # Gaussian 
+    pheno = genotypes @ beta + noise               # build phenotype (Gauss)
+    pv_scenario2_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv
+    pv_scenario2_mt[i, 1:8] = get_crm_pvs(pheno, covs, alt_genotypes, E)
+    # Poisson
+    pheno_pois = genotypes @ beta + noise_pois          # build phenotype Poisson
+    pv_scenario2_mt[i, 8] = shapiro(pheno_pois).pvalue  # record normality pv
+    pv_scenario2_mt[i, 9:17] = get_crm_pvs(pheno_pois, covs, alt_genotypes, E)
 
-# pv_scenario2_df = pd.DataFrame(
-#     data=pv_scenario2_mt,
-#     columns=cols,
-#     index=['rep' + str(rep) for rep in range(n_reps)],
-# )
+pv_scenario2_df = pd.DataFrame(
+    data=pv_scenario2_mt,
+    columns=cols,
+    index=['rep' + str(rep) for rep in range(n_reps)],
+)
 
-# print(pv_scenario2_df.head())
+print(pv_scenario2_df.head())
 
-# pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/shuffled/50tested_samebeta.csv'))
-# with pv_scenario2_filename.open('w') as pf:
-#     pv_scenario2_df.to_csv(pf, index=False)
+pv_scenario2_filename = AnyPath(output_path('simulations/CRM/1000samples_10causal_singletons/shuffled/50tested_samebeta.csv'))
+with pv_scenario2_filename.open('w') as pf:
+    pv_scenario2_df.to_csv(pf, index=False)
 
 
 # # scenario 2a
