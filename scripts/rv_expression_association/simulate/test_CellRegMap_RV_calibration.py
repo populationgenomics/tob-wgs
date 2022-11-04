@@ -126,7 +126,7 @@ for i in range(n_reps):
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = ones((genotypes.shape[1], 1))  # create effect size
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_10)
+    [singletons.remove(x) for x in select_singletons_10]
     alt_singletons_10 = sample(list(singletons), 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
@@ -170,7 +170,7 @@ for i in range(n_reps):
     beta = zeros((genotypes.shape[1], 1))        # create betas as 0s
     beta[0:10] = 1                               # only 10 non-0 betas
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_50)
+    [singletons.remove(x) for x in select_singletons_50]
     alt_singletons_50 = sample(singletons, 50)
     alt_genotypes = geno_subset[alt_singletons_50]  # subset genotypes
     # now build pheno with regular genotypes, test alt
@@ -208,7 +208,7 @@ for i in range(n_reps):
     beta = zeros((genotypes.shape[1], 1))          # create betas as 0s
     beta[0:10] = 1                                 # only 10 non-0 betas
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_20)
+    [singletons.remove(x) for x in select_singletons_20]
     alt_singletons_20 = sample(singletons, 20)
     alt_genotypes = geno_subset[alt_singletons_20]  # subset genotypes
     # now build pheno with regular genotypes, test alt
@@ -247,7 +247,7 @@ for i in range(n_reps):
     beta = ones((genotypes.shape[1], 1))           # create betas as 1s
     beta[0:2] = -1                                 # for two variants, -1
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_10)
+    [singletons.remove(x) for x in select_singletons_10]
     alt_singletons_10 = sample(singletons, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
@@ -286,7 +286,7 @@ for i in range(n_reps):
     beta = ones((genotypes.shape[1], 1))           # create betas as 1s
     beta[0:5] = -1                                 # for five variants, -1
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_10)
+    [singletons.remove(x) for x in select_singletons_10]
     alt_singletons_10 = sample(singletons, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
@@ -324,7 +324,7 @@ for i in range(n_reps):
     genotypes = geno_subset[select_singletons_10]  # subset genotypes
     beta = arange(0.1, 1.1, 0.1).reshape(10, 1)    # create varying betas
     # get other singletons to test (to assess calibration)
-    singletons.remove(select_singletons_10)
+    [singletons.remove(x) for x in select_singletons_10]
     alt_singletons_10 = sample(singletons, 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
     # now build pheno with regular genotypes, test alt
