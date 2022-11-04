@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-module-docstring,wrong-import-position,import-error
 
-# This script aims to record differences in the calibration of gene-set associations
-# under different scenarios. It is a mirrored script to test_CellRegMap.py,
+# This script records differences in the calibration of gene-set associations
+# under different scenarios. It is a mirrored script of test_CellRegMap.py,
 # evaluating the same tests (CellRegMap-RV VT, burden and omnibus tests) and
-# scenarios, but critically shuffling the genotypes prior to testing, to
-# assess the rate of false positives (calibration of tests)
+# scenarios (1, 2, 2a, 3, 3a, 4), but critically shuffling the genotypes prior to
+# testing, to assess the rate of false positives (calibration of tests)
 
 # import python modules
 import sys
@@ -85,7 +85,7 @@ variant_freq = variant_freq[variant_freq > 0]
 # consider singletons (1 copy in 1 individual) only
 singleton_freq = 0.5 / n_samples
 all_singletons = list(variant_freq[variant_freq == singleton_freq].index.values)
-print(len(singletons))
+print(len(all_singletons))
 
 seed(0)
 noise = randn(n_samples, 1)  # random noise Gaussian
@@ -94,6 +94,7 @@ noise_pois = poisson(lam=1, size=n_samples).reshape(n_samples, 1)  # Poisson noi
 covs = ones((n_samples, 1))  # intercept of ones as covariates
 E = eye(n_samples)
 
+# same columns for all coming tables
 cols = [
     'P_shapiro',
     'P_CRM_RV',
@@ -128,6 +129,7 @@ for i in range(n_reps):
     singletons.remove(select_singletons_10)
     alt_singletons_10 = sample(list(singletons), 10)
     alt_genotypes = geno_subset[alt_singletons_10]  # subset genotypes
+    # now build pheno with regular genotypes, test alt
     # Gaussian
     pheno = genotypes @ beta + noise  # build phenotype (Gauss)
     pv_scenario1_mt[i, 0] = shapiro(pheno).pvalue  # record normality pv
