@@ -4,15 +4,19 @@
 # from the whole TOB-WGS dataset that are biallelic SNVs
 # and rare (MAF < 5%)
 
+import click
 import hail as hl
 from cpg_utils.hail_batch import dataset_path, init_batch
 
-# full TOB-WGS object
-MT = dataset_path('mt/v7.mt')
+@click.command()
+@click.option('--mt-path', required=True)  # 'mt/v7.mt'
 
 
-def main():  
+def main(
+    mt_path: str,
+):  
     # read hail matrix table object (WGS data)
+    MT = dataset_path(mt_path)
     init_batch()
     mt = hl.read_matrix_table(MT)
     # densify
@@ -32,7 +36,7 @@ def main():
 
     print(mt.count())
 
-    
+
 if __name__ == '__main__':
     main()
     
