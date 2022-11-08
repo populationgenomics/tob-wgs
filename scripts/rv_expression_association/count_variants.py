@@ -8,11 +8,10 @@ import click
 import hail as hl
 from cpg_utils.hail_batch import dataset_path, init_batch
 
+
 @click.command()
 @click.option('--mt-path', required=True)  # 'mt/v7.mt'
-
-
-def main(
+def count_variants(
     mt_path: str,
 ):  
     # read hail matrix table object (WGS data)
@@ -37,6 +36,6 @@ def main(
     print(mt.count())
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == '__count_variants__':
+    count_variants()
     
