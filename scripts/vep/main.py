@@ -8,7 +8,7 @@ Use VEP using a dataproc cluster.
 
 import click
 from analysis_runner import dataproc
-from cpg_utils.workflows.batch import get_batch
+from cpg_workflows.batch import get_batch
 
 
 @click.command()
