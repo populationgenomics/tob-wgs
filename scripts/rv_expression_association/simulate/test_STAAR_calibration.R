@@ -166,9 +166,9 @@ n_reps <- 1000
 pv_scenario1_mt <- matrix(0, nrow = n_reps, ncol = 32)
 for (i in 1:n_reps){
     set.seed(i)
-    # print(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_subset[, select_singletons_10]       # subset genotypes
+    # get other singletons to test (to assess calibration)
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)    # create effect size
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
@@ -195,14 +195,19 @@ for (i in 1:n_reps){
     set.seed(i)
     select_singletons_50 <- singletons[sample(length(singletons), 50)]
     genotypes <- geno_subset[, select_singletons_50]     # subset genotypes
+    # get other singletons to test (to assess calibration)
+    set.seed(i)
+    left_singletons <- singletons[!(singletons %in% select_singletons_50)]
+    other_singletons_50 <- left_singletons[sample(length(left_singletons), 50)]
+    alt_genotypes <- geno_subset[, other_singletons_50]
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
-    pv_scenario2_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
+    pv_scenario2_mt[i, 1:16] <- get_all_pvs(pheno, covs, alt_genotypes, 16)
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_scenario2_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, genotypes, 16)
+    pv_scenario2_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, alt_genotypes, 16)
 }
 pv_scenario2_df <- as.data.frame(pv_scenario2_mt)
 colnames(pv_scenario2_df) <- cols
@@ -221,14 +226,19 @@ for (i in 1:n_reps){
     set.seed(i)
     select_singletons_20 <- singletons[sample(length(singletons), 20)]
     genotypes <- geno_subset[, select_singletons_20]     # subset genotypes
+    # get other singletons to test (to assess calibration)
+    set.seed(i)
+    left_singletons <- singletons[!(singletons %in% select_singletons_20)]
+    other_singletons_20 <- left_singletons[sample(length(left_singletons), 20)]
+    alt_genotypes <- geno_subset[, other_singletons_20]
     beta <- matrix(0, nrow = ncol(genotypes), ncol = 1)  # create betas as 0s
     beta[1:10] <- 1                                      # only 10 non-0 betas
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
-    pv_scenario2a_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
+    pv_scenario2a_mt[i, 1:16] <- get_all_pvs(pheno, covs, alt_genotypes, 16)
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_scenario2a_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, genotypes, 16)
+    pv_scenario2a_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, alt_genotypes, 16)
 }
 pv_scenario2a_df <- as.data.frame(pv_scenario2a_mt)
 colnames(pv_scenario2a_df) <- cols
@@ -248,14 +258,19 @@ for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_subset[, select_singletons_10]     # subset genotypes
+    # get other singletons to test (to assess calibration)
+    set.seed(i)
+    left_singletons <- singletons[!(singletons %in% select_singletons_10)]
+    other_singletons_10 <- left_singletons[sample(length(left_singletons), 10)]
+    alt_genotypes <- geno_subset[, other_singletons_10]
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
     beta[1:2] <- -1                                      # for two variants, -1
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
-    pv_scenario3_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
+    pv_scenario3_mt[i, 1:16] <- get_all_pvs(pheno, covs, alt_genotypes, 16)
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_scenario3_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, genotypes, 16)
+    pv_scenario3_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, alt_genotypes, 16)
 }
 pv_scenario3_df <- as.data.frame(pv_scenario3_mt)
 colnames(pv_scenario3_df) <- cols
@@ -276,14 +291,19 @@ for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_subset[, select_singletons_10]     # subset genotypes
+    # get other singletons to test (to assess calibration)
+    set.seed(i)
+    left_singletons <- singletons[!(singletons %in% select_singletons_10)]
+    other_singletons_10 <- left_singletons[sample(length(left_singletons), 10)]
+    alt_genotypes <- geno_subset[, other_singletons_10]
     beta <- matrix(1, nrow = ncol(genotypes), ncol = 1)  # create betas as 1s
     beta[1:5] <- -1                                      # for five variants, -1
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
-    pv_scenario3a_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
+    pv_scenario3a_mt[i, 1:16] <- get_all_pvs(pheno, covs, alt_genotypes, 16)
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_scenario3a_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, genotypes, 16)
+    pv_scenario3a_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, alt_genotypes, 16)
 }
 pv_scenario3a_df <- as.data.frame(pv_scenario3a_mt)
 colnames(pv_scenario3a_df) <- cols
