@@ -1,4 +1,5 @@
 #!/usr/bin/env python3  
+# pylint: disable=missing-module-docstring,missing-function-docstring,no-value-for-parameter,import-error,no-name-in-module
 
 # This script aims to count the total number of variants (non-ref)
 # from the whole TOB-WGS dataset that are biallelic SNVs
@@ -15,9 +16,8 @@ def count_variants(
     mt_path: str,
 ):  
     # read hail matrix table object (WGS data)
-    MT = dataset_path(mt_path)
     init_batch()
-    mt = hl.read_matrix_table(MT)
+    mt = hl.read_matrix_table(dataset_path(mt_path))
     # densify
     mt = hl.experimental.densify(mt)
 
