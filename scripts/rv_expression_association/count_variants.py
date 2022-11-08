@@ -10,6 +10,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch
 # full TOB-WGS object
 MT = dataset_path('mt/v7.mt')
 
+
 def main():  
     # read hail matrix table object (WGS data)
     init_batch()
@@ -31,5 +32,7 @@ def main():
 
     print(mt.count())
 
+    
 if __name__ == '__main__':
     main()
+    
