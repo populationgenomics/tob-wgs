@@ -18,7 +18,6 @@ def count_variants(
     # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(dataset_path(mt_path))
-    # densify
     mt = hl.experimental.densify(mt)
 
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
