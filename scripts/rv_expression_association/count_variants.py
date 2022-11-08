@@ -36,6 +36,6 @@ def count_variants(
     print(mt.count())
 
 
-if __name__ == '__count_variants__':
+if __name__ == '__main__':
     count_variants()
     
