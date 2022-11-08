@@ -8,7 +8,7 @@ Use VEP using a dataproc cluster.
 
 import click
 from analysis_runner import dataproc
-from cpg_utils.workflows.batch import get_batch
+from cpg_workflows.batch import get_batch
 
 
 @click.command()
@@ -19,6 +19,8 @@ def main(script: str, mt: str, vep_version: str):
     """
     runs a script inside dataproc to execute VEP
     :param script: str, the path to the VEP main script
+    :param mt: str, the path to matrixtable
+    :param vep_version: str, vep version
     """
     
     # create a hail batch

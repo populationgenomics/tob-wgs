@@ -15,13 +15,16 @@ from cpg_utils.hail_batch import dataset_path, init_batch
 
 @click.command()
 @click.option('--mt-path', required=True)  # 'mt/v7.mt'
-def main(
-    mt_path: str,
-):
-    # read hail matrix table object (WGS data)
-    MT = dataset_path(mt_path)
+def main(mt_path: str):
+    """
+    read a MT, apply filters, print the remaining data dimensions
+    """
+
     init_batch()
-    mt = hl.read_matrix_table(MT)
+
+    # read hail matrix table object (WGS data)
+    mt = hl.read_matrix_table(dataset_path(mt_path))
+
     # densify
     mt = hl.experimental.densify(mt)
 
@@ -42,4 +45,4 @@ def main(
 
 
 if __name__ == '__main__':
-    main()
+    main()  # pylint: disable=E1120
