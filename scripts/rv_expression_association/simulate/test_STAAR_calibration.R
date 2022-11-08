@@ -1,14 +1,10 @@
 #!/usr/bin/env Rscript
 
-## This script aims to record differences in the power of gene-set associations
-## under different scenarios. It runs a SKAT, burden, and SKAT-O tests
-## (implemented in the SKAT R package; Wu et al AJHG 2011, Lee et al AJHG 2012)
-## to test for an association between a set of rare genetic variants (real)
-## and a simulated phenotype. The sets of variants tested and the simulated
-## effect sizes are varied and the resulted association p-values are recorded.
-
-## specifically in this script I model the phenotype as the genetic effect
-## and add noise, both Gaussian and Poisson
+## This script aims to record differences in the calibration of gene-set
+## associations under different scenarios. It is a mirror of test_STAAR.R,
+# evaluating the same tests (SKAT, ACAT, burden and omnibus tests) and
+# scenarios (1, 2, 2a, 3, 3a, 4), but critically shuffling the genotypes prior
+# to testing, to assess the rate of false positives (calibration of tests)
 
 # install R packages (install.packages)
 install.packages("googleCloudStorageR", repos = "http://cran.csiro.au")
@@ -307,13 +303,19 @@ for (i in 1:n_reps){
     set.seed(i)
     select_singletons_10 <- singletons[sample(length(singletons), 10)]
     genotypes <- geno_subset[, select_singletons_10]     # subset genotypes
+    # get another set of singletons to test (to assess calibration)
+    set.seed(i)
+    left_singletons <- singletons[!(singletons %in% select_singletons_10)]
+    other_singletons_10 <- left_singletons[sample(length(left_singletons), 10)]
+    alt_genotypes <- geno_subset[, other_singletons_10]
     beta <- seq(0.1, 1, by = 0.1)                        # create varying betas
     # Gaussian noise
     pheno <- genotypes %*% beta + noise              # build phenotype (Gauss)
-    pv_scenario4_mt[i, 1:16] <- get_all_pvs(pheno, covs, genotypes, 16)
+    pv_scenario4_mt[i, 1:16] <- get_all_pvs(pheno, covs, alt_genotypes, 16)
     # Poisson noise
     pheno_pois <- genotypes %*% beta + noise_pois     # build phenotype (Pois)
-    pv_scenario4_mt[i, 17:32] <- get_all_pvs(pheno_pois, covs, genotypes, 16)
+    pv_scenario4_mt[i, 17:32] <- get_all_pvs(pheno_pois,
+        covs, alt_genotypes, 16)
 }
 pv_scenario4_df <- as.data.frame(pv_scenario4_mt)
 colnames(pv_scenario4_df) <- cols
@@ -326,7 +328,7 @@ write.csv(pv_scenario4_df, pv_scenario4_filename)
 
 # save files
 dataset_env <- Sys.getenv("tob-wgs")
-gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/staar/1000samples_10causal_singletons/")
+gcs_outdir <- glue("gs://cpg-tob-wgs-test/v0/simulations/staar/1000samples_10causal_singletons/shuffled/")
 system(glue("gsutil cp {pv_scenario1_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2_filename} {gcs_outdir}"))
 system(glue("gsutil cp {pv_scenario2a_filename} {gcs_outdir}"))
