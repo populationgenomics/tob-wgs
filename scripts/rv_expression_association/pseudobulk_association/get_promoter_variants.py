@@ -9,8 +9,8 @@
 # * rare (MAF < 5%)
 # and export as plink files
 
-import click
 import logging
+import click
 import hail as hl
 import pandas as pd
 from cloudpathlib import AnyPath
@@ -105,7 +105,7 @@ def get_promoter_variants(
         | (mt.variant_qc.AF[1] > 0.95) & (mt.variant_qc.AF[1] < 1)
     )
     mt_path = output_path('rare_variants.mt', 'tmp')
-    mt = mt.checkpoint(rv_mt_path, overwrite=True)  # checkpoint
+    mt = mt.checkpoint(mt_path, overwrite=True)  # checkpoint
     logging.info(f'Number of rare variants (freq<5%): {mt.count()[0]}')
 
     # export this as a Hail table for downstream analysis
