@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=wrong-import-position,missing-module-docstring
+# pylint: disable=wrong-import-position,missing-module-docstring,no-value-for-parameter,import-error
 
 # This script runs our CellRegMap-RV method to test for an association between a set of 
 # rare genetic variants (within the promoter of a given gene)
@@ -11,6 +11,7 @@
 import sys
 import subprocess
 import click
+import numpy as np
 import pandas as pd
 
 # install CellRegMap (new version) from github
@@ -33,15 +34,15 @@ from cellregmap import (
     omnibus_set_association,
 )
 
-def get_crm_pvs(pheno, covs, genotypes, E=None):
+def get_crm_pvs(pheno, covs, genotypes, contexts=None):
     """
     CellRegMap-RV tests
     * score test (variance)
     * burden test (max)
     * omnibus (Cauchy) test
     """
-    pv0 = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=E)[0]
-    pv1 = run_burden_association(y=pheno, G=genotypes, W=covs, E=E, mask="mask.max")[0]
+    pv0 = run_gene_set_association(y=pheno, G=genotypes, W=covs, E=contexts)[0]
+    pv1 = run_burden_association(y=pheno, G=genotypes, W=covs, E=contexts, mask="mask.max")[0]
     pv2 = omnibus_set_association(np.array([pv0, pv1]))
     return [pv0, pv1, pv2]
 
