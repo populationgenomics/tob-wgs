@@ -23,7 +23,8 @@ analysis-runner --dataset "tob-wgs" \
     --description "get set of promoter variants for a gene, convert to plink" \
     --access-level "standard" \
     --output-dir "tob_wgs_rv/plink" \
-    get_promoter_variants.py
+    get_promoter_variants.py --gene-file scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr22.tsv \
+    --gene-name "VPREB3" --window-size 10000
 ```
 
 ### Step 2: prepare input files
