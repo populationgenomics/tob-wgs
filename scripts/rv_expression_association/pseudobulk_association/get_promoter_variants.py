@@ -1,16 +1,19 @@
 #!/usr/bin/env python3  
-# pylint: disable=missing-module-docstring,missing-function-docstring
+# pylint: disable=missing-module-docstring,missing-function-docstring,disable=no-value-for-parameter
 
-# For a given gene, this script aims to export all variants (non-ref)
+# For a given gene, this script aims to get all variants (non-ref)
 # from the TOB-WGS dataset that are 
 # * in and around the gene (+- a given window size)
 # * in promoter region (as annotated by VEP)
 # * biallelic SNVs
 # * rare (MAF < 5%)
+# and export as a plink file
 
 import click
 import logging
 import hail as hl
+import pandas as pd
+from cloudpathlib import AnyPath
 from hail.methods import export_plink
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
@@ -22,25 +25,50 @@ VEP_HT = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht')
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 @click.command()
-@click.option('--chrom', required=True)        # e.g., 22
+@click.option('--gene-file', required=True)    # e.g., 22
 @click.option('--gene-name', required=True)    # e.g., VPREB3
-@click.option('--window-size', required=True)  # 10000
-def main(
-    chrom: str,
+@click.option('--window-size', required=True)  # 10,000
+def get_promoter_variants(
+    gene_file: str,
     gene_name: str;
     window_size: int;
 ): 
     # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(MT)
+    
+    # get relevant chromosome
+    gene_df = pd.read_csv(AnyPath(dataset_path(gene_file)), sep='\t', index_col=0)
+    chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
     # subset to chromosome
-    mt = 
-    # subset to window
-    mt = 
-    logging.info(f'Number of variants in window: {mt.count()[0]}')
+    mt = mt.filter_rows(mt.locus.contig == ('chr' + chrom))
 
     # densify
-    mt = hl.experimental.densify(mt)
+    mt = hl.experimental.densify(mt) # never know when i should do this step
+    
+    # subset to window
+    # get gene body position (start and end) and build interval
+    interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(
+        window_size
+    )
+    interval_end = int(gene_df[gene_df['gene_name'] == gene_name]['end']) + int(
+        window_size
+    )
+    # clip to chromosome boundaries
+    left_boundary = max(1, interval_start)
+    right_boundary = min(
+        interval_end, hl.get_reference('GRCh38').lengths[f'chr{chrom}']
+    )
+    # get gene-specific genomic interval
+    gene_interval = f'chr{chrom}:{left_boundary}-{right_boundary}'
+    logging.info(f'Interval considered: {gene_interval}')  # 'chr22:23219960-23348287'
+
+    # include variants up to {window size} up- and downstream
+    mt = hl.filter_intervals(
+        mt, [hl.parse_locus_interval(gene_interval, reference_genome='GRCh38')]
+    )
+    logging.info(f'Number of variants within interval: {mt.count()[0]}')
+    logging.info(f'Number of variants in window: {mt.count()[0]}')
 
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(
@@ -59,6 +87,17 @@ def main(
     )  # add checkpoint to avoid repeat evaluation
     logging.info(f'Number of QC-passing, biallelic SNPs: {mt.count()[0]}')
 
+
+    # filter variants found to be in promoter regions
+    mt = mt.filter_rows(
+        mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter'
+    )
+    mt_path = output_path('promoter_variants.mt', 'tmp')
+    mt = mt.checkpoint(mt_path, overwrite=True)  # checkpoint
+    logging.info(
+        f'Number of rare variants (freq<5%) in promoter regions: {mt.count()[0]}'
+    )
+
     # filter rare variants only (freq < 5%)
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows((mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0))
@@ -66,33 +105,15 @@ def main(
     mt = mt.checkpoint(rv_mt_path, overwrite=True)  # checkpoint
     logging.info(f'Number of rare variants (freq<5%): {mt.count()[0]}')
 
-    # filter variants found to be in promoter regions
-    mt = filtered_mt.filter_rows(
-        filtered_mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter'
-    )
-    filtered_mt_path = output_path('regulatory_variants.mt', 'tmp')
-    filtered_mt = filtered_mt.checkpoint(filtered_mt_path, overwrite=True)  # checkpoint
-    logging.info(
-        f'Number of rare variants (freq<5%) with regulatory consequences: {filtered_mt.count()[0]}'
-    )
-
     # export this as a Hail table for downstream analysis
-    ht_filename = output_path('vpreb3_rare_regulatory_summary.ht')
-    ht = filtered_mt.rows()
+    ht_filename = output_path(f'{gene_name}_rare_promoter_summary.ht')
+    ht = mt.rows()
     ht.write(ht_filename)  
 
-    # export MT object to PLINK (all regulatory variants)
-    filtered_mt_path = output_path('plink_files/vpreb3_rare_regulatory')
-    export_plink(filtered_mt, filtered_mt_path, ind_id=filtered_mt.s)
-
-    # filter to promoter variants only
-    filtered_mt2 = filtered_mt.filter_rows(
-        filtered_mt.vep.regulatory_feature_consequences['biotype'][0] == 'promoter'
-    )
-    # export to PLINK
-    filtered_mt_path2 = output_path('plink_files/vpreb3_rare_promoter')
-    export_plink(filtered_mt2, filtered_mt_path2, ind_id=filtered_mt2.s)
+    # export MT object to PLINK (promoter variants)
+    mt_path = output_path(f'plink_files/{gene_name}_rare_promoter')
+    export_plink(mt, mt_path, ind_id=mt.s)
 
 
 if __name__ == '__main__':
-    main()  # pylint: disable=no-value-for-parameter
+    get_promoter_variants()  

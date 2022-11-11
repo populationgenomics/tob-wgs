@@ -1,0 +1,20 @@
+## Pseudobulk rare variants association analysis
+
+Scripts to find associations between rare variants (from WGS data) and single-cell expression (from scRNA-seq data) aggregated as "pseudobulk".
+
+As a first step to evaluate our ability to test for association between rare variation (freq<5%) and single-cell expression, we consider aggregated expression across donors, separately for each cell type.
+"Pseudobulk" expression (in this case mean expression for each gene and donor) resembles more closely "bulk" expression data, which is less sparse than single-cell data and thus is easier to model.
+Additionally, it results in a single observation per individual (as opposed to multiple cells) which also makes it easier to deal with.
+Thus, we perform this analysis as a benchmark method.
+
+### Step 1: obtain variants
+
+Script to get genotype data for variants that are:
+* in and around a given gene (at a given window size)
+* in promoter region (as annotated by VEP)
+* biallelic SNVs
+* rare (freq<5%)
+
+We save the object as a hail table for downstream analyses, and export to plink for association testing.
+
+### Step 2:
