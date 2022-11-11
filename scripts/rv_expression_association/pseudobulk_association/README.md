@@ -17,4 +17,5 @@ Script to get genotype data for variants that are:
 
 We save the object as a hail table for downstream analyses, and export to plink for association testing.
 
-### Step 2:
+### Step 2: prepare input files
+Next, we prepare the input files to perform the association (Step 3)
