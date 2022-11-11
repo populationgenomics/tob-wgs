@@ -7,7 +7,7 @@
 # * in promoter region (as annotated by VEP)
 # * biallelic SNVs
 # * rare (MAF < 5%)
-# and export as a plink file
+# and export as plink files
 
 import click
 import logging
@@ -26,8 +26,8 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
 @click.command()
-@click.option('--gene-file', required=True)  # e.g., 22
-@click.option('--gene-name', required=True)  # e.g., VPREB3
+@click.option('--gene-file', required=True)    # scrna-seq/grch38_association_files/gene_location_files/GRCh38_geneloc_chr1.tsv
+@click.option('--gene-name', required=True)    # e.g., VPREB3
 @click.option('--window-size', required=True)  # 10,000
 def get_promoter_variants(
     gene_file: str,
@@ -98,7 +98,7 @@ def get_promoter_variants(
         f'Number of rare variants (freq<5%) in promoter regions: {mt.count()[0]}'
     )
 
-    # filter rare variants only (freq < 5%)
+    # filter rare variants only (MAF < 5%)
     mt = hl.variant_qc(mt)
     mt = mt.filter_rows(
         (mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0)
