@@ -10,6 +10,8 @@
 # import python modules
 import sys
 import subprocess
+import click
+import pandas as pd
 
 # install CellRegMap (new version) from github
 subprocess.run(
@@ -43,9 +45,18 @@ def get_crm_pvs(pheno, covs, genotypes, E=None):
     pv2 = omnibus_set_association(np.array([pv0, pv1]))
     return [pv0, pv1, pv2]
 
-def main():  
-    
+
+@click.command()
+@click.option('--pheno-file', required=True) 
+@click.option('--geno-file', required=True) 
+def main(
+    pheno_file: str,
+    geno_file: str,
+):  
+    pheno = pd.read_csv(pheno_file)
+    geno = pd.read_csv(geno_file)
 
 
 if __name__ == '__main__':
     main()
+
