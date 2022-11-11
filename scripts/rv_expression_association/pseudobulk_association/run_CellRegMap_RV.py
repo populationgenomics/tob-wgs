@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,missing-module-docstring
 
 # This script runs our CellRegMap-RV method to test for an association between a set of 
 # rare genetic variants (within the promoter of a given gene)

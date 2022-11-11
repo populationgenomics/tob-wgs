@@ -32,4 +32,4 @@ Next, we prepare the input files to perform the association (Step 3)
 
 ### Step3: run association
 
-[Script](run_CellRegMap_RV.py) to run association test
+[Script](run_rellregmap_rv.py) to run association test
