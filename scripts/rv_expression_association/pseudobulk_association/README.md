@@ -17,5 +17,14 @@ Script to get genotype data for variants that are:
 
 We save the object as a hail table for downstream analyses, and export to plink for association testing.
 
+To run:
+```
+analysis-runner --dataset "tob-wgs" \
+    --description "get set of promoter variants for a gene, convert to plink" \
+    --access-level "standard" \
+    --output-dir "tob_wgs_rv/plink" \
+    get_promoter_variants.py
+```
+
 ### Step 2: prepare input files
 Next, we prepare the input files to perform the association (Step 3)
