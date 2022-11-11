@@ -1,8 +1,8 @@
-#!/usr/bin/env python3  
+#!/usr/bin/env python3
 # pylint: disable=missing-module-docstring,missing-function-docstring,disable=no-value-for-parameter
 
 # For a given gene, this script aims to get all variants (non-ref)
-# from the TOB-WGS dataset that are 
+# from the TOB-WGS dataset that are
 # * in and around the gene (+- a given window size)
 # * in promoter region (as annotated by VEP)
 # * biallelic SNVs
@@ -24,19 +24,20 @@ VEP_HT = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht')
 # use logging to print statements, display at info level
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+
 @click.command()
-@click.option('--gene-file', required=True)    # e.g., 22
-@click.option('--gene-name', required=True)    # e.g., VPREB3
+@click.option('--gene-file', required=True)  # e.g., 22
+@click.option('--gene-name', required=True)  # e.g., VPREB3
 @click.option('--window-size', required=True)  # 10,000
 def get_promoter_variants(
     gene_file: str,
-    gene_name: str;
-    window_size: int;
-): 
+    gene_name: str,
+    window_size: int,
+):
     # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(MT)
-    
+
     # get relevant chromosome
     gene_df = pd.read_csv(AnyPath(dataset_path(gene_file)), sep='\t', index_col=0)
     chrom = gene_df[gene_df['gene_name'] == gene_name]['chr']
@@ -44,8 +45,8 @@ def get_promoter_variants(
     mt = mt.filter_rows(mt.locus.contig == ('chr' + chrom))
 
     # densify
-    mt = hl.experimental.densify(mt) # never know when i should do this step
-    
+    mt = hl.experimental.densify(mt)  # never know when i should do this step
+
     # subset to window
     # get gene body position (start and end) and build interval
     interval_start = int(gene_df[gene_df['gene_name'] == gene_name]['start']) - int(
@@ -73,9 +74,9 @@ def get_promoter_variants(
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(
         (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)  # QC
-        & (hl.len(mt.alleles) == 2)                                   # remove hom-ref
-        & (mt.n_unsplit_alleles == 2)                                 # biallelic
-        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))                   # SNVs
+        & (hl.len(mt.alleles) == 2)  # remove hom-ref
+        & (mt.n_unsplit_alleles == 2)  # biallelic
+        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))  # SNVs
     )
 
     # annotate using VEP
@@ -86,7 +87,6 @@ def get_promoter_variants(
         mt_path, overwrite=True
     )  # add checkpoint to avoid repeat evaluation
     logging.info(f'Number of QC-passing, biallelic SNPs: {mt.count()[0]}')
-
 
     # filter variants found to be in promoter regions
     mt = mt.filter_rows(
@@ -100,7 +100,10 @@ def get_promoter_variants(
 
     # filter rare variants only (freq < 5%)
     mt = hl.variant_qc(mt)
-    mt = mt.filter_rows((mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0))
+    mt = mt.filter_rows(
+        (mt.variant_qc.AF[1] < 0.05) & (mt.variant_qc.AF[1] > 0)
+        | (mt.variant_qc.AF[1] > 0.95) & (mt.variant_qc.AF[1] < 1)
+    )
     mt_path = output_path('rare_variants.mt', 'tmp')
     mt = mt.checkpoint(rv_mt_path, overwrite=True)  # checkpoint
     logging.info(f'Number of rare variants (freq<5%): {mt.count()[0]}')
@@ -108,7 +111,7 @@ def get_promoter_variants(
     # export this as a Hail table for downstream analysis
     ht_filename = output_path(f'{gene_name}_rare_promoter_summary.ht')
     ht = mt.rows()
-    ht.write(ht_filename)  
+    ht.write(ht_filename)
 
     # export MT object to PLINK (promoter variants)
     mt_path = output_path(f'plink_files/{gene_name}_rare_promoter')
@@ -116,4 +119,4 @@ def get_promoter_variants(
 
 
 if __name__ == '__main__':
-    get_promoter_variants()  
+    get_promoter_variants()
