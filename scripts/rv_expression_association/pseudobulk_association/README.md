@@ -29,3 +29,7 @@ analysis-runner --dataset "tob-wgs" \
 
 ### Step 2: prepare input files
 Next, we prepare the input files to perform the association (Step 3)
+
+### Step3: run association
+
+[Script](run_CellRegMap_RV.py) to run association test
