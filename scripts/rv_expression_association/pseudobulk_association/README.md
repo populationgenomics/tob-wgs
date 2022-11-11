@@ -9,7 +9,7 @@ Thus, we perform this analysis as a benchmark method.
 
 ### Step 1: obtain variants
 
-Script to get genotype data for variants that are:
+[Script](get_promoter_variants.py) to get genotype data for variants that are:
 * in and around a given gene (at a given window size)
 * in promoter region (as annotated by VEP)
 * biallelic SNVs
