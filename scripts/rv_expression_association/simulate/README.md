@@ -10,7 +10,7 @@ In a first instance, using the three tests implemented in the [SKAT](https://cra
 * STAAR: [Li et al, Nature Methods 2022](https://www.nature.com/articles/s41592-022-01640-x)
 
 Additionally (Python):
-* CellRegMap-RV (new name coming soon)[variance-component score test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L648-L676).
+* CellRegMap-RV (new name coming soon) [variance-component score test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L648-L676).
 * CellRegMap-RV [burden test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L679-L720)
 * CellRegMap-RV [omnibus combined test](https://github.com/annacuomo/CellRegMap/blob/main/cellregmap/_cellregmap.py#L723-L742) (similar to the ACAT-O approach)
 
