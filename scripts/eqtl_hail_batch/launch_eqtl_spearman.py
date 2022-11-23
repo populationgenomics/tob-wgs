@@ -1498,7 +1498,7 @@ def main(
     outputs: dict[str, dict[str, Any]] = defaultdict(dict)
 
     # do the genotype_info stuff
-    filtered_mt_path = output_path('genotype_table.mt', 'tmp')
+    filtered_mt_path = output_path('genotype_table.mt', 'analysis')
     if AnyPath(filtered_mt_path).exists() and not force:
         _logger.info(f'Reusing filtered_mt path: {filtered_mt_path}')
     else:
