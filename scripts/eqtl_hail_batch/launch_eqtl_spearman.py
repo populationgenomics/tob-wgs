@@ -547,11 +547,17 @@ def run_spearman_correlation_scatter(
     # calculate log expression values
     residuals_df = pd.read_csv(residuals_csv_path)
     expression_df = pd.read_csv(expression_tsv_path, sep='\t')
-    # log_expression_df = get_log_expression(expression_df)
+    # Print out residuals and expression df to debug
+    print(f'Printing residuals df {residuals_df}')
+    print(f'Printing expression df {expression_df}')
+    # see if there are any zeros in the residual df
+    print(f'Are there any samples with no expression?: {residuals_df.isnull().values.any()}')
 
     # Get 1Mb sliding window around each gene
     geneloc_df = pd.read_csv(geneloc_tsv_path, sep='\t')
+    print(f'Printing geneloc df {geneloc_df}')
     gene_infos = geneloc_df[geneloc_df.gene_name == gene_name]
+    print(f'Printing gene_infos df {gene_infos}')
     if len(gene_infos) == 0:
         raise ValueError(
             f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}'
