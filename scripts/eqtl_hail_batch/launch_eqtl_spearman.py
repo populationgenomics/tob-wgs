@@ -117,9 +117,8 @@ def filter_joint_call_mt(
     # see https://github.com/populationgenomics/tob-wgs/blob/main/scripts/validation/tob_wgs_call_rate_distribution.py
     call_rate = 0.95
     n_samples_to_pass = n_samples * call_rate
-    n_samples_to_fail = (n_samples - n_samples_to_pass)
     mt = mt.filter_rows(
-        hl.agg.sum(hl.is_missing(mt.GT)) > n_samples_to_fail, keep=False
+        hl.agg.sum(hl.is_defined(mt.GT)) < n_samples_to_pass, keep=False
     )
     # filter out variants with MAF <= 0.01
     ht = hl.read_table(frequency_table_path)
