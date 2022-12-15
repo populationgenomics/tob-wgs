@@ -67,7 +67,7 @@ DEFAULT_FREQUENCY_TABLE_PATH = dataset_path(
     'joint-calling/v7/variant_qc/frequencies.ht/', 'analysis'
 )
 DEFAULT_VEP_ANNOTATION_TABLE_PATH = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
-DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-reference/gencode/gencode.v38.annotation.gtf.bgz'  # reference_path('gencode_gtf'),
+DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-common-main/references/gencode/gencode.v38.annotation.gtf.bgz'  # reference_path('gencode_gtf'),
 
 MULTIPY_IMAGE = 'australia-southeast1-docker.pkg.dev/cpg-common/images/multipy:0.16'
 
