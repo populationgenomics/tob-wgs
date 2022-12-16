@@ -15,7 +15,7 @@ dataproc.hail_dataproc_job(
     'generate_genotype_df.py',
     max_age='8h',
     num_secondary_workers=20,
-    init=['gs://cpg-common-main/references/hail_dataproc/install_common.sh'],
+    init=['gs://cpg-common-main/hail_dataproc/install_common.sh'],
     job_name='export_genotype_data',
 )
 
