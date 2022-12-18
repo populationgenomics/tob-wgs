@@ -8,7 +8,7 @@ Run VEP on the hail mt
 
 import click
 import hail as hl
-from cpg_utils.hail_batch import output_path
+from cpg_utils.hail_batch import dataset_path, output_path
 
 
 @click.command()
@@ -21,7 +21,7 @@ def main(mt_path: str, vep_version: str):
 
     hl.init(default_reference='GRCh38')
 
-    mt = hl.read_matrix_table(mt_path)
+    mt = hl.read_matrix_table(dataset_path(mt_path))
     ht = mt.rows()
     # filter to biallelic loci only
     ht = ht.filter(hl.len(ht.alleles) == 2)
