@@ -6,7 +6,7 @@ This runs a Hail query script in Dataproc using Hail Batch in order to run VEP o
 VEP_VERSION=108.2 \
     analysis-runner \
     --dataset tob-wgs \
-    --description "run vep $VEP_VERSION" \
+    --description "Annotate with VEP $VEP_VERSION" \
     --output-dir tob_wgs_vep/v7_vep_$VEP_VERSION \
     --access-level standard \
     main.py \
