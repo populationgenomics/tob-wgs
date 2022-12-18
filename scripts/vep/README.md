@@ -1,6 +1,6 @@
 # Test VEP using the analysis runner
 
-This runs a Hail query script in Dataproc using Hail Batch in order to run VEP on a hail matrix table. To run, use conda to install the analysis-runner, then execute the following command:
+This runs a Hail query script in Dataproc using Hail Batch in order to run VEP on a Hail matrix table. To run, install the analysis-runner, then execute the following command:
 
 ```sh
 VEP_VERSION=108.2 \
