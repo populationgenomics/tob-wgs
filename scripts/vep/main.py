@@ -20,7 +20,7 @@ def main(script: str, mt: str, vep_version: str):
     runs a script inside dataproc to execute VEP
     :param script: str, the path to the VEP main script
     """
-    
+
     # create a hail batch
     batch = get_batch('run_vep_in_dataproc_cluster')
 
@@ -35,6 +35,7 @@ def main(script: str, mt: str, vep_version: str):
             f'gs://cpg-common-main/hail_dataproc/install_common.sh',
             f'gs://cpg-common-main/references/vep/{vep_version}/dataproc/init.sh',
         ],
+        init_timeout='30m',
         job_name='run_vep',
         num_secondary_workers=20,
         num_workers=2,
