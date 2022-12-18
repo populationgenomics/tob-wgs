@@ -3,8 +3,8 @@
 This runs a Hail query script in Dataproc using Hail Batch in order to run VEP on a Hail matrix table. TOB-WGS uses GENCODE 42, which corresponds to VEP 108. To generate annotated tables for both the `test` and `main` namespaces, install the analysis-runner, then execute the following command:
 
 ```sh
+VEP_VERSION=108.2
 for ACCESS_LEVEL in test standard; do
-    VEP_VERSION=108.2 \
     analysis-runner \
     --dataset tob-wgs \
     --description "Annotate with VEP $VEP_VERSION" \
