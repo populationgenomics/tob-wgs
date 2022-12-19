@@ -1,14 +1,18 @@
-# Test VEP using the analysis runner
+# Annotate with VEP using the analysis-runner
 
-This runs a Hail query script in Dataproc using Hail Batch in order to run VEP on a hail matrix table. To run, use conda to install the analysis-runner, then execute the following command:
+This runs a Hail query script in Dataproc using Hail Batch in order to run VEP on a Hail matrix table. TOB-WGS uses GENCODE 42, which corresponds to VEP 108. To generate annotated tables for both the `test` and `main` namespaces, install the analysis-runner, then execute the following command:
 
 ```sh
-analysis-runner \
-	--dataset tob-wgs \
-	--description "run vep" \
-	--output-dir "tob_wgs_vep/v0" \
-	--access-level standard generate_genotype_df_batch.py \
-	--script run_vep.py \
-	--mt 'gs://cpg-tob-wgs-main/mt/v7.mt/' \
-	--vep-version '104.3'
+VEP_VERSION=108.2
+for ACCESS_LEVEL in test standard; do
+    analysis-runner \
+    --dataset tob-wgs \
+    --description "Annotate with VEP $VEP_VERSION" \
+    --output-dir tob_wgs_vep/v7_vep_$VEP_VERSION \
+    --access-level $ACCESS_LEVEL \
+    main.py \
+    --script run_vep.py \
+    --mt mt/v7.mt \
+    --vep-version $VEP_VERSION
+done
 ```
