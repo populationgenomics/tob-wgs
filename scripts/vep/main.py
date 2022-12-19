@@ -35,7 +35,7 @@ def main(script: str, mt: str, vep_version: str):
             f'gs://cpg-common-main/hail_dataproc/install_common.sh',
             f'gs://cpg-common-main/references/vep/{vep_version}/dataproc/init.sh',
         ],
-        init_timeout='30m',
+        init_timeout='60m',
         job_name='run_vep',
         num_secondary_workers=20,
         num_workers=2,
