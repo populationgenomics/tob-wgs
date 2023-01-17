@@ -1,4 +1,4 @@
-#!/usr/bin/env python3  
+#!/usr/bin/env python3
 
 import click
 import hail as hl
@@ -6,14 +6,16 @@ from cpg_utils.hail_batch import dataset_path, init_batch
 
 
 @click.command()
-@click.option('--input-mt-path', required=True)   # 'mt/v7.mt'
-@click.option('--genes', required=True)           # 'LMNA'
-@click.option('--output-mt-path', required=True)  # 'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/significant_genes_burden_max.mt'          
+@click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
+@click.option('--genes', required=True)  # 'LMNA'
+@click.option(
+    '--output-mt-path', required=True
+)  # 'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/significant_genes_burden_max.mt'
 def subset_variants(
     input_mt_path: str,
     genes: str,
     output_mt_path: str,
-):  
+):
 
     # read ht objects to extract variant names
     variants = list()
@@ -32,7 +34,10 @@ def subset_variants(
     mt = mt.filter_rows(mt.locus in variants)
 
     # save mt
-    mt.write(output_mt_path, overwrite=True)  # how do I specify the analysis bucket again?
+    mt.write(
+        output_mt_path, overwrite=True
+    )  # how do I specify the analysis bucket again?
+
 
 if __name__ == '__main__':
     subset_variants()
