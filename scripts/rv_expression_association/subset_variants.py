@@ -32,7 +32,7 @@ def subset_variants(
     mt = mt.filter_rows(mt.locus in variants)
 
     # save mt
-    mt.write(output_mt_path, overwrite=True)
+    mt.write(output_mt_path, overwrite=True)  # how do I specify the analysis bucket again?
 
 if __name__ == '__main__':
     subset_variants()
