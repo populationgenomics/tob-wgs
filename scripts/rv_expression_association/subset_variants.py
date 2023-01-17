@@ -17,6 +17,7 @@ def subset_variants(
     genes: str,
     output_mt_path: str,
 ):
+    init_batch()
 
     # read ht objects to extract variant names
     variants = []
@@ -24,10 +25,9 @@ def subset_variants(
     for gene in genes_of_interest:
         ht_object_filename = f'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht'
         ht = hl.read_table(ht_object_filename)
-        variants.append(ht.locus.collect())  # I am nearly sure the syntax is wrong here
+        variants.extend(ht.locus.collect())  # I am nearly sure the syntax is wrong here
 
     # read hail matrix table object (WGS data)
-    init_batch()  # does this need to be above?
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
     mt = hl.experimental.densify(mt)
 
