@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=no-value-for-parameter,missing-function-docstring
 
 import click
 import hail as hl
@@ -41,3 +42,4 @@ def subset_variants(
 
 if __name__ == '__main__':
     subset_variants()
+
