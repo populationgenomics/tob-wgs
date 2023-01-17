@@ -17,7 +17,8 @@ def subset_variants(
 
     # read ht objects to extract variant names
     variants = list()
-    for gene in genes:
+    genes_of_interest = genes.split(' ')
+    for gene in genes_of_interest:
         ht_object_filename = f'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht'
         ht = hl.read_table(ht_object_filename)
         variants.append(ht.locus.collect())  # I am nearly sure the syntax is wrong here
