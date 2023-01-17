@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=no-value-for-parameter,missing-function-docstring
+# pylint: disable=no-value-for-parameter,missing-function-docstring,missing-module-docstring
 
 import click
 import hail as hl
@@ -19,7 +19,7 @@ def subset_variants(
 ):
 
     # read ht objects to extract variant names
-    variants = list()
+    variants = []
     genes_of_interest = genes.split(' ')
     for gene in genes_of_interest:
         ht_object_filename = f'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht'
@@ -42,4 +42,3 @@ def subset_variants(
 
 if __name__ == '__main__':
     subset_variants()
-
