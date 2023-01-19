@@ -28,14 +28,17 @@ def subset_variants(
         # ht_object_filename = f'gs://cpg-tob-wgs-test-analysis/tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht'
         ht_object_filename = dataset_path(f'tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht', 'analysis')
         ht = hl.read_table(ht_object_filename)
+        print(ht.count())
         variants.extend(ht.locus.collect())  # I am nearly sure the syntax is wrong here
 
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
     mt = hl.experimental.densify(mt)
+    print(mt.count())
 
     # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
     mt = mt.filter_rows(mt.locus in variants)
+    print(mt.count())
 
     # save mt
     output_mt_path = output_path(output_mt_name, 'analysis')
