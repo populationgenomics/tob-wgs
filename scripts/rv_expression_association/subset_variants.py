@@ -8,7 +8,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 @click.command()
 @click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
-@click.option('--genes', required=True)  # 'LMNA'
+@click.option('--genes', required=True, help='List of genes to consider. Space separated, as one argument.')  # 'LMNA'
 @click.option('--output=mt-name', required=True)  # 'significant_genes_burden_max.mt'
 # @click.option(
 #     '--output-mt-path', required=True
