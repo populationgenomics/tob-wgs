@@ -8,15 +8,15 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 @click.command()
 @click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
-@click.option('--genes', required=True, help='List of genes to consider. Space separated, as one argument.')  # 'LMNA'
+@click.option(
+    '--genes',
+    required=True,
+    help='List of genes to consider. Space separated, as one argument.',
+)  # 'LMNA'
 @click.option('--output-mt-name', required=True)  # 'significant_genes_burden_max.mt'
-# @click.option(
-#     '--output-mt-path', required=True
-# )  # 'gs://cpg-tob-wgs-main-analysis/tob_wgs_rv/pseudobulk_rv_association/significant_genes_burden_max.mt'
 def subset_variants(
     input_mt_path: str,
     genes: str,
-    # output_mt_path: str,
     output_mt_name: str,
 ):
     init_batch()
@@ -25,11 +25,13 @@ def subset_variants(
     variants = []
     genes_of_interest = genes.split(' ')
     for gene in genes_of_interest:
-        # ht_object_filename = f'gs://cpg-tob-wgs-test-analysis/tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht'
-        ht_object_filename = dataset_path(f'tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht', 'analysis')
+        ht_object_filename = dataset_path(
+            f'tob_wgs_rv/pseudobulk_rv_association/summary_hts/{gene}_rare_promoter_summary.ht',
+            'analysis',
+        )
         ht = hl.read_table(ht_object_filename)
         print(ht.count())
-        variants.extend(ht.locus.collect())  # I am nearly sure the syntax is wrong here
+        variants.extend(ht.locus.collect())
 
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
@@ -42,9 +44,7 @@ def subset_variants(
 
     # save mt
     output_mt_path = output_path(output_mt_name, 'analysis')
-    mt.write(
-        output_mt_path, overwrite=True
-    )  # how do I specify the analysis bucket again?
+    mt.write(output_mt_path, overwrite=True)
 
 
 if __name__ == '__main__':
