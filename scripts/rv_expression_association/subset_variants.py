@@ -13,16 +13,20 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
     required=True,
     help='List of genes to consider. Space separated, as one argument.',
 )  # 'LMNA'
-@click.option('--output-mt-name', required=True)  # 'significant_genes_burden_max.mt'
+@click.option('--output-mt-prefix', required=True)  # 'significant_gene_burden_max/'
 def subset_variants(
     input_mt_path: str,
     genes: str,
-    output_mt_name: str,
+    output_mt_prefix: str,
 ):
     init_batch()
 
-    # read ht objects to extract variant names
-    variants = []
+    # read hail matrix table object (WGS data)
+    mt = hl.read_matrix_table(dataset_path(input_mt_path))
+    mt = hl.experimental.densify(mt)
+    print(mt.count())
+
+    # read ht objects and subset mt to specific variants
     genes_of_interest = genes.split(' ')
     for gene in genes_of_interest:
         ht_object_filename = dataset_path(
@@ -31,20 +35,12 @@ def subset_variants(
         )
         ht = hl.read_table(ht_object_filename)
         print(ht.count())
-        variants.extend(ht.locus.collect())
-
-    # read hail matrix table object (WGS data)
-    mt = hl.read_matrix_table(dataset_path(input_mt_path))
-    mt = hl.experimental.densify(mt)
-    print(mt.count())
-
-    # subset to only relevant loci
-    mt = mt.filter_rows(mt.locus in variants)
-    print(mt.count())
-
-    # save mt
-    output_mt_path = output_path(output_mt_name, 'analysis')
-    mt.write(output_mt_path, overwrite=True)
+        mt_tmp = mt.semi_join_rows(ht)
+        print(mt_tmp.count())
+        # save mt
+        output_mt_name = f'{output_mt_prefix}{gene}.mt'
+        output_mt_path = output_path(output_mt_name, 'analysis')
+        mt_tmp.write(output_mt_path, overwrite=True)
 
 
 if __name__ == '__main__':
