@@ -38,7 +38,7 @@ def subset_variants(
     mt = hl.experimental.densify(mt)
     print(mt.count())
 
-    # filter out low quality variants and consider biallelic variants only (no multi-allelic, no ref-only)
+    # subset to only relevant loci
     mt = mt.filter_rows(mt.locus in variants)
     print(mt.count())
 
