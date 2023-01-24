@@ -24,7 +24,6 @@ def subset_variants(
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
     mt = hl.experimental.densify(mt)
-    print(mt.count())
 
     # read ht objects and subset mt to specific variants
     genes_of_interest = genes.split(' ')
@@ -34,9 +33,8 @@ def subset_variants(
             'analysis',
         )
         ht = hl.read_table(ht_object_filename)
-        print(ht.count())
+        # merge objects
         mt_tmp = mt.semi_join_rows(ht)
-        print(mt_tmp.count())
         # save mt
         output_mt_name = f'{output_mt_prefix}{gene}.mt'
         output_mt_path = output_path(output_mt_name, 'analysis')
