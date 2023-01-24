@@ -29,5 +29,6 @@ analysis-runner --dataset "tob-wgs" \
     --description "get variants for significant genes" \
     --access-level "standard" \
     --output-dir "tob_wgs_rv/pseudobulk_rv_association" \
-    subset_variants.py --input-mt-path mt/v7.mt --genes "LMNA RPS26" --output-mt-path tob_wgs_rv/pseudobulk_rv_association/significant_genes_burden_max.mt
+    subset_variants.py --input-mt-path mt/v7.mt --genes "LMNA RPS26" \
+    --output-mt-path tob_wgs_rv/pseudobulk_rv_association/significant_genes_burden_max.mt
 ```
