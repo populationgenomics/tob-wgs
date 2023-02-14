@@ -3,7 +3,8 @@ Righto then, what do?
 
 - we have a directory of BED files, each with the external sample ID as a name
 - we want to find the internal IDs for each sample
-
+- for each sample, create a job to create a mini-CRAM using its relevant BED
+- write the resulting files to the release bucket
 """
 
 
@@ -16,8 +17,6 @@ from cpg_workflows.batch import get_batch
 
 from sample_metadata.model.analysis_type import AnalysisType
 from sample_metadata.apis import AnalysisApi, SampleApi
-
-REFERENCE = 'ffrom config?'
 
 
 def get_samples_from_metamist(samples: list[str]) -> dict[str, str]:
