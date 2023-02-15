@@ -63,7 +63,7 @@ def main(beds: str):
     cram_map = get_cram_files(list(sample_map.values()))
 
     # set an output path to write files to
-    release_cram = 'gs://cpg-tob-wgs-release/cram'
+    release_cram = 'gs://cpg-tob-wgs-release/MRR_cram_extracts/2023_01_30'
 
     # set the image and reference to use
     samtools_image = get_config()['images']['samtools']
@@ -104,14 +104,15 @@ def main(beds: str):
         # -L: target regions file, specific to sample
         # --write-index: ...
         cram_job.command(
-            f'samtools view '
+            'samtools view '
             f'-T {batch_reference} '
             f'-L {sample_bed} '
-            f'-C --write-index '
-            f'-o {cram_job.output_cram["cram"]} {cram}'
+            '-C --write-index '
+            f'-o {cram_job.output_cram["cram"]} '
+            f'{cram}'
         )
 
-        cram_out_path = os.path.join(release_cram, ext_id)
+        cram_out_path = os.path.join(release_cram, f'{ext_id}_mini')
 
         # write the CRAM and relevant index
         get_batch().write_output(cram_job.output_cram, cram_out_path)
