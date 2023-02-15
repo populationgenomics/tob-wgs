@@ -68,13 +68,12 @@ def main(beds: str):
 
     # set the image and reference to use
     samtools_image = get_config()['images']['samtools']
-    cram_reference = get_config()['references']['broad']['ref_fasta']
 
     # let's start up a hail batch!
     batch = get_batch('Generate CRAM subsets - tob-wgs')
 
     # read reference in once per batch
-    batch_reference = batch.read_input(cram_reference)
+    batch_reference = batch.read_input('gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta')
 
     # iterate over  all samples & BED files
     for ext_id, bed_file in ext_ids.items():
