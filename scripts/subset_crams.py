@@ -117,6 +117,8 @@ def main(beds: str):
         # write the CRAM and relevant index
         get_batch().write_output(cram_job.output_cram, cram_out_path)
 
+    get_batch().run(wait=False)
+
 
 if __name__ == '__main__':
     main()  # pylint: disable=no-value-for-parameter
