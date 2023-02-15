@@ -4,16 +4,17 @@ Righto then, what do?
 - we have a directory of BED files, each with the external sample ID as a name
 - we want to find the internal IDs for each sample
 - for each sample, create a job to create a mini-CRAM using its relevant BED
-- write the resulting files to the release bucket
+- write the resulting files to the main bucket
+
+Requires manual transfer later to the release bucket
 """
 
 
-import os
 import click
 
 from cpg_utils import to_path
 from cpg_utils.config import get_config
-from cpg_workflows.batch import get_batch
+from cpg_workflows.batch import get_batch, dataset_path
 
 from sample_metadata.model.analysis_type import AnalysisType
 from sample_metadata.apis import AnalysisApi, SampleApi
@@ -63,17 +64,16 @@ def main(beds: str):
     cram_map = get_cram_files(list(sample_map.values()))
 
     # set an output path to write files to
-    release_cram = 'gs://cpg-tob-wgs-release/MRR_cram_extracts/2023_01_30'
+    release_cram = 'gs://cpg-tob-wgs-main/MRR_cram_extracts/2023_01_30'
 
     # set the image and reference to use
     samtools_image = get_config()['images']['samtools']
-    cram_reference = get_config()['references']['broad']['ref_fasta']
 
     # let's start up a hail batch!
     batch = get_batch('Generate CRAM subsets - tob-wgs')
 
     # read reference in once per batch
-    batch_reference = batch.read_input(cram_reference)
+    batch_reference = batch.read_input('gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta')
 
     # iterate over  all samples & BED files
     for ext_id, bed_file in ext_ids.items():
@@ -112,10 +112,11 @@ def main(beds: str):
             f'{cram}'
         )
 
-        cram_out_path = os.path.join(release_cram, f'{ext_id}.mini')
-
         # write the CRAM and relevant index
-        get_batch().write_output(cram_job.output_cram, cram_out_path)
+        get_batch().write_output(
+            cram_job.output_cram,
+            dataset_path(f'MRR_cram_extracts/2023_01_30/{ext_id}.mini'),
+        )
 
     get_batch().run(wait=False)
 
