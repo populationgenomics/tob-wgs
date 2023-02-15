@@ -112,7 +112,7 @@ def main(beds: str):
             f'{cram}'
         )
 
-        cram_out_path = os.path.join(release_cram, f'{ext_id}_mini')
+        cram_out_path = os.path.join(release_cram, f'{ext_id}.mini')
 
         # write the CRAM and relevant index
         get_batch().write_output(cram_job.output_cram, cram_out_path)
