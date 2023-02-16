@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: missing-module-docstring, no-value-for-parameter
+# pylint: missing-module-docstring,no-value-for-parameter
 
 import click
 import hail as hl
@@ -40,10 +40,10 @@ def annotate_variants(
     # annotation
     # not sure how to do this, does it make sense to loop over peaks / genomic region
     # and annotate all loci in the same way, then move on to the next peak?
-    annotated_mt = mt.annotate_rows(peak_avg_count = openchr_ht)  
+    annotated_mt = mt.annotate_rows(peak_avg_count=openchr_ht)  
     
     # save mt
-    annotated_mt.write(output_mt_path, overwrite=True)
+    annotated_mt.write(output_path(output_mt_path), overwrite=True)
 
 
 if __name__ == '__main__':
