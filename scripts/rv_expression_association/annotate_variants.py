@@ -28,11 +28,19 @@ def annotate_variants(
     )
 
     # read in annotation data frame
+    # this data frame has columns indicating the genomic region and average openness in each cell type
+    #         peak           |       B      |     CD4 T    | ...
+    # chr21:5065291-5066183  |   3.643175	|   1.791078   | ...
     openchr_df = pd.read_csv(dataset_path(annotation_df_path), index_col=0)
+    
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df) 
+    
     # annotation
+    # not sure how to do this, does it make sense to loop over peaks / genomic region
+    # and annotate all loci in the same way, then move on to the next peak?
     annotated_mt = mt.annotate_rows(peak_avg_count = openchr_ht)  
+    
     # save mt
     annotated_mt.write(output_mt_path, overwrite=True)
 
