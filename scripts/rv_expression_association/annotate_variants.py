@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: missing-module-docstring,no-value-for-parameter
+# pylint: disable=missing-module-docstring,no-value-for-parameter
 
 import click
 import hail as hl
