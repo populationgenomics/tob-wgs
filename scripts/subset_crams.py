@@ -6,6 +6,8 @@ Righto then, what do?
 - for each sample, create a job to create a mini-CRAM using its relevant BED
 - write the resulting files to the main bucket
 
+Uses GCS_OAUTH_TOKEN within the samtools container to read GCS CRAMs directly
+
 Requires manual transfer later to the release bucket
 """
 
@@ -14,6 +16,7 @@ import click
 
 from cpg_utils import to_path
 from cpg_utils.config import get_config
+from cpg_utils.hail_batch import authenticate_cloud_credentials_in_job
 from cpg_workflows.batch import get_batch, dataset_path
 
 from sample_metadata.model.analysis_type import AnalysisType
@@ -49,12 +52,15 @@ def main(beds: str):
     produce a single job per sample, generating a subset CRAM
     write that cram + index to the release bucket
     (release bucket not present in config...)
+
+    :param beds: str, path to cloud folder containing BED files
+        BED file naming is "<EXT_ID>.bed"
     """
 
     # find all BED files in the input directory
     bed_files = to_path(beds).glob('*.bed')
 
-    # for each of the BED files, get the ext ID
+    # from each of the BED files, get the ext ID
     ext_ids = {file.name.split('.', maxsplit=1)[0]: str(file) for file in bed_files}
 
     # get lookup of all CPG: Ext IDs for these samples
@@ -62,9 +68,6 @@ def main(beds: str):
 
     # get all (latest) CRAM files for these samples
     cram_map = get_cram_files(list(sample_map.values()))
-
-    # set an output path to write files to
-    release_cram = 'gs://cpg-tob-wgs-main/MRR_cram_extracts/2023_01_30'
 
     # set the image and reference to use
     samtools_image = get_config()['images']['samtools']
@@ -80,15 +83,16 @@ def main(beds: str):
         cpg_id = sample_map[ext_id]
         cram_file = cram_map[cpg_id]
         cram_job = batch.new_job(name=f'subset CRAM {ext_id}/{cpg_id}')
+
+        # authenticate credentials in job
+        authenticate_cloud_credentials_in_job(cram_job)
+
+        # run the job inside the samtools image
         cram_job.image(samtools_image)
 
         # big storage, probably not huge on compute (small regions)
         cram_job.storage('60G')
-
-        # read in the cram data for this sample
-        cram = batch.read_input_group(
-            **{'cram': cram_file, 'cram.crai': f'{cram_file}.crai'}
-        ).cram
+        cram_job.memory('16G')
 
         # read in the sample BED file
         sample_bed = batch.read_input(bed_file)
@@ -103,13 +107,15 @@ def main(beds: str):
         # -C: output CRAM
         # -L: target regions file, specific to sample
         # --write-index: ...
+        # sets GCS_OAUTH_TOKEN to access data directly
         cram_job.command(
+            'GCS_OAUTH_TOKEN=$(gcloud auth application-default print-access-token) '
             'samtools view '
             f'-T {batch_reference} '
             f'-L {sample_bed} '
             '-C --write-index '
             f'-o {cram_job.output_cram["cram"]} '
-            f'{cram}'
+            f'{cram_file}'
         )
 
         # write the CRAM and relevant index
