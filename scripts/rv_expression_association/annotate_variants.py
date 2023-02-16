@@ -29,7 +29,7 @@ def annotate_variants(
     )
 
     # read in annotation data frame
-    # this data frame has columns indicating the genomic region and average openness in each cell type
+    # this data frame has, for the genomic region, columns indicating average chromatin openness per cell type
     #                        |       B      |     CD4 T    | ...
     # chr21-5065291-5066183  |   3.643175   |   1.791078   | ...
     openchr_df = pd.read_csv(dataset_path(annotation_df_path), index_col=0)
