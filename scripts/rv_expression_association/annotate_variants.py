@@ -20,6 +20,12 @@ def annotate_variants(
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
     mt = hl.experimental.densify(mt)
+    
+    # filter out low quality variants and consider only variable loci (no ref-only)
+    mt = mt.filter_rows(
+        (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)  # QC
+        & (hl.len(mt.alleles) == 2)  # remove hom-ref
+    )
 
     # read in annotation data frame
     openchr_df = pd.read_csv(dataset_path(annotation_df_path), index_col=0)
