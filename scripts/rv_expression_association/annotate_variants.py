@@ -40,6 +40,7 @@ def annotate_variants(
     # annotation
     # not sure how to do this, does it make sense to loop over peaks / genomic region
     # and annotate all loci in the same way, then move on to the next peak?
+    # sth like: loci[loci in interval].open_chromatin.{cell_type} = df[interval, {celltype}]
     annotated_mt = mt.annotate_rows(peak_avg_count=openchr_ht)  
     
     # save mt
