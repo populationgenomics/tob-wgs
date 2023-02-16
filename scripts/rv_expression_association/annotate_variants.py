@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: missing-module-docstring, no-value-for-parameter
 
 import click
 import hail as hl
@@ -13,7 +14,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 def annotate_variants(
     input_mt_path: str,
     annotation_df_path: str,
-    output_mt_prefix: str,
+    output_mt_path: str,
 ):
     init_batch()
 
