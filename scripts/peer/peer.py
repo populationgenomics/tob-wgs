@@ -25,6 +25,7 @@ import pandas as pd
 from cpg_utils.hail_batch import remote_tmpdir, output_path
 from google.cloud import storage
 
+
 PEER_DOCKER = 'australia-southeast1-docker.pkg.dev/cpg-common/images/peer:1.3.2'
 
 
@@ -36,7 +37,7 @@ def get_covariates(
     Only needs to be run once. This returns a TSV (as a string)
     """
     # load in scores which have outliers removed
-    scores_df = pd.read_json(scores_path)
+    scores_df: pd.DataFrame = pd.read_json(scores_path)
     sampleid = scores_df.s
     # only get the first 4 PCs, as indicated by scree plot
     scores = pd.DataFrame(scores_df['scores'].to_list()).iloc[:, 0:4]

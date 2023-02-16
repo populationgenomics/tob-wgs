@@ -14,6 +14,11 @@ For example:
         --chromosomes '1 2' \
         --genes B_intermediate
 """
+
+
+#  pylint: disable=unsupported-assignment-operation,unsubscriptable-object
+
+
 import os
 import logging
 
@@ -1102,9 +1107,9 @@ def calculate_conditional_residuals(
             model = sm.OLS(y, x)
             residuals = list(model.fit().resid)
             return residuals
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.info(f'y = {y}, x = {x}')
-            raise Exception(
+            raise ValueError(
                 f'Error during calculate_adjusted_residuals for {gene_id}'
             ) from e
 
