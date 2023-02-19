@@ -76,7 +76,9 @@ def main(beds: str):
     batch = get_batch('Generate CRAM subsets - tob-wgs')
 
     # read reference in once per batch
-    batch_reference = batch.read_input('gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta')
+    batch_reference = batch.read_input(
+        'gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta'
+    )
 
     # iterate over  all samples & BED files
     for ext_id, bed_file in ext_ids.items():
@@ -91,15 +93,16 @@ def main(beds: str):
         cram_job.image(samtools_image)
 
         # big storage, probably not huge on compute (small regions)
-        cram_job.storage('60G')
+        cram_job.storage('10G')
         cram_job.memory('16G')
+        cram_job.cpu('4')
 
         # read in the sample BED file
         sample_bed = batch.read_input(bed_file)
 
-        # set a group for the output file (cram and index)
-        cram_job.declare_resource_group(
-            output_cram={'cram': '{root}.cram', 'cram.crai': '{root}.cram.crai'}
+        # create the output path directly to GCS
+        cram_output_path = dataset_path(
+            f'MRR_cram_extracts/2023_01_30/{ext_id}.mini.cram'
         )
 
         # samtools view
@@ -107,21 +110,15 @@ def main(beds: str):
         # -C: output CRAM
         # -L: target regions file, specific to sample
         # --write-index: ...
-        # sets GCS_OAUTH_TOKEN to access data directly
+        # sets GCS_OAUTH_TOKEN to read/write data directly
         cram_job.command(
             'GCS_OAUTH_TOKEN=$(gcloud auth application-default print-access-token) '
-            'samtools view '
+            'samtools view -@ 4 '
             f'-T {batch_reference} '
             f'-L {sample_bed} '
             '-C --write-index '
-            f'-o {cram_job.output_cram["cram"]} '
+            f'-o {cram_output_path} '
             f'{cram_file}'
-        )
-
-        # write the CRAM and relevant index
-        get_batch().write_output(
-            cram_job.output_cram,
-            dataset_path(f'MRR_cram_extracts/2023_01_30/{ext_id}.mini'),
         )
 
     get_batch().run(wait=False)
