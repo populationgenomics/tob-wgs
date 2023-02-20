@@ -45,5 +45,5 @@ analysis-runner --dataset "tob-wgs" \
     --output-dir "tob_wgs_rv/" \
     annotate_variants.py --input-mt-path mt/v7.mt \
     --annotation-df-path "tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv" \
-    --output-ht-prefix open_chromatin_annotation/open_chromatin_annotated.ht
+    --output-ht-path open_chromatin_annotation/open_chromatin_annotated.ht
 ```
