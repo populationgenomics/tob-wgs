@@ -37,7 +37,7 @@ def annotate_variants(
     # turn into (there may be a better way):
     #         peak           |       B      |     CD4 T    | ...
     # chr21:5065291-5066183  |   3.643175   |   1.791078   | ...
-    openchr_df["peak"] = str(openchr_df.index[0]).replace('-', ':', 1)
+    openchr_df['peak'] = str(openchr_df.index[0]).replace('-', ':', 1)
     
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df) 
@@ -45,7 +45,7 @@ def annotate_variants(
     
     # annotate
     variants_ht = mt.rows()
-    variants_ht = variants_ht.annotate(interval_annotations = openchr_ht.index(variants_ht.locus, all_matches=True))
+    variants_ht = variants_ht.annotate(interval_annotations=openchr_ht.index(variants_ht.locus, all_matches=True))
     
     # save ht
     variants_ht.write(output_path(output_ht_path), overwrite=True)
