@@ -35,13 +35,14 @@ def annotate_variants(
     openchr_df = pd.read_csv(dataset_path(annotation_df_path), index_col=0)
     
     # turn into (there may be a better way):
-    #         peak           |       B      |     CD4 T    | ...
+    #         interval       |       B      |     CD4 T    | ...
     # chr21:5065291-5066183  |   3.643175   |   1.791078   | ...
-    openchr_df['peak'] = str(openchr_df.index[0]).replace('-', ':', 1)
+    openchr_df['interval'] = str(openchr_df.index[0]).replace('-', ':', 1)
     
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df) 
-    # do we need to update the index to be of "interval" type?
+    # parse as interval, set as key
+    openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval)).key_by('interval')
     
     # annotate
     variants_ht = mt.rows()
