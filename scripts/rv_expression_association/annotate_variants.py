@@ -9,7 +9,7 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 @click.command()
 @click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
-@click.option('--annotation-df=path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv'
+@click.option('--annotation-df-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv'
 @click.option('--output-ht-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/open_chromatin_annotated.ht'
 def annotate_variants(
     input_mt_path: str,
