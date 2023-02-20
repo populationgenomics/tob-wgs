@@ -32,3 +32,18 @@ analysis-runner --dataset "tob-wgs" \
     subset_variants.py --input-mt-path mt/v7.mt --genes "LMNA RPS26" \
     --output-mt-prefix significant_gene_burden_max/
 ```
+
+### Variant annotation
+
+[This script](annotate_variants.py) takes as input a Hail Matrix Table object and a txt file containing some interval-level annotations, extract variant data from the mt and annotates it based on the table provided.
+
+To run:
+```
+analysis-runner --dataset "tob-wgs" \
+    --description "annotate variants with chromatin accessibility info" \
+    --access-level "test" \
+    --output-dir "tob_wgs_rv/" \
+    annotate_variants.py --input-mt-path mt/v7.mt \
+    --annotation-df-path "tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv" \
+    --output-ht-prefix open_chromatin_annotation/open_chromatin_annotated.ht
+```
