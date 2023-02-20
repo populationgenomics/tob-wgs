@@ -10,11 +10,11 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 @click.command()
 @click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
 @click.option('--annotation-df=path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv'
-@click.option('--output-mt-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/v7_open_chromatin.mt'
+@click.option('--output-ht-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/open_chromatin_annotated.ht'
 def annotate_variants(
     input_mt_path: str,
     annotation_df_path: str,
-    output_mt_path: str,
+    output_ht_path: str,
 ):
     init_batch()
 
@@ -41,15 +41,14 @@ def annotate_variants(
     
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df) 
+    # do we need to update the index to be of "interval" type?
     
-    # annotation
-    # not sure how to do this, does it make sense to loop over peaks / genomic region
-    # and annotate all loci in the same way, then move on to the next peak?
-    # sth like: loci[loci in interval].open_chromatin.{cell_type} = df[interval, {celltype}]
-    annotated_mt = mt.annotate_rows(peak_avg_count=openchr_ht)  
+    # annotate
+    variants_ht = mt.rows()
+    variants_ht = variants_ht.annotate(interval_annotations = openchr_ht.index(variants_ht.locus, all_matches=True))
     
-    # save mt
-    annotated_mt.write(output_path(output_mt_path), overwrite=True)
+    # save ht
+    variants_ht.write(output_path(output_ht_path), overwrite=True)
 
 
 if __name__ == '__main__':
