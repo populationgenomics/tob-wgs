@@ -42,7 +42,7 @@ def annotate_variants(
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df)
     # parse as interval, set as key
-    openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval)).key_by('interval')
+    openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval, reference_genome='GRCh38')).key_by('interval')
 
     # annotate
     variants_ht = mt.rows()
