@@ -9,8 +9,12 @@ from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 @click.command()
 @click.option('--input-mt-path', required=True)  # 'mt/v7.mt'
-@click.option('--annotation-df-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv'
-@click.option('--output-ht-path', required=True)  # 'tob_wgs_rv/open_chromatin_annotation/open_chromatin_annotated.ht'
+@click.option(
+    '--annotation-df-path', required=True
+)  # 'tob_wgs_rv/open_chromatin_annotation/predicted_l1_celltypes_avg_peaks_chr21.csv'
+@click.option(
+    '--output-ht-path', required=True
+)  # 'tob_wgs_rv/open_chromatin_annotation/open_chromatin_annotated.ht'
 def annotate_variants(
     input_mt_path: str,
     annotation_df_path: str,
@@ -42,12 +46,16 @@ def annotate_variants(
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df)
     # parse as interval, set as key
-    openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval, reference_genome='GRCh38')).key_by('interval')
+    openchr_ht = openchr_ht.annotate(
+        interval=hl.parse_locus_interval(openchr_ht.interval, reference_genome='GRCh38')
+    ).key_by('interval')
 
     # annotate
     mt = mt.filter_rows(mt.locus.contig == 'chr21')  # object in test is chr21 only
     variants_ht = mt.rows()
-    variants_ht = variants_ht.annotate(interval_annotations=openchr_ht.index(variants_ht.locus))
+    variants_ht = variants_ht.annotate(
+        interval_annotations=openchr_ht.index(variants_ht.locus)
+    )
 
     # save ht
     variants_ht.write(output_path(output_ht_path), overwrite=True)
