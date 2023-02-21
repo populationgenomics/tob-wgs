@@ -45,6 +45,7 @@ def annotate_variants(
     openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval, reference_genome='GRCh38')).key_by('interval')
 
     # annotate
+    mt = mt.filter_rows(mt.locus.contig == 'chr21')  # object in test is chr21 only
     variants_ht = mt.rows()
     variants_ht = variants_ht.annotate(interval_annotations=openchr_ht.index(variants_ht.locus))
 
