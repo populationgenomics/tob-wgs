@@ -37,7 +37,7 @@ def annotate_variants(
     # turn into (there may be a better way):
     #         interval       |       B      |     CD4 T    | ...
     # chr21:5065291-5066183  |   3.643175   |   1.791078   | ...
-    openchr_df['interval'] = str(openchr_df.index[0]).replace('-', ':', 1).replace('chr','')
+    openchr_df['interval'] = str(openchr_df.index[0]).replace('-', ':', 1)
 
     # import as hail Table
     openchr_ht = hl.Table.from_pandas(openchr_df)
