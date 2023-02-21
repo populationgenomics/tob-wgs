@@ -21,7 +21,7 @@ def annotate_variants(
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
     mt = hl.experimental.densify(mt)
-    
+
     # filter out low quality variants and consider only variable loci (no ref-only)
     mt = mt.filter_rows(
         (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)  # QC
@@ -33,21 +33,21 @@ def annotate_variants(
     #                        |       B      |     CD4 T    | ...
     # chr21-5065291-5066183  |   3.643175   |   1.791078   | ...
     openchr_df = pd.read_csv(dataset_path(annotation_df_path), index_col=0)
-    
+
     # turn into (there may be a better way):
     #         interval       |       B      |     CD4 T    | ...
     # chr21:5065291-5066183  |   3.643175   |   1.791078   | ...
     openchr_df['interval'] = str(openchr_df.index[0]).replace('-', ':', 1)
-    
+
     # import as hail Table
-    openchr_ht = hl.Table.from_pandas(openchr_df) 
+    openchr_ht = hl.Table.from_pandas(openchr_df)
     # parse as interval, set as key
     openchr_ht = openchr_ht.annotate(interval=hl.parse_locus_interval(openchr_ht.interval)).key_by('interval')
-    
+
     # annotate
     variants_ht = mt.rows()
-    variants_ht = variants_ht.annotate(interval_annotations=openchr_ht.index(variants_ht.locus, all_matches=True))
-    
+    variants_ht = variants_ht.annotate(interval_annotations=openchr_ht.index(variants_ht.locus))
+
     # save ht
     variants_ht.write(output_path(output_ht_path), overwrite=True)
 
