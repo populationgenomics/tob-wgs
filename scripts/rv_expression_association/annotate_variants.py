@@ -54,7 +54,7 @@ def annotate_variants(
     mt = mt.filter_rows(mt.locus.contig == 'chr21')  # object in test is chr21 only
     variants_ht = mt.rows()
     variants_ht = variants_ht.annotate(
-        interval_annotations=openchr_ht.index(variants_ht.locus)
+        open_chromatin=openchr_ht.index(variants_ht.locus)
     )
 
     # save ht
