@@ -17,7 +17,6 @@ def annotate_variants(
     output_ht_path: str,
 ):
     init_batch()
-    hl.init(default_reference='GRCh38')
 
     # read hail matrix table object (WGS data)
     mt = hl.read_matrix_table(dataset_path(input_mt_path))
