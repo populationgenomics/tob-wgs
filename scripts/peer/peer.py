@@ -38,7 +38,7 @@ def get_covariates(
     """
     # load in scores which have outliers removed
     scores_df: pd.DataFrame = pd.read_json(scores_path)
-    sampleid = scores_df.s
+    sampleid = scores_df.s  # pylint: disable=no-member
     # only get the first 4 PCs, as indicated by scree plot
     scores = pd.DataFrame(scores_df['scores'].to_list()).iloc[:, 0:4]
     scores.columns = ['PC1', 'PC2', 'PC3', 'PC4']
