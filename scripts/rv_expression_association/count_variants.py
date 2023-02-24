@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-# pylint: disable=missing-module-docstring,missing-function-docstring,no-value-for-parameter,import-error,no-name-in-module
+# pylint: disable=no-value-for-parameter,import-error,no-name-in-module
 
-# This script aims to count the total number of variants (non-ref)
-# from the whole TOB-WGS dataset that are biallelic SNVs
-# and rare (MAF < 5%)
+
+"""
+This script aims to count the total number of variants (non-ref)
+from the whole TOB-WGS dataset that are biallelic SNVs
+and rare (MAF < 5%)
+"""
 
 import click
 import hail as hl
@@ -12,9 +15,11 @@ from cpg_utils.hail_batch import dataset_path, init_batch
 
 @click.command()
 @click.option('--mt-path', required=True)  # 'mt/v7.mt'
-def count_variants(
-    mt_path: str,
-):
+def count_variants(mt_path: str):
+    """
+    reads the MT, conducts QC filtering, and prints the nuber
+    of remaining variants
+    """
     # read hail matrix table object (WGS data)
     init_batch()
     mt = hl.read_matrix_table(dataset_path(mt_path))
