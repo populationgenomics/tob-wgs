@@ -162,4 +162,5 @@ master  = [autoimmune_disease,diabetes_type1,diabetes_type2,rheumatoid_arthritis
 for m in master: 
     m_string= [i for i, j in locals().items() if j == m][0]
     print(f'{m_string}: {Counter(m)}')
-    
+
+print(len(participants))
