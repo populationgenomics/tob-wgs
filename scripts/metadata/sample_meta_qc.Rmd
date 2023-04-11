@@ -1,0 +1,30 @@
+---
+title: "QC"
+author: "Hope"
+date: "03/04/2023"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+data = read.table("~/Downloads/joint-calling_v7_meta.tsv", sep = "\t", header = TRUE)
+# gs://cpg-tob-wgs-main-analysis/joint-calling/v7/meta.tsv
+```
+
+
+```{r}
+data = data %>% filter(!(s %in% c("NA12878", "NA12891","NA12892","syndip"))) #remove non TOB samples
+```
+
+
+```{r}
+
+data%>% filter(!is.na(hard_filters))%>% select(s, hard_filters, external_id) #15 rows did not pass `hard_filters`
+
+data %>% filter(!is.na(qc_metrics_filters)) %>% select(s, qc_metrics_filters, external_id) #13 rows did not pass `qc_metrics_filters`
+
+data %>% filter(high_quality == "true") #1042 rows
+
+```
+
