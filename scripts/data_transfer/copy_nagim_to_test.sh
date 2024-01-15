@@ -206,5 +206,5 @@ dest="gs://cpg-tob-wgs-test/harper-hope/nagim/gvcf/"
 
 # Loop over the files and copy each one to the destination
 for file in "${files[@]}"; do
-  gsutil -m cp "$file" "$dest"
+  gsutil cp "$file" "$dest"
 done
