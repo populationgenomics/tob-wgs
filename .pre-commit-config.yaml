@@ -51,7 +51,7 @@ repos:
         additional_dependencies: [types-PyYAML==6.0.4, types-toml]
 
   - repo: https://github.com/populationgenomics/pre-commits
-    rev: "v0.1.1"
+    rev: "v0.1.2"
     hooks:
       - id: cpg-id-checker
         args: ["--extra-pattern", 'TOB\d+']
