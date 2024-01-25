@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+# flake8: noqa: PLR2004
 
 """
 Run VEP on the hail mt
@@ -7,7 +7,9 @@ Run VEP on the hail mt
 
 
 import click
+
 import hail as hl
+
 from cpg_utils.hail_batch import dataset_path, output_path
 
 

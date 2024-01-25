@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=no-value-for-parameter,import-error,no-name-in-module
-
+# flake8: noqa: PLR2004
 
 """
 This script aims to count the total number of variants (non-ref)
@@ -9,7 +9,9 @@ and rare (MAF < 5%)
 """
 
 import click
+
 import hail as hl
+
 from cpg_utils.hail_batch import dataset_path, init_batch
 
 
@@ -30,7 +32,7 @@ def count_variants(mt_path: str):
         (hl.len(hl.or_else(mt.filters, hl.empty_set(hl.tstr))) == 0)  # QC
         & (hl.len(mt.alleles) == 2)  # remove hom-ref
         & (mt.n_unsplit_alleles == 2)  # biallelic
-        & (hl.is_snp(mt.alleles[0], mt.alleles[1]))  # SNVs
+        & (hl.is_snp(mt.alleles[0], mt.alleles[1])),  # SNVs
     )
 
     # filter rare variants only (MAF < 5%)

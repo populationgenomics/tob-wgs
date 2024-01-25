@@ -1,4 +1,6 @@
-"""Create metadata sheet for TOB samples
+# flake8: noqa: PD015
+"""
+Create metadata sheet for TOB samples
 Run using the command:
 analysis-runner --dataset tob-wgs \
 --access-level standard --output-dir "scrna-seq/grch38_association_files/metadata" \
@@ -6,7 +8,9 @@ analysis-runner --dataset tob-wgs \
 """
 
 import logging
+
 import pandas as pd
+
 from cpg_utils.hail_batch import output_path
 
 METADATA = (
@@ -21,8 +25,11 @@ SAMPLEID_KEYS = (
 
 metadata = pd.read_csv(METADATA)
 outliers = pd.read_csv(OUTLIERS)
-combined_metadata = pd.merge(
-    metadata, pd.DataFrame(outliers), how='left', left_on='CPG_ID', right_on='samples'
+combined_metadata = metadata.merge(
+    pd.DataFrame(outliers),
+    how='left',
+    left_on='CPG_ID',
+    right_on='samples',
 )
 combined_metadata = combined_metadata.rename(columns={'samples': 'population'})
 # make sure all 51 outliers properly mapped to a CPG ID
@@ -30,7 +37,8 @@ n_outliers = len(combined_metadata.population.dropna())
 logging.info(f'{n_outliers} samples are population outliers')
 combined_metadata.population = combined_metadata.population.fillna('NFE')
 combined_metadata.loc[
-    combined_metadata['population'].str.contains('CPG'), 'population'
+    combined_metadata['population'].str.contains('CPG'),
+    'population',
 ] = 'outlier'
 # add in oneK1K IDs
 sampleid_keys = pd.read_csv(SAMPLEID_KEYS, sep='\t')

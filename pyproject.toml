@@ -49,4 +49,5 @@ ignore = [
     "Q000",    # Single quotes found but double quotes preferred
     "S101",    # Use of assert detected
     "PT009",   # Use regular assert instead of unittest-style 'assertEqual'
+    "I001",    # IMport block is un-sorted (we use isort directly)
 ]

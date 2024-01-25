@@ -1,5 +1,9 @@
-"""Moves gVCFs from the upload bucket to the main bucket.
-Eventually this will be automated by the upload processor."""
+# flake8: noqa: S603,S607
+
+"""
+Moves gVCFs from the upload bucket to the main bucket.
+Eventually this will be automated by the upload processor.
+"""
 
 import os
 import subprocess
