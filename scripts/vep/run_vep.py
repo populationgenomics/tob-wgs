@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: PLR2004
+# ruff: noqa: PLR2004
 
 """
 Run VEP on the hail mt

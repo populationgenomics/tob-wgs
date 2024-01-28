@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: E402,E501,PLR2004,PD015,ANN001,ANN202,ARG001,PD011,PD015,SLF001,ERA001
+# ruff: noqa: E402,E501,PLR2004,PD015,ANN001,ANN202,ARG001,PD011,PD015,SLF001,ERA001
 # pylint: disable=import-outside-toplevel,too-many-locals,import-error,wrong-import-position,too-many-lines,invalid-unary-operand-type,too-many-statements
 """
 Create a Hail Batch workflow for all the EQTL analysis, including:

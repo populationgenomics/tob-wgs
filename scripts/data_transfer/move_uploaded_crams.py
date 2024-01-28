@@ -1,4 +1,4 @@
-# flake8: noqa: S603,S607
+# ruff: noqa: S603,S607
 """
 Moves CRAMs from the upload bucket to the archive bucket.
 Eventually this will be automated by the upload processor.

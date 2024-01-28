@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: S603,S607
+# ruff: noqa: S603,S607
 """
 Copies GRCh38 SNPchip MatrixTable to the tob-wgs main bucket.
 """

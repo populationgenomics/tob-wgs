@@ -1,4 +1,4 @@
-# flake8: noqa: PD015
+# ruff: noqa: PD015
 """
 Create metadata sheet for TOB samples
 Run using the command:

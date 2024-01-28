@@ -1,4 +1,4 @@
-# flake8: noqa: S603,S607
+# ruff: noqa: S603,S607
 
 """
 Moves gVCFs from the upload bucket to the main bucket.

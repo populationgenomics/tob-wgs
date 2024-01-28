@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: SLF001
+# ruff: noqa: SLF001
 """Reproduction case for the Hail team."""
 
 import hail as hl

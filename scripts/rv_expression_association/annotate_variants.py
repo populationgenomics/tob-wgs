@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: PLR2004,ERA001
+# ruff: noqa: PLR2004,ERA001
 # pylint: disable=missing-function-docstring,missing-module-docstring,no-value-for-parameter
 
 import click

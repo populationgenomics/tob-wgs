@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=no-value-for-parameter,import-error,no-name-in-module
-# flake8: noqa: PLR2004
+# ruff: noqa: PLR2004
 
 """
 This script aims to count the total number of variants (non-ref)

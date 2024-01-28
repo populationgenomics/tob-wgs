@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: PLR2004
+# ruff: noqa: PLR2004
 """Plot call rate distribution for TOB-WGS dataset"""
 
 from bokeh.io.export import get_screenshot_as_png

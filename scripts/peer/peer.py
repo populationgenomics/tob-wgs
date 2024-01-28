@@ -1,4 +1,4 @@
-# flake8: noqa: ANN001,PD015,SLF001,PLR2004
+# ruff: noqa: ANN001,PD015,SLF001,PLR2004
 """
 Test run this with:
 
