@@ -1,8 +1,6 @@
 bump2version
 pre-commit
-pylint
 hail
 click
 cpg-utils >= 4.6.1
-cpg_workflows>=1.1.4
 analysis-runner

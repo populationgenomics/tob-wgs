@@ -13,14 +13,16 @@ Requires manual transfer later to the release bucket
 
 
 import click
+from sample_metadata.apis import AnalysisApi, SampleApi
+from sample_metadata.model.analysis_type import AnalysisType
 
 from cpg_utils import to_path
 from cpg_utils.config import get_config
-from cpg_utils.hail_batch import authenticate_cloud_credentials_in_job
-from cpg_workflows.batch import get_batch, dataset_path
-
-from sample_metadata.model.analysis_type import AnalysisType
-from sample_metadata.apis import AnalysisApi, SampleApi
+from cpg_utils.hail_batch import (
+    authenticate_cloud_credentials_in_job,
+    dataset_path,
+    get_batch,
+)
 
 
 def get_samples_from_metamist(samples: list[str]) -> dict[str, str]:
@@ -28,7 +30,8 @@ def get_samples_from_metamist(samples: list[str]) -> dict[str, str]:
     return a mapping of external to internal IDs
     """
     return SampleApi().get_sample_id_map_by_external(
-        project='tob-wgs', request_body=samples
+        project='tob-wgs',
+        request_body=samples,
     )
 
 
@@ -37,7 +40,9 @@ def get_cram_files(samples: list[str]) -> dict[str, str]:
     find the most recent registered CRAM file for each sample
     """
     results_list = AnalysisApi().get_latest_analysis_for_samples_and_type(
-        analysis_type=AnalysisType('cram'), project='tob-wgs', request_body=samples
+        analysis_type=AnalysisType('cram'),
+        project='tob-wgs',
+        request_body=samples,
     )
 
     # return a mapping of CPG ID to CRAM file
@@ -77,7 +82,7 @@ def main(beds: str):
 
     # read reference in once per batch
     batch_reference = batch.read_input(
-        'gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta'
+        'gs://cpg-common-main/references/hg38/v0/Homo_sapiens_assembly38.fasta',
     )
 
     # iterate over  all samples & BED files
@@ -102,7 +107,7 @@ def main(beds: str):
 
         # create the output path directly to GCS
         cram_output_path = dataset_path(
-            f'MRR_cram_extracts/2023_01_30/{ext_id}.mini.cram'
+            f'MRR_cram_extracts/2023_01_30/{ext_id}.mini.cram',
         )
 
         # samtools view
@@ -118,7 +123,7 @@ def main(beds: str):
             f'-L {sample_bed} '
             '-C --write-index '
             f'-o {cram_output_path} '
-            f'{cram_file}'
+            f'{cram_file}',
         )
 
     get_batch().run(wait=False)

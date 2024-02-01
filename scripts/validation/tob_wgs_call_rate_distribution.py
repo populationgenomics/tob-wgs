@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-
+# ruff: noqa: PLR2004
 """Plot call rate distribution for TOB-WGS dataset"""
 
 from bokeh.io.export import get_screenshot_as_png
-from cpg_utils.hail_batch import (dataset_path, init_batch, output_path)
+
 import hail as hl
+
+from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 MT = dataset_path('mt/v7.mt/')
 
@@ -24,11 +26,23 @@ def main():
     # Calculate call rate and add to mt
     mt = mt.annotate_rows(call_rate=hl.agg.sum(hl.is_defined(mt.GT)) / n_samples)
     # plot distribution
-    p1 = hl.plot.histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
+    p1 = hl.plot.histogram(
+        mt.call_rate,
+        range=(0, 1),
+        bins=30,
+        legend='Call Rate',
+        title='Call Rate Distribution',
+    )
     p1_filename = output_path('histogram_call_rate.png', 'web')
     with hl.hadoop_open(p1_filename, 'wb') as f:
         get_screenshot_as_png(p1).save(f, format='PNG')
-    p2 = hl.plot.cumulative_histogram(mt.call_rate, range=(0, 1), bins=30, legend='Call Rate', title='Call Rate Distribution')
+    p2 = hl.plot.cumulative_histogram(
+        mt.call_rate,
+        range=(0, 1),
+        bins=30,
+        legend='Call Rate',
+        title='Call Rate Distribution',
+    )
     p2_filename = output_path('cumulative_histogram_call_rate.png', 'web')
     with hl.hadoop_open(p2_filename, 'wb') as f:
         get_screenshot_as_png(p2).save(f, format='PNG')

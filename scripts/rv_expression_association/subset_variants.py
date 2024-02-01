@@ -2,7 +2,9 @@
 # pylint: disable=no-value-for-parameter,missing-function-docstring,missing-module-docstring
 
 import click
+
 import hail as hl
+
 from cpg_utils.hail_batch import dataset_path, init_batch, output_path
 
 

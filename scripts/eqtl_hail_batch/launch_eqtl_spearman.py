@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# flake8: noqa: E402
+# ruff: noqa: E402,E501,PLR2004,PD015,ANN001,ANN202,ARG001,PD011,PD015,SLF001,ERA001
 # pylint: disable=import-outside-toplevel,too-many-locals,import-error,wrong-import-position,too-many-lines,invalid-unary-operand-type,too-many-statements
 """
 Create a Hail Batch workflow for all the EQTL analysis, including:
@@ -19,8 +19,8 @@ For example:
 #  pylint: disable=unsupported-assignment-operation,unsubscriptable-object
 
 
-import os
 import logging
+import os
 
 
 def setup_logger(name):
@@ -50,8 +50,15 @@ from collections import defaultdict
 from typing import Any
 
 import click
-import hailtop.batch as hb
+import numpy as np
+import pandas as pd
 from cloudpathlib import AnyPath
+from google.cloud import storage
+
+# computation imports
+import hail as hl
+import hailtop.batch as hb
+
 from cpg_utils.config import get_config
 from cpg_utils.hail_batch import (
     copy_common_env,
@@ -60,16 +67,11 @@ from cpg_utils.hail_batch import (
     output_path,
     remote_tmpdir,
 )
-from google.cloud import storage
-
-# computation imports
-import hail as hl
-import numpy as np
-import pandas as pd
 
 DEFAULT_JOINT_CALL_TABLE_PATH = dataset_path('mt/v7.mt/')
 DEFAULT_FREQUENCY_TABLE_PATH = dataset_path(
-    'joint-calling/v7/variant_qc/frequencies.ht/', 'analysis'
+    'joint-calling/v7/variant_qc/frequencies.ht/',
+    'analysis',
 )
 DEFAULT_VEP_ANNOTATION_TABLE_PATH = dataset_path('tob_wgs_vep/104/vep104.3_GRCh38.ht/')
 DEFAULT_GENCODE_GTF_PATH = 'gs://cpg-common-main/references/gencode/gencode.v38.annotation.gtf.bgz'  # reference_path('gencode_gtf'),
@@ -122,7 +124,8 @@ def filter_joint_call_mt(
     # see https://github.com/populationgenomics/tob-wgs/blob/main/scripts/validation/tob_wgs_call_rate_distribution.py
     call_rate = 0.95
     mt = mt.filter_rows(
-        hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate), keep=False
+        hl.agg.sum(hl.is_missing(mt.GT)) > (n_samples * call_rate),
+        keep=False,
     )
     # filter out variants with MAF <= 0.01
     ht = hl.read_table(frequency_table_path)
@@ -131,7 +134,7 @@ def filter_joint_call_mt(
     # add in VEP annotation
     vep = hl.read_table(vep_annotation_path)
     mt = mt.annotate_rows(
-        vep_functional_anno=vep[mt.row_key].vep.regulatory_feature_consequences.biotype
+        vep_functional_anno=vep[mt.row_key].vep.regulatory_feature_consequences.biotype,
     )
     # add OneK1K IDs to genotype mt
     sampleid_keys = pd.read_csv(AnyPath(keys_path), sep='\t')
@@ -143,7 +146,7 @@ def filter_joint_call_mt(
         left_on='sampleid',
         right_on='InternalID',
     )
-    sampleid_keys.fillna('', inplace=True)
+    sampleid_keys = sampleid_keys.fillna('')
     sampleid_keys = hl.Table.from_pandas(sampleid_keys)
     sampleid_keys = sampleid_keys.key_by('sampleid')
     mt = mt.annotate_cols(onek1k_id=sampleid_keys[mt.s].OneK1K_ID)
@@ -188,7 +191,7 @@ def generate_eqtl_spearman(
         _logger.info(f'Reusing results for eqtl_residuals: {residuals_csv_path}')
     else:
         calculate_residuals_job = batch.new_python_job(
-            f'{job_prefix}calculate-residuals'
+            f'{job_prefix}calculate-residuals',
         )
         copy_common_env(calculate_residuals_job)
         residuals_csv_path = calculate_residuals_job.call(
@@ -204,7 +207,7 @@ def generate_eqtl_spearman(
         _logger.info(f'Reusing results for log_cpm: {data_summary_path}')
     else:
         generate_log_cpm_output_job = batch.new_python_job(
-            f'{job_prefix}generate_log_cpm_output'
+            f'{job_prefix}generate_log_cpm_output',
         )
         generate_log_cpm_output_job.memory('8Gi')
         copy_common_env(generate_log_cpm_output_job)
@@ -222,17 +225,18 @@ def generate_eqtl_spearman(
 
     for gene_name in genes:
         spearman_output = os.path.join(
-            spearman_output_directory, f'correlation_results_{gene_name}.parquet'
+            spearman_output_directory,
+            f'correlation_results_{gene_name}.parquet',
         )
 
         if AnyPath(spearman_output).exists() and not force:
             _logger.info(
-                f'Reusing results for eqtl_spearman_correlation_{gene_name}: {residuals_csv_path}'
+                f'Reusing results for eqtl_spearman_correlation_{gene_name}: {residuals_csv_path}',
             )
             continue
 
         j = batch.new_python_job(
-            name=f'{job_prefix}calculate_spearman_correlation_{gene_name}'
+            name=f'{job_prefix}calculate_spearman_correlation_{gene_name}',
         )
         j.cpu(2)
         j.memory('8Gi')
@@ -308,13 +312,10 @@ def remove_sc_outliers(df):
     Remove outlier samples, as identified by sc analysis
     """
     outliers = ['966_967', '88_88']
-    df = df[-df.sampleid.isin(outliers)]
-
-    return df
+    return df[-df.sampleid.isin(outliers)]
 
 
 def get_log_expression(expression_df):
-
     """get logged expression values
 
     Input:
@@ -332,9 +333,7 @@ def get_log_expression(expression_df):
     log_expression_df = expression_df[to_log].applymap(lambda x: np.log(x + 1))
     log_expression_df.insert(loc=0, column='sampleid', value=sample_ids)
     # remove sc outlier samples
-    log_expression_df = remove_sc_outliers(log_expression_df)
-
-    return log_expression_df
+    return remove_sc_outliers(log_expression_df)
 
 
 def calculate_log_cpm(expression_df):
@@ -347,9 +346,7 @@ def calculate_log_cpm(expression_df):
     # this can only be done on integers
     expression_df = expression_df.iloc[:, 1:]
     cpm_df = expression_df.apply(lambda x: (x / sum(x)) * 1000000, axis=0)
-    log_cpm = np.log(cpm_df + 1)
-
-    return log_cpm
+    return np.log(cpm_df + 1)
 
 
 def generate_log_cpm_output(
@@ -392,7 +389,7 @@ def generate_log_cpm_output(
         # not sure what this value is doing here
         iqr_outliers_min = q1 - (1.5 * iqr)
         iqr_outliers_max = q3 + (1.5 * iqr)
-        data_struct = {
+        return {
             'bin_counts': hist,
             'bin_edges': bin_edges,
             'n_samples': n_samples,
@@ -407,11 +404,10 @@ def generate_log_cpm_output(
             'iqr_max': iqr_outliers_max,
         }
 
-        return data_struct
-
     # apply function over all columns (genes) and reset index so that gene names are in the df
     data_summary = pd.DataFrame(
-        log_cpm.apply(create_struct, axis=0), columns=['data']
+        log_cpm.apply(create_struct, axis=0),
+        columns=['data'],
     ).reset_index()
     data_summary = data_summary.rename({'index': 'gene_symbol'}, axis='columns')
     # add in cell type info
@@ -419,7 +415,9 @@ def generate_log_cpm_output(
     # add in ENSEMBL IDs
     init_batch(driver_cores=2)
     gtf = hl.experimental.import_gtf(
-        gencode_gtf_path, reference_genome='GRCh38', skip_invalid_contigs=True
+        gencode_gtf_path,
+        reference_genome='GRCh38',
+        skip_invalid_contigs=True,
     )
     # convert int to str in order to avoid 'int() argument must be a string, a bytes-like object or a number, not 'NoneType''
     gtf = gtf.annotate(frame=hl.str(gtf.frame))
@@ -427,7 +425,9 @@ def generate_log_cpm_output(
     # rename gtf column gene_name in order to match data_summary file
     gtf = gtf.rename(columns={'gene_name': 'gene_symbol'})
     data_summary['gene_ids'] = data_summary.merge(
-        gtf.drop_duplicates('gene_symbol'), how='left', on='gene_symbol'
+        gtf.drop_duplicates('gene_symbol'),
+        how='left',
+        on='gene_symbol',
     ).gene_id
 
     # Save file
@@ -484,7 +484,8 @@ def calculate_eqtl_residuals(
         gene = gene_id
         exprs_val = log_expression_df[['sampleid', gene]]
         test_df = exprs_val.merge(covariates_df, on='sampleid', how='right').dropna(
-            axis=0, how='any'
+            axis=0,
+            how='any',
         )
         test_df = test_df.rename(columns={test_df.columns[1]: 'expression'})
         test_df[['sex', 'age']] = test_df[['sex', 'age']].astype(int)
@@ -493,8 +494,7 @@ def calculate_eqtl_residuals(
             test_df,
         )
         model = sm.OLS(y, x)
-        residuals = list(model.fit().resid)
-        return residuals
+        return list(model.fit().resid)
 
     residual_df = pd.DataFrame(list(map(calculate_gene_residual, gene_ids))).T
     residual_df.columns = gene_ids
@@ -559,7 +559,7 @@ def run_spearman_correlation_scatter(
     gene_infos = geneloc_df[geneloc_df.gene_name == gene_name]
     if len(gene_infos) == 0:
         raise ValueError(
-            f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}'
+            f'Could not find gene {gene_name} in geneloc_df: {geneloc_tsv_path}',
         )
     gene_info = gene_infos.iloc[0]
     gene_info.left = int(gene_info.start - 1e6)
@@ -570,7 +570,10 @@ def run_spearman_correlation_scatter(
 
     # get all SNPs which are within 1Mb of each gene
     init_batch(
-        driver_cores=4, driver_memory='highmem', worker_cores=2, worker_memory='highmem'
+        driver_cores=4,
+        driver_memory='highmem',
+        worker_cores=2,
+        worker_memory='highmem',
     )
     mt = hl.read_matrix_table(filtered_mt_path)
     # only keep samples that are contained within the residuals df
@@ -581,12 +584,14 @@ def run_spearman_correlation_scatter(
     # Do this only on SNPs contained within 1Mb gene region to save on
     # computational time
     right_boundary = min(
-        gene_info.right + 1, hl.get_reference('GRCh38').lengths[chromosome]
+        gene_info.right + 1,
+        hl.get_reference('GRCh38').lengths[chromosome],
     )
     left_boundary = max(1, gene_info.left)
     first_and_last_snp = f'{chromosome}:{left_boundary}-{right_boundary}'
     mt = hl.filter_intervals(
-        mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
+        mt,
+        [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')],
     )
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     # remove SNPs with no variance
@@ -618,7 +623,8 @@ def run_spearman_correlation_scatter(
         position_table['position'].between(gene_info.left, gene_info.right)
     ]
     gene_snp_df = snps_within_region.assign(
-        gene_id=gene_info.gene_id, gene_symbol=gene_info.gene_name
+        gene_id=gene_info.gene_id,
+        gene_symbol=gene_info.gene_name,
     )
 
     # get genotypes from mt in order to load individual SNPs into
@@ -676,7 +682,9 @@ def run_spearman_correlation_scatter(
         log_cpm = log_cpm[['sampleid', gene_name]]
         # merge log_cpm data with genotype info
         gt_expr_data = genotype_df.merge(
-            log_cpm, left_on='sampleid', right_on='sampleid'
+            log_cpm,
+            left_on='sampleid',
+            right_on='sampleid',
         )
         # group gt_expr_data by snpid and genotype
         grouped_gt = gt_expr_data.groupby(['snpid', 'n_alt_alleles'])
@@ -689,7 +697,7 @@ def run_spearman_correlation_scatter(
             mean_val = _group[gene_name].mean()
             q1, median_val, q3 = _group[gene_name].quantile([0.25, 0.5, 0.75])
             iqr = q3 - q1
-            data_struct = {
+            return {
                 'bin_counts': hist,
                 'bin_edges': bin_edges,
                 'n_samples': n_samples,
@@ -701,8 +709,6 @@ def run_spearman_correlation_scatter(
                 'q3': q3,
                 'iqr': iqr,
             }
-
-            return data_struct
 
         snp_gt_summary_data = []
         for item in grouped_gt.groups:
@@ -727,7 +733,7 @@ def run_spearman_correlation_scatter(
                     'gene_symbol': gene_name,
                     'cell_type_id': cell_type,
                     'struct': create_struct(group),
-                }
+                },
             )
 
         return pd.DataFrame.from_dict(snp_gt_summary_data)
@@ -740,10 +746,11 @@ def run_spearman_correlation_scatter(
             cell_type,
             str(chromosome),
             f'eqtl_effect_{gene_name}.parquet',
-        )
+        ),
     )
     with AnyPath(association_effect_path).open(
-        'wb', force_overwrite_to_cloud=True
+        'wb',
+        force_overwrite_to_cloud=True,
     ) as fp:
         association_effect_data.to_parquet(fp)
 
@@ -855,14 +862,14 @@ def generate_conditional_analysis(
     # the iteration at 2 (from a 0 index)
     for iteration in range(2, iterations + 2):
         round_dir = os.path.join(output_prefix, f'round{iteration}/')
-        residuals_output_path = os.path.join(round_dir, f'residual_results.csv')
+        residuals_output_path = os.path.join(round_dir, 'residual_results.csv')
 
         if AnyPath(residuals_output_path).exists() and not force:
             _logger.info(f'Reusing residuals result from {residuals_output_path}')
             previous_residual_path = residuals_output_path
         else:
             calc_resid_df_job = batch.new_python_job(
-                f'{job_prefix}calculate-residual-round-{iteration}'
+                f'{job_prefix}calculate-residual-round-{iteration}',
             )
             calc_resid_df_job.depends_on(*sig_snps_dependencies)
             calc_resid_df_job.cpu(2)
@@ -878,7 +885,7 @@ def generate_conditional_analysis(
                 calculate_conditional_residuals,
                 residual_path=previous_residual_path,
                 significant_snps_path=previous_sig_snps_directory,
-                output_location=os.path.join(round_dir, f'residual_results.csv'),
+                output_location=os.path.join(round_dir, 'residual_results.csv'),
                 filtered_matrix_table_path=filtered_matrix_table_path,
                 force=force,
             )
@@ -887,16 +894,17 @@ def generate_conditional_analysis(
         jobs = []
         for gene_name in genes:
             conditional_output_path = os.path.join(
-                new_sig_snps_directory, f'sig-snps-{gene_name}.parquet'
+                new_sig_snps_directory,
+                f'sig-snps-{gene_name}.parquet',
             )
 
             if AnyPath(conditional_output_path).exists() and not force:
                 _logger.info(
-                    f'Reusing conditionals result from {residuals_output_path}'
+                    f'Reusing conditionals result from {residuals_output_path}',
                 )
             else:
                 j = batch.new_python_job(
-                    name=f'{job_prefix}calculate_spearman_round_{iteration}_{gene_name}'
+                    name=f'{job_prefix}calculate_spearman_round_{iteration}_{gene_name}',
                 )
                 j.cpu(2)
                 j.memory('8Gi')
@@ -937,7 +945,8 @@ def generate_conditional_analysis(
         fake_sink = batch.new_python_job(f'{job_prefix}sink')
         fake_sink.depends_on(*sig_snps_dependencies)
         sinked_sig_snps_directory = fake_sink.call(
-            return_value, previous_sig_snps_directory
+            return_value,
+            previous_sig_snps_directory,
         )
 
     return {
@@ -971,7 +980,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     # computational time
     snps_to_keep = set(gene_snp_test_df.snp_id)
     sorted_snps = sorted(snps_to_keep)
-    sorted_snp_positions = list(map(lambda x: x.split(':')[:2][1], sorted_snps))
+    sorted_snp_positions = [x.split(':')[:2][1] for x in sorted_snps]
     sorted_snp_positions = [int(i) for i in sorted_snp_positions]
     # get first and last positions, with 1 added to last position (to make it inclusive)
     # get one random element from the list to get chromosome
@@ -986,7 +995,8 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
         + str(sorted_snp_positions[-1] + 1)
     )
     mt = hl.filter_intervals(
-        mt, [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')]
+        mt,
+        [hl.parse_locus_interval(first_and_last_snp, reference_genome='GRCh38')],
     )
     mt = mt.filter_cols(samples_to_keep.contains(mt['onek1k_id']))
     t = mt.entries()
@@ -995,8 +1005,8 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
     t = t.select(t.alleles, t.n_alt_alleles, sampleid=t.onek1k_id)
     t = t.annotate(
         snp_id=hl.str(':').join(
-            list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]]))
-        )
+            list(map(hl.str, [t.contig, t.position, t.alleles[0], t.alleles[1]])),
+        ),
     )
     # Further reduce the table by only selecting SNPs needed
     set_to_keep = hl.literal(snps_to_keep)
@@ -1007,9 +1017,7 @@ def get_genotype_df(residual_df, gene_snp_test_df, filtered_matrix_table_path):
         t = t.filter(~hl.literal(snps_to_remove).contains(t.snp_id))
 
     genotype_df = t.to_pandas(flatten=True)
-    genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1, inplace=True)
-
-    return genotype_df
+    return genotype_df.rename({'onek1k_id': 'sampleid'}, axis=1)
 
 
 def calculate_conditional_residuals(
@@ -1065,7 +1073,8 @@ def calculate_conditional_residuals(
     )
     # add in SNP_ID column
     esnp1['snp_id'] = esnp1[['chrom', 'bp', 'a1', 'a2']].apply(
-        lambda row: ':'.join(row.values.astype(str)), axis=1
+        lambda row: ':'.join(row.values.astype(str)),
+        axis=1,
     )
     # Subset residuals for the genes to be tested
     gene_ids = esnp1['gene_symbol'][
@@ -1105,16 +1114,15 @@ def calculate_conditional_residuals(
         y, x = dmatrices('expression ~ genotype', test_df)
         try:
             model = sm.OLS(y, x)
-            residuals = list(model.fit().resid)
-            return residuals
-        except Exception as e:  # pylint: disable=broad-except
+            return list(model.fit().resid)
+        except Exception as e:  # noqa: BLE001
             logger.info(f'y = {y}, x = {x}')
             raise ValueError(
-                f'Error during calculate_adjusted_residuals for {gene_id}'
+                f'Error during calculate_adjusted_residuals for {gene_id}',
             ) from e
 
     adjusted_residual_mat = pd.DataFrame(
-        list(map(calculate_adjusted_residuals, gene_ids))
+        list(map(calculate_adjusted_residuals, gene_ids)),
     ).T
     adjusted_residual_mat.columns = gene_ids
     adjusted_residual_mat.insert(loc=0, column='sampleid', value=genotype_df.sampleid)
@@ -1203,7 +1211,8 @@ def run_scattered_conditional_analysis(
     # add in SNP_ID column
     esnps_to_test = esnps_to_test[esnps_to_test.gene_symbol.isin(residual_df.columns)]
     esnps_to_test['snp_id'] = esnps_to_test[['chrom', 'bp', 'a1', 'a2']].apply(
-        lambda row: ':'.join(row.values.astype(str)), axis=1
+        lambda row: ':'.join(row.values.astype(str)),
+        axis=1,
     )
 
     # for each gene, get esnps_to_test
@@ -1232,13 +1241,15 @@ def run_scattered_conditional_analysis(
         # the residual df was created using the top eSNP as the conditioning SNP.
         test_df = test_df.dropna(axis=0, how='any')
         spearmans_rho, p = spearmanr(
-            test_df['SNP'], test_df['residual'], nan_policy='omit'
+            test_df['SNP'],
+            test_df['residual'],
+            nan_policy='omit',
         )
         return gene_name, gene_id, a1, a2, snp, spearmans_rho, p
 
     # calculate spearman correlation
     adjusted_spearman_df = pd.DataFrame(
-        list(gene_snp_test_df.apply(spearman_correlation, axis=1))
+        list(gene_snp_test_df.apply(spearman_correlation, axis=1)),
     )
 
     adjusted_spearman_df.columns = [
@@ -1259,15 +1270,21 @@ def run_scattered_conditional_analysis(
         #   - Write a file somewhere to easily track that this failed round
         logger.error(f'All residuals for {gene_name} are 0, returning nothing')
         failed_marker = output_path(
-            os.path.join('failed', os.path.basename(output_location))
+            os.path.join('failed', os.path.basename(output_location)),
         )
         with AnyPath(failed_marker).open(mode='w+', force_overwrite_to_cloud=True) as f:
             f.write(f'All residuals for {gene_name} are 0')
         return None
 
     # add in chromosome and position information to get locus and global bp in hail
-    adjusted_spearman_df['chrom'] = adjusted_spearman_df.snp_id.str.split(':', expand=True)[0]
-    adjusted_spearman_df['bp'] = adjusted_spearman_df.snp_id.str.split(':', expand=True)[1]
+    adjusted_spearman_df['chrom'] = adjusted_spearman_df.snp_id.str.split(
+        ':',
+        expand=True,
+    )[0]
+    adjusted_spearman_df['bp'] = adjusted_spearman_df.snp_id.str.split(
+        ':',
+        expand=True,
+    )[1]
     adjusted_spearman_df['alleles'] = adjusted_spearman_df[['a1', 'a2']].values.tolist()
     adjusted_spearman_df['round'] = str(iteration)
 
@@ -1340,9 +1357,7 @@ def get_chromosomes(input_files_prefix: str):
         filter_=pattern.search,
     )
     searches = [pattern.search(fn) for fn in files]
-    chromosomes = set(
-        file_search.groups()[0] for file_search in searches if file_search
-    )
+    chromosomes = {file_search.groups()[0] for file_search in searches if file_search}
     return sorted(chromosomes)
 
 
@@ -1381,7 +1396,7 @@ def get_genes_for_chromosome(*, expression_tsv_path, geneloc_tsv_path) -> list[s
     gene_ids = set(list(expression_df.columns.values)[1:])
 
     genes = set(geneloc_df.gene_name).intersection(gene_ids)
-    return list(sorted(genes))
+    return sorted(genes)
 
 
 # endregion GENERIC
@@ -1446,7 +1461,9 @@ def from_cli(
         run_args = {'wait': False}
 
     batch = hb.Batch(
-        name='eqtl_spearman', backend=backend, default_python_image=MULTIPY_IMAGE
+        name='eqtl_spearman',
+        backend=backend,
+        default_python_image=MULTIPY_IMAGE,
     )
     main(
         batch,
@@ -1507,7 +1524,7 @@ def main(
     if AnyPath(filtered_mt_path).exists() and not force:
         _logger.info(f'Reusing filtered_mt path: {filtered_mt_path}')
     else:
-        filter_mt_job = batch.new_python_job(f'filter_mt')
+        filter_mt_job = batch.new_python_job('filter_mt')
         copy_common_env(filter_mt_job)
         filtered_mt_path = filter_mt_job.call(
             filter_joint_call_mt,
@@ -1521,10 +1538,14 @@ def main(
 
     for cell_type in cell_types:
         expression_tsv_path = os.path.join(
-            input_files_prefix, 'expression_files', f'{cell_type}_expression.tsv'
+            input_files_prefix,
+            'expression_files',
+            f'{cell_type}_expression.tsv',
         )
         covariates_tsv_path = os.path.join(
-            input_files_prefix, 'covariates_files', f'{cell_type}_peer_factors_file.txt'
+            input_files_prefix,
+            'covariates_files',
+            f'{cell_type}_peer_factors_file.txt',
         )
 
         for chromosome in chromosomes:

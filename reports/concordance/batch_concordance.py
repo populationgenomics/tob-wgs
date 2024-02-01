@@ -3,14 +3,24 @@
 """Concordance between SNPchip and WGS samples"""
 
 import os
+
 import hailtop.batch as hb
+
+from cpg_utils.hail_batch import get_batch
 
 CONCORDANCE_IMG = (
     'australia-southeast1-docker.pkg.dev/peter-dev-302805/test/concordance:0.1.16'
 )
 
 
-def concordance(batch, snpmt, wgsmt, samples, chrom, cpu):
+def concordance(
+    batch: hb.Batch,
+    snpmt: str,
+    wgsmt: str,
+    samples: str,
+    chrom: str,
+    cpu: int,
+) -> hb.batch.job.Job:
     """
     Concordance between SNPchip and WGS samples
     """
@@ -31,7 +41,7 @@ def concordance(batch, snpmt, wgsmt, samples, chrom, cpu):
           --res_samples {conc.res_samples_tsv} \
           --html {conc.html} \
           --cpu {cpu}
-        """
+        """,
     )
     return conc
 
@@ -41,7 +51,7 @@ if __name__ == '__main__':
         billing_project=os.getenv('HAIL_BILLING_PROJECT'),
         bucket=os.getenv('HAIL_BUCKET'),
     )
-    b = hb.Batch(backend=service_backend, name='concordance')
+    b = get_batch(name='concordance')
 
     BUCKET = 'gs://cpg-tob-wgs-main'
     SNP = f'{BUCKET}/snpchip/v1/snpchip_grch38.mt'
@@ -53,8 +63,6 @@ if __name__ == '__main__':
     HTML = f'{PREFIX}.html'
     job = concordance(b, SNP, WGS, SAMPLES, CHROM, CPU)
     b.write_output(job.html, f'{BUCKET}-web/concordance/v1/{HTML}')
-    b.write_output(
-        job.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv'
-    )
+    b.write_output(job.res_samples_tsv, f'{BUCKET}/concordance/v1/{PREFIX}_samples.tsv')
     b.run(dry_run=False)
     service_backend.close()

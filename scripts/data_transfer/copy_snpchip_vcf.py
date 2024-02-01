@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: S603,S607
 
 """
 Copies raw SNPchip genotype data tarball and Plink-generated VCF

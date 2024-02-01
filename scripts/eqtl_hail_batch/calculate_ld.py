@@ -1,19 +1,21 @@
 """Read in correlation results and claculate ld values"""
 
 import click
-import hail as hl
 import pandas as pd
+
+import hail as hl
 
 
 @click.command()
 @click.option('--input-path', help='A path prefix of where to input files are located')
-def query(input_path):
+def query(input_path: str):
     """calculate LD values"""
 
     hl.init(default_reference='GRCh38')
 
     tmp_dir = input_path.replace(
-        input_path.split('/')[2], input_path.split('/')[2] + '-tmp'
+        input_path.split('/')[2],
+        input_path.split('/')[2] + '-tmp',
     )
     mt_path = f'{tmp_dir}/genotype_table.mt/'
     mt = hl.read_matrix_table(mt_path)
@@ -25,11 +27,13 @@ def query(input_path):
     # example: https://stackoverflow.com/questions/20906474/import-multiple-csv-files-into-pandas-and-concatenate-into-one-dataframe
     significant_snps_path = f'{input_path}correlation_results.csv'
     significant_snps_df = pd.read_csv(
-        significant_snps_path, sep=' ', skipinitialspace=True
+        significant_snps_path,
+        sep=' ',
+        skipinitialspace=True,
     )
     t = hl.Table.from_pandas(significant_snps_df)
     # only keep rows whose FDR is < 0.05
-    t = t.filter(t.fdr < 0.05)
+    t = t.filter(t.fdr < 0.05)  # noqa: PLR2004
     print(f'Printing table: {t.show()}')
     t = t.key_by('global_bp')
     # filter mt to positions which are in significant_snps table
@@ -59,7 +63,7 @@ def query(input_path):
     table = table.to_pandas()
     # save table
     ld_filename = f'{input_path}ld_matrix.ht'
-    # ld_filename = output_path(f'ld_matrix.csv', 'analysis')
+    # ld_filename = output_path(f'ld_matrix.csv', 'analysis')   # noqa: ERA001
     table.to_csv(ld_filename, index=False)
 
 

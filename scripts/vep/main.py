@@ -7,8 +7,9 @@ Use VEP using a dataproc cluster.
 
 
 import click
+
 from analysis_runner import dataproc
-from cpg_workflows.batch import get_batch
+from cpg_utils.hail_batch import get_batch
 
 
 @click.command()
@@ -32,7 +33,7 @@ def main(script: str, mt: str, vep_version: str):
         script=f'{script} --mt {mt} --vep-version {vep_version}',
         max_age='12h',
         init=[
-            f'gs://cpg-common-main/hail_dataproc/install_common.sh',
+            'gs://cpg-common-main/hail_dataproc/install_common.sh',
             f'gs://cpg-common-main/references/vep/{vep_version}/dataproc/init.sh',
         ],
         init_timeout='30m',
