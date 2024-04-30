@@ -92,7 +92,27 @@ def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
     # TODO: confirm asyncio documentation; create async function 
     # await asyncio.gather(api_calls_to_gather)
 
+def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date): 
+    # Create a set from the fluidX identifiers only that were extracted from metamist
+    metamist_set_fluidX = set(fluidX_to_assay_ids.keys())
+
+    # Create a second set with fluidX identifiers extracted from excel files
+    excel_set_fluidX = set(fluidX_to_sequencing_date.keys())
+
+    # Find intersection/difference between two sets
+    print(f'Count fluidX in Metamist {len(metamist_set_fluidX)}')
+    print(f'Count fluidX in Excel {len(excel_set_fluidX)}')
+
+    print(f'Diff metamist excel {metamist_set_fluidX.difference(excel_set_fluidX)}')
+    diff_excel_metamist = excel_set_fluidX.difference(metamist_set_fluidX)
+    print(f'Diff excel metamist {diff_excel_metamist}')
+    print(f'Len diff excel metamist {len(diff_excel_metamist)}')
+
+
 if __name__ == '__main__':
     fluidX_to_assay_ids = query_metamist()
     fluidX_to_sequencing_date = extract_excel()
-    upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+
+    # Exploration only 
+    compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
