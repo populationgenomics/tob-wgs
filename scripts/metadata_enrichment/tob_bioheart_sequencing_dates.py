@@ -7,10 +7,26 @@ import asyncio
 import csv
 
 # Extract required data from metamist
-QUERY = gql(
+QUERY_TOB = gql(
     """
     query enrich_tob_seq_date {
     project(name: "tob-wgs") {
+        samples {
+            externalId
+            meta
+            assays {
+                id
+                meta
+            }
+        }
+        }
+    }
+    """)
+
+QUERY_BIOHEART = gql(
+    """
+    query enrich_bioheart_seq_date {
+    project(name: "bioheart") {
         samples {
             externalId
             meta
@@ -47,11 +63,14 @@ QUERY_SEQ_GR_ACTIVE = gql(
 def query_metamist():
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
-    query_result = query(QUERY)
+    query_result = query(QUERY_TOB)
+    query_result_bioheart = query(QUERY_BIOHEART)
 
     # list of dictionaries of samples per External ID
     tob_samples = query_result['project']['samples']
+    bioheart_samples = query_result_bioheart['project']['samples']
 
+    # TOB-WGS
     # Create list of all assays from tob_samples (at an individual level)
     assays = []
     for sample in tob_samples:
@@ -63,9 +82,23 @@ def query_metamist():
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidX_tube_id = assay.get('meta').get('KCCG FluidX tube ID')
+        # Check that FluidX tube is not null TODO
         fluidX_to_assay_ids[fluidX_tube_id].append(assay.get('id'))
-    
-    return fluidX_to_assay_ids
+
+    # BIOHEART
+    assays_bioheart = []
+    for sample in bioheart_samples:
+        assays_bioheart.extend(sample.get('assays'))
+
+    # Use default dict to group assays with fluid X tube metadata
+    fluidX_to_assay_ids_bioheart = defaultdict(list)
+    for assay in assays_bioheart:
+        # per assay, extract assay ID and fluid X tubeID
+        # fluid tube id is the key; list contains assay IDs
+        fluidX_tube_id_bioheart = assay.get('meta').get('fluid_x_tube_id')
+        fluidX_to_assay_ids_bioheart[fluidX_tube_id_bioheart].append(assay.get('id'))
+
+    return fluidX_to_assay_ids, fluidX_to_assay_ids_bioheart
 
 def extract_excel():
     tob_workbook_names = ['scripts/metadata_enrichment/1K1K Sequencing Dates.xlsx', 'scripts/metadata_enrichment/BioHEART Sequencing Dates.xlsx']
@@ -87,7 +120,7 @@ def extract_excel():
     fluidX_to_sequencing_date = pd.Series(aggregated_df.accession_date.values,index=aggregated_df.fluidX_id).to_dict()
     return fluidX_to_sequencing_date
 
-async def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
+def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
     # construct API update calls
     # Iterate through the fluidX_to_assay_IDs dictionary because this is representative of what's already in metamist
     # That is: fluidX_to_assay_IDs groups assays by fluidX_tube_id
@@ -112,7 +145,7 @@ async def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date
             print(f'*****\nNO TUBE ID FOR : {fluidX_id} and assays {assay_ids}')
 
     # TODO: confirm asyncio documentation; create async function 
-    return await asyncio.gather(api_calls_to_gather)
+    # return await asyncio.gather(api_calls_to_gather)
 
 def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date): 
     # Create a set from the fluidX identifiers only that were extracted from metamist
@@ -178,10 +211,10 @@ def is_active_sequencing_group():
 
 
 if __name__ == '__main__':
-    fluidX_to_assay_ids = query_metamist()
+    fluidX_to_assay_ids, fluidX_tube_id_bioheart = query_metamist()
     fluidX_to_sequencing_date = extract_excel()
-    # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
 
     # Exploration only 
-    compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    # compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
     # is_active_sequencing_group()
