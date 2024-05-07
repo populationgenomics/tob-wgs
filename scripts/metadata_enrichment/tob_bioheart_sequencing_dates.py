@@ -4,6 +4,7 @@ import pandas as pd
 from metamist.apis import AssayApi
 from metamist.models import AssayUpsert
 import asyncio
+import csv
 
 # Extract required data from metamist
 QUERY = gql(
@@ -22,8 +23,29 @@ QUERY = gql(
     }
     """)
 
+QUERY_SEQ_GR_ACTIVE = gql(
+    """
+    query check_cram_assays {
+        project(name: "tob-wgs") {
+            participants {
+            externalId
+            samples {
+                sequencingGroups(activeOnly: {contains: true}) {
+                id
+                assays {
+                    id
+                    meta
+                }
+                }
+            }
+            }
+        }
+    }
+    """
+    )
+
 def query_metamist():
-    # gives us json output from graphql query 
+    # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
     query_result = query(QUERY)
 
@@ -65,7 +87,7 @@ def extract_excel():
     fluidX_to_sequencing_date = pd.Series(aggregated_df.accession_date.values,index=aggregated_df.fluidX_id).to_dict()
     return fluidX_to_sequencing_date
 
-def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
+async def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
     # construct API update calls
     # Iterate through the fluidX_to_assay_IDs dictionary because this is representative of what's already in metamist
     # That is: fluidX_to_assay_IDs groups assays by fluidX_tube_id
@@ -90,7 +112,7 @@ def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
             print(f'*****\nNO TUBE ID FOR : {fluidX_id} and assays {assay_ids}')
 
     # TODO: confirm asyncio documentation; create async function 
-    # await asyncio.gather(api_calls_to_gather)
+    return await asyncio.gather(api_calls_to_gather)
 
 def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date): 
     # Create a set from the fluidX identifiers only that were extracted from metamist
@@ -107,6 +129,52 @@ def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
     diff_excel_metamist = excel_set_fluidX.difference(metamist_set_fluidX)
     print(f'Diff excel metamist {diff_excel_metamist}')
     print(f'Len diff excel metamist {len(diff_excel_metamist)}')
+    # Save diff_excel_metamist to csv
+
+    with open('./scripts/metadata_enrichment/bioheart_tubes_missing_in_Metamist.csv', 'w') as file:
+        writer = csv.writer(file, delimiter=',')
+        writer.writerow(['tube_id'])
+        for item in diff_excel_metamist:
+            writer.writerow([item])
+
+
+def is_active_sequencing_group():
+    query_result = query(QUERY_SEQ_GR_ACTIVE)
+
+    active_samples = query_result['project']['participants']
+    external_ids_to_active_assay_ids = defaultdict(list)
+
+    participants = []
+    # group all active samples by external ID
+    for participant in active_samples:
+        assay_ids = []
+        # participants.extend(participant.get('samples'))
+        external_id = participant.get('externalId')
+        # Get the id for all our active sequencing groups
+    #     assay_ids = participant.get('samples').get('sequencingGroups').get('assays').get('id')
+        assay_ids = participant.get('samples').get('sequencingGroups')
+        print(assay_ids)
+    #     for id in assay_ids:
+    #         # First, you need a list of all the 
+    #             external_ids_to_active_assay_ids[external_id].append(id)
+
+                
+    # for i in external_ids_to_active_assay_ids:
+    #     print(i)
+
+    # Create list of all assays from tob_samples (at an individual level)
+    # assays = []
+    # for sample in tob_samples:
+    #     assays.extend(sample.get('assays'))
+
+    # # Use default dict to group assays with fluid X tube metadata
+    # fluidX_to_assay_ids = defaultdict(list)
+    # for assay in assays:
+    #     # per assay, extract assay ID and fluid X tubeID
+    #     # fluid tube id is the key; list contains assay IDs
+    #     fluidX_tube_id = assay.get('meta').get('KCCG FluidX tube ID')
+    #     fluidX_to_assay_ids[fluidX_tube_id].append(assay.get('id'))
+
 
 
 if __name__ == '__main__':
@@ -116,3 +184,4 @@ if __name__ == '__main__':
 
     # Exploration only 
     compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    # is_active_sequencing_group()
