@@ -5,6 +5,7 @@ from metamist.apis import AssayApi
 from metamist.models import AssayUpsert
 import asyncio
 import csv
+import json
 
 # Extract required data from metamist
 QUERY_TOB = gql(
@@ -159,13 +160,12 @@ def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
                 print(f'Tube ID {fluidX_id} is not in the sequencing manifest')
             else:
                 for assay_id in assay_ids:
-                    # Create API call and save to 
-                    api_calls_to_gather.append(assay_API.update_assay_async(AssayUpsert(id=assay_id, meta={'sequencing_date': date})))
+                    print(f'API call added for {assay_id}')
+                    # api_calls_to_gather.append(assay_API.update_assay_async(AssayUpsert(id=assay_id, meta={'sequencing_date': date})))
                     # assay_API.update_assay(AssayUpsert(id=assay_id, meta={'sequencing_date': date}))
 
         else:
             print(f'*****\nNO TUBE ID FOR : {fluidX_id} and assays {assay_ids}')
-
     # TODO: confirm asyncio documentation; create async function 
     # return await asyncio.gather(api_calls_to_gather)
 
@@ -180,16 +180,22 @@ def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
     print(f'Count fluidX in Metamist {len(metamist_set_fluidX)}')
     print(f'Count fluidX in Excel {len(excel_set_fluidX)}')
 
-    print(f'Diff metamist excel {metamist_set_fluidX.difference(excel_set_fluidX)}')
+    diff_metamist_excel = metamist_set_fluidX.difference(excel_set_fluidX)
+    print(f'Diff metamist excel {diff_metamist_excel}')
+    print(f'Len diff metamist excel {len(diff_metamist_excel)}')
     diff_excel_metamist = excel_set_fluidX.difference(metamist_set_fluidX)
     print(f'Diff excel metamist {diff_excel_metamist}')
     print(f'Len diff excel metamist {len(diff_excel_metamist)}')
-    # Save diff_excel_metamist to csv
 
-    with open('./scripts/metadata_enrichment/bioheart_tubes_missing_in_Metamist.csv', 'w') as file:
+    # Sort diff_metamist_excel (determine if chronological)
+    # print(sorted(list(diff_metamist_excel)))
+    print(list(sorted(filter(None, diff_metamist_excel))))
+
+    # Save diff_metamist_excel to csv
+    with open('./scripts/metadata_enrichment/tubes_missing_in_manifests.csv', 'w') as file:
         writer = csv.writer(file, delimiter=',')
         writer.writerow(['tube_id'])
-        for item in diff_excel_metamist:
+        for item in diff_metamist_excel:
             writer.writerow([item])
 
 
@@ -234,10 +240,12 @@ def is_active_sequencing_group():
 
 if __name__ == '__main__':
     fluidX_to_assay_ids = query_metamist()
-    # fluidX_to_sequencing_date = extract_excel()
-    # TODO: COMBINE tob and bioheart defaultdicts and provide the combined dict as a parameter. 
-    # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
-
-    # Exploration only 
-    # compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    if len(fluidX_to_assay_ids) != 0:
+        fluidX_to_sequencing_date = extract_excel()
+        # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+            # Exploration only 
+        compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    else:
+        print('You have no FluidX_ids/assays to upsert')
+    
     # is_active_sequencing_group()
