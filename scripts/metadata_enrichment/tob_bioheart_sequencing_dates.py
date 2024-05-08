@@ -202,50 +202,34 @@ def compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
 def is_active_sequencing_group():
     query_result = query(QUERY_SEQ_GR_ACTIVE)
 
-    active_samples = query_result['project']['participants']
-    external_ids_to_active_assay_ids = defaultdict(list)
+    participants = query_result['project']['participants']
+    sequencing_group_to_active_assay_ids = defaultdict(list)
+    participants_without_sequencingGroup = []
 
-    participants = []
     # group all active samples by external ID
-    for participant in active_samples:
-        assay_ids = []
-        # participants.extend(participant.get('samples'))
-        external_id = participant.get('externalId')
+    for participant in participants:
+        sequencing_groups = []
+        # external_id = participant.get('externalId')
         # Get the id for all our active sequencing groups
-    #     assay_ids = participant.get('samples').get('sequencingGroups').get('assays').get('id')
-        assay_ids = participant.get('samples').get('sequencingGroups')
-        print(assay_ids)
-    #     for id in assay_ids:
-    #         # First, you need a list of all the 
-    #             external_ids_to_active_assay_ids[external_id].append(id)
-
-                
-    # for i in external_ids_to_active_assay_ids:
-    #     print(i)
-
-    # Create list of all assays from tob_samples (at an individual level)
-    # assays = []
-    # for sample in tob_samples:
-    #     assays.extend(sample.get('assays'))
-
-    # # Use default dict to group assays with fluid X tube metadata
-    # fluidX_to_assay_ids = defaultdict(list)
-    # for assay in assays:
-    #     # per assay, extract assay ID and fluid X tubeID
-    #     # fluid tube id is the key; list contains assay IDs
-    #     fluidX_tube_id = assay.get('meta').get('KCCG FluidX tube ID')
-    #     fluidX_to_assay_ids[fluidX_tube_id].append(assay.get('id'))
-
-
+        sequencing_groups = participant['samples'][0]['sequencingGroups']
+        try:
+            assays = sequencing_groups[0]['assays']
+            sequencing_group_id = sequencing_groups[0]['id']
+        except IndexError:
+            participants_without_sequencingGroup.append(participant['externalId'])
+        else:
+            for assay in assays:
+                sequencing_group_to_active_assay_ids[sequencing_group_id].append(assay['id'])
+    print(sequencing_group_to_active_assay_ids)
 
 if __name__ == '__main__':
-    fluidX_to_assay_ids = query_metamist()
-    if len(fluidX_to_assay_ids) != 0:
-        fluidX_to_sequencing_date = extract_excel()
-        # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
-            # Exploration only 
-        compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
-    else:
-        print('You have no FluidX_ids/assays to upsert')
+    # fluidX_to_assay_ids = query_metamist()
+    # if len(fluidX_to_assay_ids) != 0:
+    #     fluidX_to_sequencing_date = extract_excel()
+    #     # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    #         # Exploration only 
+    #     compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    # else:
+    #     print('You have no FluidX_ids/assays to upsert')
     
-    # is_active_sequencing_group()
+    is_active_sequencing_group()
