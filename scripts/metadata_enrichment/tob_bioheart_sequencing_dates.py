@@ -63,11 +63,11 @@ QUERY_SEQ_GR_ACTIVE = gql(
 def query_metamist():
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
-    query_result = query(QUERY_TOB)
+    query_result_tob = query(QUERY_TOB)
     query_result_bioheart = query(QUERY_BIOHEART)
 
     # list of dictionaries of samples per External ID
-    tob_samples = query_result['project']['samples']
+    tob_samples = query_result_tob['project']['samples']
     bioheart_samples = query_result_bioheart['project']['samples']
 
     # TOB-WGS
@@ -77,13 +77,13 @@ def query_metamist():
         assays.extend(sample.get('assays'))
 
     # Use default dict to group assays with fluid X tube metadata
-    fluidX_to_assay_ids = defaultdict(list)
+    fluidX_to_assay_ids_tob = defaultdict(list)
     for assay in assays:
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidX_tube_id = assay.get('meta').get('KCCG FluidX tube ID')
         # Check that FluidX tube is not null TODO
-        fluidX_to_assay_ids[fluidX_tube_id].append(assay.get('id'))
+        fluidX_to_assay_ids_tob[fluidX_tube_id].append(assay.get('id'))
 
     # BIOHEART
     assays_bioheart = []
@@ -96,9 +96,31 @@ def query_metamist():
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidX_tube_id_bioheart = assay.get('meta').get('fluid_x_tube_id')
-        fluidX_to_assay_ids_bioheart[fluidX_tube_id_bioheart].append(assay.get('id'))
+        fluidX_to_assay_ids_bioheart[fluidX_tube_id_bioheart.split('_')[1]].append(assay.get('id'))
 
-    return fluidX_to_assay_ids, fluidX_to_assay_ids_bioheart
+    appended_dictionary =  append_dictionaries(fluidX_to_assay_ids_tob, fluidX_to_assay_ids_bioheart)
+    return appended_dictionary
+
+
+def append_dictionaries(fluidX_to_assay_ids_tob, fluidX_to_assay_ids_bioheart):
+    """
+    Append two defaultDict objects into a single dictionary.
+    """
+    result = defaultdict(list)
+    dicts_to_merge = [fluidX_to_assay_ids_tob, fluidX_to_assay_ids_bioheart]
+    # First check to ensure that there are no overlapping keys
+    set_tob = set(fluidX_to_assay_ids_tob.keys())
+    set_bioheart = set(fluidX_to_assay_ids_bioheart.keys())
+
+    if (len(set_tob.intersection(set_bioheart)) == 0) and (len(set_bioheart.intersection(set_tob)) == 0):
+        # Append bioheart dict to tob dict
+        for dict in dicts_to_merge:
+            for key, value in dict.items():
+                result[key].append(value)
+        return result
+    else: 
+        return {}
+
 
 def extract_excel():
     tob_workbook_names = ['scripts/metadata_enrichment/1K1K Sequencing Dates.xlsx', 'scripts/metadata_enrichment/BioHEART Sequencing Dates.xlsx']
@@ -134,7 +156,7 @@ def upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date):
             try:
                 date = fluidX_to_sequencing_date[fluidX_id]
             except KeyError:
-                print(f'Tube ID {fluidX_id} is not in provided sequencing manifest')
+                print(f'Tube ID {fluidX_id} is not in the sequencing manifest')
             else:
                 for assay_id in assay_ids:
                     # Create API call and save to 
@@ -211,9 +233,10 @@ def is_active_sequencing_group():
 
 
 if __name__ == '__main__':
-    fluidX_to_assay_ids, fluidX_tube_id_bioheart = query_metamist()
-    fluidX_to_sequencing_date = extract_excel()
-    upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
+    fluidX_to_assay_ids = query_metamist()
+    # fluidX_to_sequencing_date = extract_excel()
+    # TODO: COMBINE tob and bioheart defaultdicts and provide the combined dict as a parameter. 
+    # upsert_sequencing_dates(fluidX_to_assay_ids, fluidX_to_sequencing_date)
 
     # Exploration only 
     # compare_tubes_metamist_excel(fluidX_to_assay_ids, fluidX_to_sequencing_date)
