@@ -27,6 +27,14 @@ QUERY_PROJECT_ASSAYS = gql(
 
 # TODO: Create separate function for default dict creation
 def query_metamist():
+    """
+    Query metamist for bioheart and tob-wgs datasets and map all tube ids to samples.
+    Later calls append_dictionaries(), which collates dicts from the two projects.
+
+    :return: Dictionary of lists, mapping tube IDs to samples retrieved from metamist
+            for both bioheart and tob-wgs datasets
+    :rtype: defaultdict
+    """
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
     query_result_tob = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': 'tob-wgs'})
@@ -39,37 +47,37 @@ def query_metamist():
     tob_samples = query_result_tob['project']['samples']
     bioheart_samples = query_result_bioheart['project']['samples']
 
-    # TOB-WGS
-    # Create list of all assays from tob_samples (at an individual level)
+    # Create default dicts for the two datasets: maps tube IDs to samples
+    tob_kccg_id = 'KCCG FluidX tube ID'
+    fluidx_to_assay_ids_tob = create_default_dict(tob_samples, tob_kccg_id)
+    print(f'Type for samples is: {type(tob_samples)} OR {type(bioheart_samples)}')
+    bioheart_kccg_id = 'fluid_x_tube_id'
+    fluidx_to_assay_ids_bioheart = create_default_dict(
+        bioheart_samples,
+        bioheart_kccg_id,
+    )
+
+    return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
+
+
+def create_default_dict(samples: list, kccg_id: str) -> defaultdict:
     assays = []
-    for sample in tob_samples:
+    for sample in samples:
         assays.extend(sample['assays'])
 
     # Use default dict to group assays with fluid X tube metadata
-    fluidx_to_assay_ids_tob = defaultdict(list)
+    tube_to_assays_defaultdict = defaultdict(list)
     for assay in assays:
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
-        fluidx_tube_id = assay['meta'].get('KCCG FluidX tube ID')
-        # Check that FluidX tube is not null TODO
-        fluidx_to_assay_ids_tob[fluidx_tube_id].append(assay['id'])
-
-    # BIOHEART
-    assays_bioheart = []
-    for sample in bioheart_samples:
-        assays_bioheart.extend(sample.get('assays'))
-
-    # Use default dict to group assays with fluid X tube metadata
-    fluidx_to_assay_ids_bioheart = defaultdict(list)
-    for assay in assays_bioheart:
-        # per assay, extract assay ID and fluid X tubeID
-        # fluid tube id is the key; list contains assay IDs
-        fluidx_tube_id_bioheart = assay.get('meta').get('fluid_x_tube_id')
-        fluidx_to_assay_ids_bioheart[fluidx_tube_id_bioheart.split('_')[1]].append(
-            assay.get('id'),
-        )
-
-    return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
+        fluidx_tube_id = assay['meta'].get(kccg_id)
+        if kccg_id.endswith('tube_id'):
+            tube_to_assays_defaultdict[fluidx_tube_id.split('_')[1]].append(
+                assay.get('id'),
+            )
+        else:
+            tube_to_assays_defaultdict[fluidx_tube_id].append(assay['id'])
+    return tube_to_assays_defaultdict
 
 
 def append_dictionaries(
