@@ -1,9 +1,11 @@
+import asyncio
 from collections import defaultdict
 
 import pandas as pd
 
 from metamist.apis import AssayApi
 from metamist.graphql import gql, query
+from metamist.models import AssayUpsert
 
 # Extract required data from metamist
 QUERY_PROJECT_ASSAYS = gql(
@@ -154,7 +156,7 @@ def extract_excel():
 
 
 # TODO: combine api calls and
-def upsert_sequencing_dates(
+async def upsert_sequencing_dates(
     fluidx_to_assay_ids: defaultdict,
     fluidx_to_sequencing_date: dict,
 ):
@@ -162,26 +164,30 @@ def upsert_sequencing_dates(
     # Iterate through the fluidX_to_assay_IDs dictionary because this is representative of what's already in metamist
     # That is: fluidX_to_assay_IDs groups assays by fluidX_tube_id
 
-    assay_api = AssayApi()  # noqa: F841
-    # api_calls_to_gather = [] #noqa: ERA001
+    assay_api = AssayApi()
+    assays_to_update = []
 
     for fluidx_id, assay_ids in fluidx_to_assay_ids.items():
         # Get sequencing date for each fluidX id from fluidX_to_sequencing_date dict
         if fluidx_id:
             try:
-                date = fluidx_to_sequencing_date[fluidx_id]  # noqa: F841
+                # Create object required to update assay
+                date = fluidx_to_sequencing_date[fluidx_id]
             except KeyError:
                 print(f'Tube ID {fluidx_id} is not in the sequencing manifest')
             else:
                 for assay_id in assay_ids:
+                    updated_assay = AssayUpsert()
+                    updated_assay['id'] = assay_id
+                    updated_assay['meta'] = {}
+                    updated_assay['meta']['fluid_x_tube_sequencing_date'] = date
+                    assays_to_update.append(updated_assay)
                     print(f'API call added for {assay_id}')
-                    # api_calls_to_gather.append(assay_API.update_assay_async(AssayUpsert(id=assay_id, meta={'sequencing_date': date}))) # noqa: ERA001
-                    # assay_API.update_assay(AssayUpsert(id=assay_id, meta={'sequencing_date': date})) # noqa: ERA001
 
         else:
             print(f'*****\nNO TUBE ID FOR : {fluidx_id} and assays {assay_ids}')
-    # TODO: confirm asyncio documentation; create async function
-    # return await asyncio.gather(api_calls_to_gather) #noqa: ERA001
+
+    return await assay_api.upsert_assay_async(assay_upsert=list(assays_to_update))
 
 
 def compare_tubes_metamist_excel(
@@ -215,9 +221,14 @@ def compare_tubes_metamist_excel(
     print(len(assays_no_tubes[0]))
 
 
-if __name__ == '__main__':
+async def main():
     fluidx_to_assay_ids = query_metamist()
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel()
+        await upsert_sequencing_dates(fluidx_to_assay_ids, fluidx_to_sequencing_date)
     else:
         print('You have no FluidX_ids/assays to upsert')
+
+
+if __name__ == '__main__':
+    asyncio.new_event_loop().run_until_complete(main())
