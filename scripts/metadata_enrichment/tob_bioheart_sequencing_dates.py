@@ -1,4 +1,3 @@
-import csv
 from collections import defaultdict
 
 import pandas as pd
@@ -206,25 +205,15 @@ def compare_tubes_metamist_excel(
     print(f'Diff excel metamist {diff_excel_metamist}')
     print(f'Len diff excel metamist {len(diff_excel_metamist)}')
 
-    # Sort diff_metamist_excel (determine if chronological)
-    print(sorted(filter(None, diff_metamist_excel)))
-
-    # Save diff_metamist_excel to csv
-    with open(
-        './scripts/metadata_enrichment/tubes_missing_in_manifests.csv',
-        'w',
-    ) as file:
-        writer = csv.writer(file, delimiter=',')
-        writer.writerow(['tube_id'])
-        for item in diff_metamist_excel:
-            writer.writerow([item])
+    # Which assays are associated with the 'None' tube?
+    assays_no_tubes = fluidx_to_assay_ids.get(None, 'empty')
+    print(assays_no_tubes)
+    print(len(assays_no_tubes[0]))
 
 
 if __name__ == '__main__':
     fluidx_to_assay_ids = query_metamist()
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel()
-        # Exploration only
-        # compare_tubes_metamist_excel(fluidx_to_assay_ids, fluidx_to_sequencing_date) # noqa: ERA001
     else:
         print('You have no FluidX_ids/assays to upsert')
