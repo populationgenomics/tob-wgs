@@ -25,10 +25,10 @@ QUERY_PROJECT_ASSAYS = gql(
 )
 
 
-# TODO: Create separate function for default dict creation
 def query_metamist():
     """
-    Query metamist for bioheart and tob-wgs datasets and map all tube ids to samples.
+    Query metamist for bioheart and tob-wgs datasets and map all tube ids to samples
+    via call to create_default_dict.
     Later calls append_dictionaries(), which collates dicts from the two projects.
 
     :return: Dictionary of lists, mapping tube IDs to samples retrieved from metamist
@@ -50,7 +50,6 @@ def query_metamist():
     # Create default dicts for the two datasets: maps tube IDs to samples
     tob_kccg_id = 'KCCG FluidX tube ID'
     fluidx_to_assay_ids_tob = create_default_dict(tob_samples, tob_kccg_id)
-    print(f'Type for samples is: {type(tob_samples)} OR {type(bioheart_samples)}')
     bioheart_kccg_id = 'fluid_x_tube_id'
     fluidx_to_assay_ids_bioheart = create_default_dict(
         bioheart_samples,
@@ -61,6 +60,13 @@ def query_metamist():
 
 
 def create_default_dict(samples: list, kccg_id: str) -> defaultdict:
+    """
+    Creates defaultdict mapping kccg tube ids to all related samples.
+    Flexible and can be applied to tob-wgs and bioheart.
+
+    :return: defaultdict mapping kccg tubes to sample ids
+    :rtype: defaultdict(list)
+    """
     assays = []
     for sample in samples:
         assays.extend(sample['assays'])
@@ -86,6 +92,9 @@ def append_dictionaries(
 ) -> defaultdict:
     """
     Append two defaultDict objects into a single dictionary.
+    Verifies that there are no intersecting tube ids
+
+    :return: When no intersection of keys
     """
     result = defaultdict(list)
     dicts_to_merge = [fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart]
