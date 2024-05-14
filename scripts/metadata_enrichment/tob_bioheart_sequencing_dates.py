@@ -117,6 +117,14 @@ def append_dictionaries(
 
 # TODO: combine pd.apply() into a single expression
 def extract_excel():
+    """
+    Reads in metadata stored in excel spreadsheets. Appends these into
+    a single dataframe and performs required transformations to columns
+    to extract the desired data.
+
+    :return: Fluid tube (key) IDS mapped to sequencing dates (value)
+    :rtype: dict
+    """
     tob_workbook_names = [
         'scripts/metadata_enrichment/1K1K Sequencing Dates.xlsx',
         'scripts/metadata_enrichment/BioHEART Sequencing Dates.xlsx',
@@ -130,9 +138,8 @@ def extract_excel():
         df_list.append(temp_df)
 
     aggregated_df = pd.concat(df_list, ignore_index=True)
-    # Separate accession date and fluidX_id in Sample Identifier column
 
-    # TODO: Can you combine these into a single expression?
+    # Separate accession date and fluidX_id in Sample Identifier column
     aggregated_df['accession_date'] = aggregated_df['Sample Identifier'].apply(
         lambda x: x.split('_')[0],
     )
