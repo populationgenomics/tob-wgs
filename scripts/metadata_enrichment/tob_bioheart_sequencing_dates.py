@@ -188,6 +188,10 @@ def compare_tubes_metamist_excel(
     fluidx_to_assay_ids: defaultdict,
     fluidx_to_sequencing_date: dict,
 ):
+    """
+    Includes diagnostic code used to identify tubes missing between metamist and the
+    provided sequencing date manifests. Prints output to console.
+    """
     # Create a set from the fluidX identifiers only that were extracted from metamist
     metamist_set_fluidx = set(fluidx_to_assay_ids.keys())
 
