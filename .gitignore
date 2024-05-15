@@ -5,3 +5,4 @@ nogit
 *.csv
 *.txt
 *.ipynb
+*.fastq.gz
