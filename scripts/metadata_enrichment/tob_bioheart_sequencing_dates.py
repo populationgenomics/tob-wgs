@@ -177,10 +177,10 @@ async def upsert_sequencing_dates(
                 print(f'Tube ID {fluidx_id} is not in the sequencing manifest')
             else:
                 for assay_id in assay_ids:
-                    updated_assay = AssayUpsert()
-                    updated_assay['id'] = assay_id
-                    updated_assay['meta'] = {}
-                    updated_assay['meta']['fluid_x_tube_sequencing_date'] = date
+                    updated_assay = AssayUpsert(
+                        id = assay_id,
+                        meta = {'fluid_x_tube_sequencing_date': date}
+                    )
                     assays_to_update.append(updated_assay)
                     print(f'API call added for {assay_id}')
 
