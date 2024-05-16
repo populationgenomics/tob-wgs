@@ -52,7 +52,7 @@ def upsert_tube_ids(list_participants: defaultdict):
         new_assay = AssayUpsert()
         new_assay['id'] = key
         new_assay['meta'] = {}
-        new_assay['meta']['kgcc_tube_id'] = tube
+        new_assay['meta']['KCCG FluidX tube ID'] = tube
         aapi.update_assay(assay_upsert=new_assay)
 
 

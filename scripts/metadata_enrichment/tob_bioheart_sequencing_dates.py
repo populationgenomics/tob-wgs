@@ -39,6 +39,7 @@ def query_metamist():
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
     query_result_tob = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': 'tob-wgs'})
+
     query_result_bioheart = query(
         QUERY_PROJECT_ASSAYS,
         variables={'datasetName': 'bioheart'},
@@ -50,9 +51,9 @@ def query_metamist():
 
     # Create default dicts for the two datasets: maps tube IDs to samples
     tob_kccg_id = 'KCCG FluidX tube ID'
-    fluidx_to_assay_ids_tob = create_default_dict(tob_samples, tob_kccg_id)
+    fluidx_to_assay_ids_tob = create_fluidx_to_assay_ids_dict(tob_samples, tob_kccg_id)
     bioheart_kccg_id = 'fluid_x_tube_id'
-    fluidx_to_assay_ids_bioheart = create_default_dict(
+    fluidx_to_assay_ids_bioheart = create_fluidx_to_assay_ids_dict(
         bioheart_samples,
         bioheart_kccg_id,
     )
@@ -60,12 +61,12 @@ def query_metamist():
     return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
 
 
-def create_default_dict(samples: list, kccg_id: str) -> defaultdict:
+def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
     """
-    Creates defaultdict mapping kccg tube ids to all related samples.
+    Creates defaultdict mapping kccg tube ids to all related assays.
     Flexible and can be applied to tob-wgs and bioheart.
 
-    :return: defaultdict mapping kccg tubes to sample ids
+    :return: defaultdict mapping kccg tubes to assay ids
     :rtype: defaultdict(list)
     """
     assays = []
@@ -108,15 +109,16 @@ def append_dictionaries(
         for d in dicts_to_merge:
             for key, value in d.items():
                 result[key].append(value)
-        return result
-    else:  # noqa: RET505
+    else:
         print(
             f'Error: these keys intersect: {set_tob.intersection(set_bioheart)}',
         )
-        return defaultdict()
+        result = defaultdict()
+
+    return result
 
 
-# TODO: combine pd.apply() into a single expression
+# TODO: Update sequencing date with correct value!
 def extract_excel():
     """
     Reads in metadata stored in excel spreadsheets. Appends these into
@@ -126,14 +128,14 @@ def extract_excel():
     :return: Fluid tube (key) IDS mapped to sequencing dates (value)
     :rtype: dict
     """
-    tob_workbook_names = [
+    workbook_names = [
         'scripts/metadata_enrichment/1K1K Sequencing Dates.xlsx',
         'scripts/metadata_enrichment/BioHEART Sequencing Dates.xlsx',
     ]
     df_list = []
 
     # Amalgamate data in all sheets listed in tob_sheet_names and bioheart_sheet_names
-    for workbook in tob_workbook_names:
+    for workbook in workbook_names:
         df_sheet_index = pd.read_excel(workbook, sheet_name=None, header=0)
         temp_df = pd.concat(df_sheet_index)
         df_list.append(temp_df)
@@ -168,6 +170,7 @@ async def upsert_sequencing_dates(
     assays_to_update = []
 
     for fluidx_id, assay_ids in fluidx_to_assay_ids.items():
+        # TODO: Refactor with early return as suggested in PR
         # Get sequencing date for each fluidX id from fluidX_to_sequencing_date dict
         if fluidx_id:
             try:
@@ -178,16 +181,17 @@ async def upsert_sequencing_dates(
             else:
                 for assay_id in assay_ids:
                     updated_assay = AssayUpsert(
-                        id = assay_id,
-                        meta = {'fluid_x_tube_sequencing_date': date}
+                        id=assay_id,
+                        meta={'fluid_x_tube_sequencing_date': date},
                     )
-                    assays_to_update.append(updated_assay)
-                    print(f'API call added for {assay_id}')
+                    assays_to_update.append(
+                        assay_api.update_assay_async(assay_upsert=updated_assay),
+                    )
 
         else:
             print(f'*****\nNO TUBE ID FOR : {fluidx_id} and assays {assay_ids}')
 
-    return await assay_api.upsert_assay_async(assay_upsert=list(assays_to_update))
+    return await asyncio.gather(*assays_to_update)
 
 
 def compare_tubes_metamist_excel(
