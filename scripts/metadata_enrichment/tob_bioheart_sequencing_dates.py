@@ -178,24 +178,24 @@ async def upsert_sequencing_dates(
     for fluidx_id, assay_ids in fluidx_to_assay_ids.items():
         # TODO: Refactor with early return as suggested in PR
         # Get sequencing date for each fluidX id from fluidX_to_sequencing_date dict
-        if fluidx_id:
-            try:
-                # Create object required to update assay
-                date = fluidx_to_sequencing_date[fluidx_id]
-            except KeyError:
-                print(f'Tube ID {fluidx_id} is not in the sequencing manifest')
-            else:
-                for assay_id in assay_ids:
-                    updated_assay = AssayUpsert(
-                        id=assay_id,
-                        meta={'fluid_x_tube_sequencing_date': date},
-                    )
-                    assays_to_update.append(
-                        assay_api.update_assay_async(assay_upsert=updated_assay),
-                    )
-
-        else:
+        if not fluidx_id:
             print(f'*****\nNO TUBE ID FOR : {fluidx_id} and assays {assay_ids}')
+            continue
+
+        try:
+            # Create object required to update assay
+            date = fluidx_to_sequencing_date[fluidx_id]
+        except KeyError:
+            print(f'Tube ID {fluidx_id} is not in the sequencing manifest')
+        else:
+            for assay_id in assay_ids:
+                updated_assay = AssayUpsert(
+                    id=assay_id,
+                    meta={'fluid_x_tube_sequencing_date': date},
+                )
+                assays_to_update.append(
+                    assay_api.update_assay_async(assay_upsert=updated_assay),
+                )
 
     return await asyncio.gather(*assays_to_update)
 
@@ -235,7 +235,10 @@ async def main():
     fluidx_to_assay_ids = query_metamist()
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel()
-        await upsert_sequencing_dates(fluidx_to_assay_ids, fluidx_to_sequencing_date)
+        await upsert_sequencing_dates(
+            fluidx_to_assay_ids,
+            fluidx_to_sequencing_date,
+        )
     else:
         print('You have no FluidX_ids/assays to upsert')
 
