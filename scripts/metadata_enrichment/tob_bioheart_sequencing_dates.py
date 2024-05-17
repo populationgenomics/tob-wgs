@@ -143,16 +143,22 @@ def extract_excel():
     aggregated_df = pd.concat(df_list, ignore_index=True)
 
     # Separate accession date and fluidX_id in Sample Identifier column
-    aggregated_df['accession_date'] = aggregated_df['Sample Identifier'].apply(
-        lambda x: x.split('_')[0],
-    )
     aggregated_df['fluidX_id'] = aggregated_df['Sample Identifier'].apply(
         lambda x: x.split('_')[1],
     )
 
-    # Insert accession value into new dictionary fluidX_to_sequencing_date. Key is FluidX ID
+    # Convert date to format YYYY-MM-DD
+    aggregated_df['Date (YY/MM/DD)'] = pd.to_datetime(
+        aggregated_df['Date (YY/MM/DD)'],
+        format='%y%m%d',
+    )
+    aggregated_df['Date (YY/MM/DD)'] = aggregated_df['Date (YY/MM/DD)'].dt.strftime(
+        '%Y-%m-%d',
+    )
+
+    # Insert sequencing date value into new dictionary fluidX_to_sequencing_date. Key is FluidX ID
     return pd.Series(
-        aggregated_df.accession_date.values,
+        aggregated_df['Date (YY/MM/DD)'].values,
         index=aggregated_df.fluidX_id,
     ).to_dict()
 
