@@ -118,7 +118,6 @@ def append_dictionaries(
     return result
 
 
-# TODO: Update sequencing date with correct value!
 def extract_excel():
     """
     Reads in metadata stored in excel spreadsheets. Appends these into
@@ -163,7 +162,6 @@ def extract_excel():
     ).to_dict()
 
 
-# TODO: combine api calls and
 async def upsert_sequencing_dates(
     fluidx_to_assay_ids: defaultdict,
     fluidx_to_sequencing_date: dict,
@@ -176,7 +174,6 @@ async def upsert_sequencing_dates(
     assays_to_update = []
 
     for fluidx_id, assay_ids in fluidx_to_assay_ids.items():
-        # TODO: Refactor with early return as suggested in PR
         # Get sequencing date for each fluidX id from fluidX_to_sequencing_date dict
         if not fluidx_id:
             print(f'*****\nNO TUBE ID FOR : {fluidx_id} and assays {assay_ids}')
