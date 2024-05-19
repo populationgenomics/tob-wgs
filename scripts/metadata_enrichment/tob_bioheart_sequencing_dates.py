@@ -232,6 +232,8 @@ async def main():
     fluidx_to_assay_ids = query_metamist()
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel()
+        # Uncomment this to compare the data in metamist to the manifests
+        # compare_tubes_metamist_excel(fluidx_to_assay_ids, fluidx_to_sequencing_date) #noqa: ERA001
         await upsert_sequencing_dates(
             fluidx_to_assay_ids,
             fluidx_to_sequencing_date,
