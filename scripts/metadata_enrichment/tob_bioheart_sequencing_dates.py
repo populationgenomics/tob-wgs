@@ -166,10 +166,13 @@ async def upsert_sequencing_dates(
     fluidx_to_assay_ids: defaultdict,
     fluidx_to_sequencing_date: dict,
 ):
-    # construct API update calls
-    # Iterate through the fluidX_to_assay_IDs dictionary because this is representative of what's already in metamist
-    # That is: fluidX_to_assay_IDs groups assays by fluidX_tube_id
+    """
+    Upserts meta {'fluid_x_tube_sequencing_date: x'} for each fluidx tube in metamist.
+    Calls AssayUpsert endpoint update_assay_async with list of upserts: manages bulk calls asynchronously.
 
+    :return: Results from bulk API assay upsert calls
+    :rtype: Future
+    """
     assay_api = AssayApi()
     assays_to_update = []
 
