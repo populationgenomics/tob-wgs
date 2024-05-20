@@ -1,12 +1,14 @@
 import asyncio
 from collections import defaultdict
 
+import click
 import pandas as pd
 from google.cloud import storage
 
 from metamist.apis import AssayApi
 from metamist.graphql import gql, query
 from metamist.models import AssayUpsert
+from metamist.parser.generic_metadata_parser import run_as_sync
 
 # Extract required data from metamist
 QUERY_PROJECT_ASSAYS = gql(
@@ -119,7 +121,7 @@ def append_dictionaries(
     return result
 
 
-def extract_excel():
+def extract_excel(workbook_names: tuple):
     """
     Reads in metadata stored in excel spreadsheets. Appends these into
     a single dataframe and performs required transformations to columns
@@ -128,8 +130,6 @@ def extract_excel():
     :return: Fluid tube (key) IDS mapped to sequencing dates (value)
     :rtype: dict
     """
-    # TODO: Add bioheart after permissions have been updated
-    workbook_names = ['gs://cpg-tob-wgs-main-upload/1K1K Sequencing Dates.xlsx']
     df_list = []
     storage_client = storage.Client()
 
@@ -164,7 +164,6 @@ def extract_excel():
         '%Y-%m-%d',
     )
 
-    print(aggregated_df.tail())
     # Insert sequencing date value into new dictionary fluidX_to_sequencing_date. Key is FluidX ID
     return pd.Series(
         aggregated_df['Date (YY/MM/DD)'].values,
@@ -241,16 +240,24 @@ def compare_tubes_metamist_excel(
     print(len(assays_no_tubes[0]))
 
 
-async def main():
+@click.command()
+@click.argument('manifests', nargs=-1)
+@click.option('--debug', '-d', is_flag=True)
+@run_as_sync
+async def main(manifests: tuple, debug: bool):
     fluidx_to_assay_ids = query_metamist()
     if len(fluidx_to_assay_ids) != 0:
-        fluidx_to_sequencing_date = extract_excel()
-        # Uncomment this to compare the data in metamist to the manifests
-        # compare_tubes_metamist_excel(fluidx_to_assay_ids, fluidx_to_sequencing_date) #noqa: ERA001
-        await upsert_sequencing_dates(
-            fluidx_to_assay_ids,
-            fluidx_to_sequencing_date,
-        )
+        fluidx_to_sequencing_date = extract_excel(manifests)
+        if not debug:
+            await upsert_sequencing_dates(
+                fluidx_to_assay_ids,
+                fluidx_to_sequencing_date,
+            )
+        else:
+            compare_tubes_metamist_excel(
+                fluidx_to_assay_ids,
+                fluidx_to_sequencing_date,
+            )
     else:
         print('You have no FluidX_ids/assays to upsert')
 
