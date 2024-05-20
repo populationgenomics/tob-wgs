@@ -2,6 +2,7 @@ import asyncio
 from collections import defaultdict
 
 import pandas as pd
+from google.cloud import storage
 
 from metamist.apis import AssayApi
 from metamist.graphql import gql, query
@@ -127,15 +128,23 @@ def extract_excel():
     :return: Fluid tube (key) IDS mapped to sequencing dates (value)
     :rtype: dict
     """
-    workbook_names = [
-        'scripts/metadata_enrichment/1K1K Sequencing Dates.xlsx',
-        'scripts/metadata_enrichment/BioHEART Sequencing Dates.xlsx',
-    ]
+    # TODO: Add bioheart after permissions have been updated
+    workbook_names = ['gs://cpg-tob-wgs-main-upload/1K1K Sequencing Dates.xlsx']
     df_list = []
+    storage_client = storage.Client()
 
     # Amalgamate data in all sheets listed in tob_sheet_names and bioheart_sheet_names
     for workbook in workbook_names:
-        df_sheet_index = pd.read_excel(workbook, sheet_name=None, header=0)
+        # Get workbook file information in GCP
+        split_workbook_name = workbook.split('/')
+        bucket_name = split_workbook_name[2]
+        file_name = split_workbook_name[3]
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.get_blob(file_name)
+        workbook_file = blob.download_as_string()
+
+        # Collate all workbooks as df into a single list for concatenation outside loop
+        df_sheet_index = pd.read_excel(workbook_file, sheet_name=None, header=0)
         temp_df = pd.concat(df_sheet_index)
         df_list.append(temp_df)
 
@@ -155,6 +164,7 @@ def extract_excel():
         '%Y-%m-%d',
     )
 
+    print(aggregated_df.tail())
     # Insert sequencing date value into new dictionary fluidX_to_sequencing_date. Key is FluidX ID
     return pd.Series(
         aggregated_df['Date (YY/MM/DD)'].values,
