@@ -205,7 +205,6 @@ async def upsert_sequencing_dates(
                 assays_to_update.append(
                     assay_api.update_assay_async(assay_upsert=updated_assay),
                 )
-
     return await asyncio.gather(*assays_to_update)
 
 
