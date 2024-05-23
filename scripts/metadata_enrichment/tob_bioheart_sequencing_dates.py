@@ -111,7 +111,7 @@ def append_dictionaries(
         # Append bioheart dict to tob dict
         for d in dicts_to_merge:
             for key, value in d.items():
-                result[key].append(value)
+                result[key].extend(value)
     else:
         print(
             f'Error: these keys intersect: {set_tob.intersection(set_bioheart)}',
