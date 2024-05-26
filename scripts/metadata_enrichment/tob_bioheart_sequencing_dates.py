@@ -1,3 +1,9 @@
+"""
+Script enriches existing assays in Metamist with sequencing dates 
+Sequencing dates are extracted from an external .csv file, which maps
+dates to fluidx kccg tube ids. 
+"""
+
 import asyncio
 from collections import defaultdict
 
@@ -29,11 +35,12 @@ QUERY_PROJECT_ASSAYS = gql(
 )
 
 
-def query_metamist(project):
+def query_metamist(project: str):
     """
     Query metamist for project and map all tube ids to samples
     via call to create_default_dict.
 
+    :param project str: Target project name. Originally provided as CLI arg
     :return: Dictionary of lists, mapping tube IDs to samples retrieved from metamist
     :rtype: defaultdict
     """
@@ -45,15 +52,9 @@ def query_metamist(project):
     samples = query_result['project']['samples']
 
     # Create default dicts for the project: maps tube IDs to samples
-    if project == 'bioheart':
-        kccg_id = 'fluid_x_tube_id'
-    else:
-        kccg_id = 'KCCG FluidX tube ID'
-    
-    fluidx_to_assay_ids_tob = create_fluidx_to_assay_ids_dict(samples, kccg_id)
-    return fluidx_to_assay_ids_tob
+    kccg_id = 'fluid_x_tube_id' if project == 'bioheart' else 'KCCG FluidX tube ID'  
 
-    # return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
+    return create_fluidx_to_assay_ids_dict(samples, kccg_id)
 
 
 def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
@@ -61,6 +62,8 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
     Creates defaultdict mapping kccg tube ids to all related assays.
     Flexible and can be applied to tob-wgs and bioheart.
 
+    :param samples list: List of all samples associated with defined project in Metamist
+    :param kccg_id str: Tube IDs are not uniformly defined. kccg_id == id used in target project
     :return: defaultdict mapping kccg tubes to assay ids
     :rtype: defaultdict(list)
     """
@@ -91,6 +94,9 @@ def extract_excel(workbook_names: tuple):
     a single dataframe and performs required transformations to columns
     to extract the desired data.
 
+    :param workbook_names tuple: Name of files containing enrichment metadata,
+        provided as CLI args. Initially there were multiple workbooks, hence
+        use of 'for' loop.
     :return: Fluid tube (key) IDS mapped to sequencing dates (value)
     :rtype: dict
     """
@@ -143,6 +149,9 @@ async def upsert_sequencing_dates(
     Upserts meta {'fluid_x_tube_sequencing_date: x'} for each fluidx tube in metamist.
     Calls AssayUpsert endpoint update_assay_async with list of upserts: manages bulk calls asynchronously.
 
+    :param fluidx_to_assay_ids defaultdict: Tube IDs : sample ids in Metamist mapping. Stored as dictionary of
+        lists with Tube ID as key.
+    :param fluidx_to_sequencing_date dict: Tube:sequencing date mapping, as extracted from .xlsx metadata file.
     :return: Results from bulk API assay upsert calls
     :rtype: Future
     """
@@ -179,6 +188,10 @@ def compare_tubes_metamist_excel(
     """
     Includes diagnostic code used to identify tubes missing between metamist and the
     provided sequencing date manifests. Prints output to console.
+
+    :param fluidx_to_assay_ids defaultdict: Tube IDs : sample ids in Metamist mapping. Stored as dictionary of
+        lists with Tube ID as key.
+    :param fluidx_to_sequencing_date dict: Tube:sequencing date mapping, as extracted from .xlsx metadata file.
     """
     # Create a set from the fluidX identifiers only that were extracted from metamist
     metamist_set_fluidx = set(fluidx_to_assay_ids.keys())
@@ -209,6 +222,13 @@ def compare_tubes_metamist_excel(
 @click.option('--debug', '-d', is_flag=True)
 @run_as_sync
 async def main(project: str, manifests: tuple, debug: bool):
+    """
+    :param project str: Target project name. Either bioheart or tob-wgs
+    :param workbook_names tuple: Name of files containing enrichment metadata.
+    :param debug bool: Boolean flag. True will run script in debug mode, which
+        prints out summary data for project.
+    """
+    print(project)
     fluidx_to_assay_ids = query_metamist(project)
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel(manifests)
