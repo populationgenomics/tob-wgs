@@ -29,39 +29,31 @@ QUERY_PROJECT_ASSAYS = gql(
 )
 
 
-def query_metamist():
+def query_metamist(project):
     """
-    Query metamist for bioheart and tob-wgs datasets and map all tube ids to samples
+    Query metamist for project and map all tube ids to samples
     via call to create_default_dict.
-    Later calls append_dictionaries(), which collates dicts from the two projects.
 
     :return: Dictionary of lists, mapping tube IDs to samples retrieved from metamist
-            for both bioheart and tob-wgs datasets
     :rtype: defaultdict
     """
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
-    query_result_tob = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': 'tob-wgs'})
-
-    query_result_bioheart = query(
-        QUERY_PROJECT_ASSAYS,
-        variables={'datasetName': 'bioheart'},
-    )
+    query_result = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': project})
 
     # list of dictionaries of samples per External ID
-    tob_samples = query_result_tob['project']['samples']
-    bioheart_samples = query_result_bioheart['project']['samples']
+    samples = query_result['project']['samples']
 
-    # Create default dicts for the two datasets: maps tube IDs to samples
-    tob_kccg_id = 'KCCG FluidX tube ID'
-    fluidx_to_assay_ids_tob = create_fluidx_to_assay_ids_dict(tob_samples, tob_kccg_id)
-    bioheart_kccg_id = 'fluid_x_tube_id'
-    fluidx_to_assay_ids_bioheart = create_fluidx_to_assay_ids_dict(
-        bioheart_samples,
-        bioheart_kccg_id,
-    )
+    # Create default dicts for the project: maps tube IDs to samples
+    if project == 'bioheart':
+        kccg_id = 'fluid_x_tube_id'
+    else:
+        kccg_id = 'KCCG FluidX tube ID'
+    
+    fluidx_to_assay_ids_tob = create_fluidx_to_assay_ids_dict(samples, kccg_id)
+    return fluidx_to_assay_ids_tob
 
-    return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
+    # return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
 
 
 def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
@@ -82,6 +74,8 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidx_tube_id = assay['meta'].get(kccg_id)
+
+        # Keys for bioheart/tob projects are formatted differently
         if kccg_id.endswith('tube_id'):
             tube_to_assays_defaultdict[fluidx_tube_id.split('_')[1]].append(
                 assay.get('id'),
@@ -89,36 +83,6 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
         else:
             tube_to_assays_defaultdict[fluidx_tube_id].append(assay['id'])
     return tube_to_assays_defaultdict
-
-
-def append_dictionaries(
-    fluidx_to_assay_ids_tob: defaultdict,
-    fluidx_to_assay_ids_bioheart: defaultdict,
-) -> defaultdict:
-    """
-    Append two defaultDict objects into a single dictionary.
-    Verifies that there are no intersecting tube ids
-
-    :return: When no intersection of keys
-    """
-    result = defaultdict(list)
-    dicts_to_merge = [fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart]
-    # First check to ensure that there are no overlapping keys
-    set_tob = set(fluidx_to_assay_ids_tob.keys())
-    set_bioheart = set(fluidx_to_assay_ids_bioheart.keys())
-
-    if len(set_tob.intersection(set_bioheart)) == 0:
-        # Append bioheart dict to tob dict
-        for d in dicts_to_merge:
-            for key, value in d.items():
-                result[key].extend(value)
-    else:
-        print(
-            f'Error: these keys intersect: {set_tob.intersection(set_bioheart)}',
-        )
-        result = defaultdict()
-
-    return result
 
 
 def extract_excel(workbook_names: tuple):
@@ -240,11 +204,12 @@ def compare_tubes_metamist_excel(
 
 
 @click.command()
+@click.argument('project', nargs=1)
 @click.argument('manifests', nargs=-1)
 @click.option('--debug', '-d', is_flag=True)
 @run_as_sync
-async def main(manifests: tuple, debug: bool):
-    fluidx_to_assay_ids = query_metamist()
+async def main(project: str, manifests: tuple, debug: bool):
+    fluidx_to_assay_ids = query_metamist(project)
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel(manifests)
         if not debug:
