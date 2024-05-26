@@ -1,7 +1,7 @@
 """
-Script enriches existing assays in Metamist with sequencing dates 
+Script enriches existing assays in Metamist with sequencing dates
 Sequencing dates are extracted from an external .csv file, which maps
-dates to fluidx kccg tube ids. 
+dates to fluidx kccg tube ids.
 """
 
 import asyncio
@@ -52,7 +52,7 @@ def query_metamist(project: str):
     samples = query_result['project']['samples']
 
     # Create default dicts for the project: maps tube IDs to samples
-    kccg_id = 'fluid_x_tube_id' if project == 'bioheart' else 'KCCG FluidX tube ID'  
+    kccg_id = 'fluid_x_tube_id' if project == 'bioheart' else 'KCCG FluidX tube ID'
 
     return create_fluidx_to_assay_ids_dict(samples, kccg_id)
 
@@ -223,12 +223,15 @@ def compare_tubes_metamist_excel(
 @run_as_sync
 async def main(project: str, manifests: tuple, debug: bool):
     """
+    Sample CLI command:
+        python scripts/metadata_enrichment/tob_bioheart_sequencing_dates.py <project/dataset name> \
+        <PATH TO METADATA FILE IN GCP>
+
     :param project str: Target project name. Either bioheart or tob-wgs
     :param workbook_names tuple: Name of files containing enrichment metadata.
     :param debug bool: Boolean flag. True will run script in debug mode, which
         prints out summary data for project.
     """
-    print(project)
     fluidx_to_assay_ids = query_metamist(project)
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel(manifests)
