@@ -77,7 +77,6 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidx_tube_id = assay['meta'].get(kccg_id)
-
         # Keys for bioheart/tob projects are formatted differently
         if kccg_id.endswith('tube_id'):
             tube_to_assays_defaultdict[fluidx_tube_id.split('_')[1]].append(
@@ -85,6 +84,7 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
             )
         else:
             tube_to_assays_defaultdict[fluidx_tube_id].append(assay['id'])
+
     return tube_to_assays_defaultdict
 
 
