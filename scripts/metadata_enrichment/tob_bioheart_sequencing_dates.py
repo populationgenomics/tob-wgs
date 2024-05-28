@@ -1,3 +1,9 @@
+"""
+Script enriches existing assays in Metamist with sequencing dates
+Sequencing dates are extracted from an external .csv file, which maps
+dates to fluidx kccg tube ids.
+"""
+
 import asyncio
 from collections import defaultdict
 
@@ -29,39 +35,26 @@ QUERY_PROJECT_ASSAYS = gql(
 )
 
 
-def query_metamist():
+def query_metamist(project: str):
     """
-    Query metamist for bioheart and tob-wgs datasets and map all tube ids to samples
+    Query metamist for project and map all tube ids to samples
     via call to create_default_dict.
-    Later calls append_dictionaries(), which collates dicts from the two projects.
 
+    :param project str: Target project name. Originally provided as CLI arg
     :return: Dictionary of lists, mapping tube IDs to samples retrieved from metamist
-            for both bioheart and tob-wgs datasets
     :rtype: defaultdict
     """
     # gives us json output from graphql query
     # Results are seen in graphql interface as a dictionary
-    query_result_tob = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': 'tob-wgs'})
-
-    query_result_bioheart = query(
-        QUERY_PROJECT_ASSAYS,
-        variables={'datasetName': 'bioheart'},
-    )
+    query_result = query(QUERY_PROJECT_ASSAYS, variables={'datasetName': project})
 
     # list of dictionaries of samples per External ID
-    tob_samples = query_result_tob['project']['samples']
-    bioheart_samples = query_result_bioheart['project']['samples']
+    samples = query_result['project']['samples']
 
-    # Create default dicts for the two datasets: maps tube IDs to samples
-    tob_kccg_id = 'KCCG FluidX tube ID'
-    fluidx_to_assay_ids_tob = create_fluidx_to_assay_ids_dict(tob_samples, tob_kccg_id)
-    bioheart_kccg_id = 'fluid_x_tube_id'
-    fluidx_to_assay_ids_bioheart = create_fluidx_to_assay_ids_dict(
-        bioheart_samples,
-        bioheart_kccg_id,
-    )
+    # Create default dicts for the project: maps tube IDs to samples
+    kccg_id = 'fluid_x_tube_id' if project == 'bioheart' else 'KCCG FluidX tube ID'
 
-    return append_dictionaries(fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart)
+    return create_fluidx_to_assay_ids_dict(samples, kccg_id)
 
 
 def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
@@ -69,6 +62,8 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
     Creates defaultdict mapping kccg tube ids to all related assays.
     Flexible and can be applied to tob-wgs and bioheart.
 
+    :param samples list: List of all samples associated with defined project in Metamist
+    :param kccg_id str: Tube IDs are not uniformly defined. kccg_id == id used in target project
     :return: defaultdict mapping kccg tubes to assay ids
     :rtype: defaultdict(list)
     """
@@ -82,43 +77,15 @@ def create_fluidx_to_assay_ids_dict(samples: list, kccg_id: str) -> defaultdict:
         # per assay, extract assay ID and fluid X tubeID
         # fluid tube id is the key; list contains assay IDs
         fluidx_tube_id = assay['meta'].get(kccg_id)
+        # Keys for bioheart/tob projects are formatted differently
         if kccg_id.endswith('tube_id'):
             tube_to_assays_defaultdict[fluidx_tube_id.split('_')[1]].append(
                 assay.get('id'),
             )
         else:
             tube_to_assays_defaultdict[fluidx_tube_id].append(assay['id'])
+
     return tube_to_assays_defaultdict
-
-
-def append_dictionaries(
-    fluidx_to_assay_ids_tob: defaultdict,
-    fluidx_to_assay_ids_bioheart: defaultdict,
-) -> defaultdict:
-    """
-    Append two defaultDict objects into a single dictionary.
-    Verifies that there are no intersecting tube ids
-
-    :return: When no intersection of keys
-    """
-    result = defaultdict(list)
-    dicts_to_merge = [fluidx_to_assay_ids_tob, fluidx_to_assay_ids_bioheart]
-    # First check to ensure that there are no overlapping keys
-    set_tob = set(fluidx_to_assay_ids_tob.keys())
-    set_bioheart = set(fluidx_to_assay_ids_bioheart.keys())
-
-    if len(set_tob.intersection(set_bioheart)) == 0:
-        # Append bioheart dict to tob dict
-        for d in dicts_to_merge:
-            for key, value in d.items():
-                result[key].extend(value)
-    else:
-        print(
-            f'Error: these keys intersect: {set_tob.intersection(set_bioheart)}',
-        )
-        result = defaultdict()
-
-    return result
 
 
 def extract_excel(workbook_names: tuple):
@@ -127,6 +94,9 @@ def extract_excel(workbook_names: tuple):
     a single dataframe and performs required transformations to columns
     to extract the desired data.
 
+    :param workbook_names tuple: Name of files containing enrichment metadata,
+        provided as CLI args. Initially there were multiple workbooks, hence
+        use of 'for' loop.
     :return: Fluid tube (key) IDS mapped to sequencing dates (value)
     :rtype: dict
     """
@@ -179,6 +149,9 @@ async def upsert_sequencing_dates(
     Upserts meta {'fluid_x_tube_sequencing_date: x'} for each fluidx tube in metamist.
     Calls AssayUpsert endpoint update_assay_async with list of upserts: manages bulk calls asynchronously.
 
+    :param fluidx_to_assay_ids defaultdict: Tube IDs : sample ids in Metamist mapping. Stored as dictionary of
+        lists with Tube ID as key.
+    :param fluidx_to_sequencing_date dict: Tube:sequencing date mapping, as extracted from .xlsx metadata file.
     :return: Results from bulk API assay upsert calls
     :rtype: Future
     """
@@ -215,6 +188,10 @@ def compare_tubes_metamist_excel(
     """
     Includes diagnostic code used to identify tubes missing between metamist and the
     provided sequencing date manifests. Prints output to console.
+
+    :param fluidx_to_assay_ids defaultdict: Tube IDs : sample ids in Metamist mapping. Stored as dictionary of
+        lists with Tube ID as key.
+    :param fluidx_to_sequencing_date dict: Tube:sequencing date mapping, as extracted from .xlsx metadata file.
     """
     # Create a set from the fluidX identifiers only that were extracted from metamist
     metamist_set_fluidx = set(fluidx_to_assay_ids.keys())
@@ -240,11 +217,22 @@ def compare_tubes_metamist_excel(
 
 
 @click.command()
+@click.argument('project', nargs=1)
 @click.argument('manifests', nargs=-1)
 @click.option('--debug', '-d', is_flag=True)
 @run_as_sync
-async def main(manifests: tuple, debug: bool):
-    fluidx_to_assay_ids = query_metamist()
+async def main(project: str, manifests: tuple, debug: bool):
+    """
+    Sample CLI command:
+        python scripts/metadata_enrichment/tob_bioheart_sequencing_dates.py <project/dataset name> \
+        <PATH TO METADATA FILE IN GCP>
+
+    :param project str: Target project name. Either bioheart or tob-wgs
+    :param workbook_names tuple: Name of files containing enrichment metadata.
+    :param debug bool: Boolean flag. True will run script in debug mode, which
+        prints out summary data for project.
+    """
+    fluidx_to_assay_ids = query_metamist(project)
     if len(fluidx_to_assay_ids) != 0:
         fluidx_to_sequencing_date = extract_excel(manifests)
         if not debug:

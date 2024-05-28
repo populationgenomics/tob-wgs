@@ -7,7 +7,7 @@ from metamist.models import AssayUpsert
 QUERY = gql(
     """
         query MyQuery {
-            project(name: "tob-wgs-dev") {
+            project(name: "bioheart-dev") {
                 participants {
                 id
                 samples {
@@ -41,18 +41,19 @@ def upsert_tube_ids(list_participants: defaultdict):
     aapi = AssayApi()
     # Create dictionary containing dummy tube IDs
     dummy_tubes = {
-        1368: 'FDS1000000000',
-        1369: 'FDS1000000001',
-        1370: 'FDS1000000002',
-        1371: 'FDS1000000003',
-        1372: 'FDS1000000004',
+        1430: 'FDS1000000000',
+        1431: 'FDS1000000001',
+        1432: 'FDS1000000002',
+        1433: 'FDS1000000003',
+        1434: 'FDS1000000004',
     }
 
     for key, tube in dummy_tubes.items():
         new_assay = AssayUpsert()
         new_assay['id'] = key
         new_assay['meta'] = {}
-        new_assay['meta']['KCCG FluidX tube ID'] = tube
+        # new_assay['meta']['KCCG FluidX tube ID'] = tube # noqa: ERA001
+        new_assay['meta']['fluid_x_tube_id'] = f'20200101_{tube}'
         aapi.update_assay(assay_upsert=new_assay)
 
 
