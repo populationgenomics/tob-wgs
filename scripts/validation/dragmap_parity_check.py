@@ -38,10 +38,9 @@ def get_dict_of_gvcf_directories(project: str, nagim: bool = False) -> dict[str,
 
     # Get GCP file paths
     cmd = ['gsutil', 'ls', prefix]
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         cmd,
         capture_output=True,
-        shell=True,
         text=True,
         check=False,
     )
