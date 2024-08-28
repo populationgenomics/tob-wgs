@@ -41,7 +41,7 @@ def get_dict_of_gvcf_directories(project: str, nagim: bool = False) -> dict[str,
     result = subprocess.run(
         cmd,
         capture_output=True,
-        shell=True,
+        shell=False,
         text=True,
         check=False,
     )
