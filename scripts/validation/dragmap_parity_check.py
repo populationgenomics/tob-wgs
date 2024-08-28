@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 import logging
 import subprocess
 from os.path import basename
@@ -182,9 +181,7 @@ def rekey_matrix_table(mt: hl.MatrixTable, keyed_ref_table: hl.Table) -> hl.Matr
     mt = mt.annotate_cols(tobid=keyed_ref_table[mt.s].tobid)
 
     # Re-key the MatrixTable by the tobid
-    mt = mt.key_cols_by('tobid')
-
-    return mt
+    return mt.key_cols_by('tobid')
 
 
 @click.command()
@@ -202,7 +199,7 @@ def main(
     nagim_mt_path: str | None,
     test: bool = True,
 ):
-    bucket = project
+
     if test:
         project = project + '-test'
 
