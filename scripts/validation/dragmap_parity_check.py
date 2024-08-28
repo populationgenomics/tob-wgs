@@ -3,7 +3,9 @@ import subprocess
 from os.path import basename
 
 import click
+
 import hail as hl
+
 from cpg_utils import to_path
 from cpg_utils.config import get_config
 from cpg_utils.hail_batch import init_batch
@@ -42,7 +44,7 @@ def get_dict_of_gvcf_directories(project: str, nagim: bool = False) -> dict[str,
         cmd,
         capture_output=True,
         text=True,
-        shell=True, # noqa: S602
+        shell=True,  # noqa: S602
         check=False,
     )
     if result.returncode == 0:
@@ -61,7 +63,6 @@ def create_combiner(
     external_header: str,
     nagim: bool = False,
 ) -> hl.vds.combiner.VariantDatasetCombiner:
-
     out_path = (
         f'gs://cpg-{project}/dragmap_parity/{"nagim_" if nagim else "new_"}vds.vds'
     )
@@ -155,7 +156,6 @@ def create_vds(
     checked_new_gvcf_paths: list[str],
     expids: list[str],
 ) -> hl.vds.VariantDataset:
-
     # make Combiner objects
     nagim_combiner, nagim_vds_path = create_combiner(
         project=project,
@@ -205,7 +205,6 @@ def main(
     nagim_mt_path: str | None,
     test: bool = True,
 ):
-
     if test:
         project = project + '-test'
 
@@ -223,11 +222,13 @@ def main(
     else:
         # create vds' from gvcf paths
         # TODO: Test the below still works (need to delete currently saved vds')
-        checked_nagim_gvcf_paths, checked_new_gvcf_paths, expids = (
-            check_active_inactive_gvcf_paths(
-                project,
-                active_inactive_sg_map,
-            )
+        (
+            checked_nagim_gvcf_paths,
+            checked_new_gvcf_paths,
+            expids,
+        ) = check_active_inactive_gvcf_paths(
+            project,
+            active_inactive_sg_map,
         )
         nagim_vds, new_vds = create_vds(
             project,
