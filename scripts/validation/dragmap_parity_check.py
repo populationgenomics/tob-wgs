@@ -232,8 +232,6 @@ def main(
 
     active_inactive_sg_map = get_active_inactive_sg_map(project, list(samples_to_skip))
 
-    ht_active_key, ht_inactive_key = create_keyed_hail_tables(active_inactive_sg_map)
-
     new_vds = hl.vds.read_vds(new_vds_path)
 
     # read in vds/matrixtables
@@ -258,6 +256,14 @@ def main(
             checked_new_gvcf_paths,
             expids,
         )
+
+    nagim_test_sgids = nagim_mt.s.collect()
+    active_inactive_sg_map2 = {}
+    for i, (tobid, active_inactive_map) in enumerate(active_inactive_sg_map.items()):
+        active_inactive_map['inactive'] = nagim_test_sgids[i]
+        active_inactive_sg_map2[tobid] = active_inactive_map
+
+    ht_active_key, ht_inactive_key = create_keyed_hail_tables(active_inactive_sg_map2)
 
     logging.info(f'nagim path: {nagim_vds_path if nagim_vds_path else nagim_mt_path}')
     logging.info(f'new path: {new_vds_path}')
