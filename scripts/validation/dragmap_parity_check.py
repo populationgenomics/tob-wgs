@@ -273,6 +273,8 @@ def main(
     output_prefix = f'gs://cpg-{project}/dragmap_parity/{output_version}'
     logging.info(f'Output prefix {output_prefix}')
 
+    ht_inactive_key.show()
+    ht_active_key.show()
     # rekey the MatrixTables
     nagim_mt = rekey_matrix_table(nagim_mt, ht_inactive_key)
     new_mt = rekey_matrix_table(new_mt, ht_active_key)
