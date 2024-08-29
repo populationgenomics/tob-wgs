@@ -134,6 +134,9 @@ def check_active_inactive_gvcf_paths(
 
 
 def get_active_inactive_sg_map(project: str) -> dict[str, dict[str, str]]:
+    if '-main' in project:
+        project = project.replace('-main', '')
+
     active_inactive_response = query(
         ACTIVE_INACTIVE_QUERY,
         variables={'project': project},
