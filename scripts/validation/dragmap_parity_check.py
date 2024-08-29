@@ -133,7 +133,10 @@ def check_active_inactive_gvcf_paths(
     return checked_nagim_gvcf_paths, checked_new_gvcf_paths, expids
 
 
-def get_active_inactive_sg_map(project: str) -> dict[str, dict[str, str]]:
+def get_active_inactive_sg_map(
+    project: str,
+    samples_to_skip: list[str],
+) -> dict[str, dict[str, str]]:
     if '-main' in project:
         project = project.replace('-main', '')
 
@@ -145,6 +148,9 @@ def get_active_inactive_sg_map(project: str) -> dict[str, dict[str, str]]:
     active_inactive_sg_map = {}
     for sample in active_inactive_response['project']['samples']:
         if len(sample['inactive_sgs']) >= 1:
+            if sample['externalId'] in samples_to_skip:
+                logging.info(f'Skipping {sample["externalId"]}')
+                continue
             assert len(sample['active_sgs']) == len(sample['inactive_sgs']) == 1
             active_inactive_sg_map[sample['externalId']] = {
                 'active': sample['active_sgs'][0]['id'],
@@ -199,6 +205,7 @@ def rekey_matrix_table(mt: hl.MatrixTable, keyed_ref_table: hl.Table) -> hl.Matr
 @click.option('--new-vds-path', required=False, default=None)
 @click.option('--nagim-vds-path', required=False, default=None)
 @click.option('--nagim-mt-path', required=False, default=None)
+@click.option('--skip-samples', required=False, multiple=True, default=None)
 @click.option('--test/--no-test', default=True)
 def main(
     project: str,
@@ -206,13 +213,21 @@ def main(
     new_vds_path: str | None,
     nagim_vds_path: str | None,
     nagim_mt_path: str | None,
+    samples_to_skip: tuple[str] | None = None,
     test: bool = True,
 ):
+    # 2 samples were duplicates and have no new CPG IDs
+    # https://centrepopgen.slack.com/archives/C018KFBCR1C/p1709006419612279?thread_ts=1708911201.676049&cid=C018KFBCR1C
+    if samples_to_skip:
+        print(f"Skipping samples: {', '.join(samples_to_skip)}")
+    else:
+        print("No samples to skip.")
+
     project = project + '-test' if test else project + '-main'
 
     logging.info(f'Running dragmap_parity_check for project {project}')
 
-    active_inactive_sg_map = get_active_inactive_sg_map(project)
+    active_inactive_sg_map = get_active_inactive_sg_map(project, list(samples_to_skip))
 
     ht_active_key, ht_inactive_key = create_keyed_hail_tables(active_inactive_sg_map)
 
