@@ -207,6 +207,8 @@ def main(
 ):
     project = project + '-test' if test else project + '-main'
 
+    logging.info(f'Running dragmap_parity_check for project {project}')
+
     active_inactive_sg_map = get_active_inactive_sg_map(project)
 
     ht_active_key, ht_inactive_key = create_keyed_hail_tables(active_inactive_sg_map)
@@ -236,6 +238,8 @@ def main(
             expids,
         )
 
+    logging.info(f'nagim path: {nagim_vds_path if nagim_vds_path else nagim_mt_path}')
+    logging.info(f'new path: {new_vds_path}')
     # prepare vds' for comparison
     # As per documentation, hl.methods.concordance() requires the dataset to contain no multiallelic variants.
     # as well as the entry field to be 'GT', also expects MatrixTable, not a VariantDataset
@@ -250,26 +254,11 @@ def main(
 
     # checkpoint the split MatrixTables
     output_prefix = f'gs://cpg-{project}/dragmap_parity/{output_version}'
-    logging.info(
-        f'Checkpointing MatrixTables to {output_prefix} before rekeying and comparing',
-    )
-    nagim_mt = nagim_mt.checkpoint(
-        f'{output_prefix}/nagim_mt.mt',
-    )
-    new_mt = new_mt.checkpoint(
-        f'{output_prefix}/new_mt.mt',
-    )
+    logging.info(f'Output prefix {output_prefix}')
 
     # rekey the MatrixTables
     nagim_mt = rekey_matrix_table(nagim_mt, ht_inactive_key)
     new_mt = rekey_matrix_table(new_mt, ht_active_key)
-
-    nagim_mt = nagim_mt.checkpoint(
-        f'{output_prefix}/nagim_mt_keyed.mt',
-    )
-    new_mt = new_mt.checkpoint(
-        f'{output_prefix}/new_mt_keyed.mt',
-    )
 
     # compare the two VDS'
     summary, samples, variants = hl.concordance(nagim_mt, new_mt)
