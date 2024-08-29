@@ -205,7 +205,7 @@ def rekey_matrix_table(mt: hl.MatrixTable, keyed_ref_table: hl.Table) -> hl.Matr
 @click.option('--new-vds-path', required=False, default=None)
 @click.option('--nagim-vds-path', required=False, default=None)
 @click.option('--nagim-mt-path', required=False, default=None)
-@click.option('--skip-samples', required=False, multiple=True, default=None)
+@click.option('--samples-to-skip', required=False, multiple=True, default=None)
 @click.option('--test/--no-test', default=True)
 def main(
     project: str,
