@@ -205,8 +205,7 @@ def main(
     nagim_mt_path: str | None,
     test: bool = True,
 ):
-    if test:
-        project = project + '-test'
+    project = project + '-test' if test else project + '-main'
 
     active_inactive_sg_map = get_active_inactive_sg_map(project)
 
