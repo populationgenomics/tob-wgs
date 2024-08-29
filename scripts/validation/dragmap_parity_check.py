@@ -262,7 +262,10 @@ def main(
     # As per documentation, hl.methods.concordance() requires the dataset to contain no multiallelic variants.
     # as well as the entry field to be 'GT', also expects MatrixTable, not a VariantDataset
     if nagim_mt_path:
-        nagim_mt = hl.split_multi(nagim_mt, filter_changed_loci=True)
+        nagim_mt = hl.experimental.sparse_split_multi(
+            nagim_mt,
+            filter_changed_loci=True,
+        )
     else:
         nagim_vds = hl.vds.split_multi(nagim_vds, filter_changed_loci=True)
         nagim_mt = nagim_vds.variant_data
