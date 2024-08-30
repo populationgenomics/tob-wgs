@@ -195,6 +195,18 @@ def rekey_matrix_table(mt: hl.MatrixTable, keyed_ref_table: hl.Table) -> hl.Matr
     # Annotate the MatrixTable with the tobid from keyed_ref_table
     mt = mt.annotate_cols(tobid=keyed_ref_table[mt.s].tobid)
 
+    # Capture the columns where tobid is None
+    none_tobid_samples = mt.filter_cols(hl.is_missing(mt.tobid)).s.collect()
+
+    # Print or log the columns that will be set to None (optional)
+    logging.info(
+        f"""Columns that will be set to None and dropped because of could not find corresponding 'newer' CPGID:" \
+        {none_tobid_samples}""",
+    )
+
+    # Filter out columns where tobid is None
+    mt = mt.filter_cols(hl.is_defined(mt.tobid))
+
     # Re-key the MatrixTable by the tobid
     return mt.key_cols_by('tobid')
 
@@ -261,10 +273,11 @@ def main(
     # prepare vds' for comparison
     # As per documentation, hl.methods.concordance() requires the dataset to contain no multiallelic variants.
     # as well as the entry field to be 'GT', also expects MatrixTable, not a VariantDataset
-    # nagim_mt is already split for multiallelic variants
     if nagim_vds_path:
         nagim_vds = hl.vds.split_multi(nagim_vds, filter_changed_loci=True)
         nagim_mt = nagim_vds.variant_data
+    else:
+        nagim_mt = hl.split_multi_hts(nagim_mt)
 
     new_vds = hl.vds.split_multi(new_vds, filter_changed_loci=True)
     new_mt = new_vds.variant_data
@@ -273,8 +286,6 @@ def main(
     output_prefix = f'gs://cpg-{project}/dragmap_parity/{output_version}'
     logging.info(f'Output prefix {output_prefix}')
 
-    ht_inactive_key.show()
-    ht_active_key.show()
     # rekey the MatrixTables
     nagim_mt = rekey_matrix_table(nagim_mt, ht_inactive_key)
     new_mt = rekey_matrix_table(new_mt, ht_active_key)
