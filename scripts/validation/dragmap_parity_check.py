@@ -283,7 +283,7 @@ def main(
     new_mt = new_vds.variant_data
 
     # checkpoint the split MatrixTables
-    output_prefix = f'gs://cpg-{project}/dragmap_parity/{output_version}'
+    output_prefix = f'gs://cpg-{project}-analysis/dragmap_parity/{output_version}'
     logging.info(f'Output prefix {output_prefix}')
 
     # rekey the MatrixTables
